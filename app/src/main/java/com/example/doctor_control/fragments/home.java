@@ -90,9 +90,7 @@ public class home extends Fragment {
         }
     }
 
-    /**
-     * This method attaches the toggle listener for updating the doctor status.
-     */
+
     private void attachStatusToggleListener(final Switch statusToggle, final TextView statusText, final ImageView statusIcon) {
         statusToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @SuppressLint("SetTextI18n")
@@ -182,9 +180,6 @@ public class home extends Fragment {
         requestQueue.add(stringRequest);
     }
 
-    /**
-     * This method fetches the current doctor status from the database.
-     */
     private void fetchDoctorStatus(final TextView statusText, @SuppressLint("UseSwitchCompatOrMaterialCode") final Switch statusToggle, final ImageView statusIcon) {
         String urlFetchStatus = "http://sxm.a58.mytemp.website/Doctors/get_doctor_status.php";
 

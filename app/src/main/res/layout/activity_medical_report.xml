@@ -102,7 +102,7 @@
                 android:layout_height="wrap_content"
                 android:hint="Weight (kg)">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etWeight"
+                    android:id="@+id/tilReason"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="numberDecimal"/>
@@ -125,7 +125,7 @@
                 android:layout_height="wrap_content"
                 android:hint="Date">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etDate"
+                    android:id="@+id/tilDate"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="date"/>
