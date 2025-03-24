@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="primaryColor">#2196F3</color>
+
+
+    <color name="textSecondary">#757575</color>
+    <color name="backgroundGradientStart">#2196F3</color>
+    <color name="backgroundGradientEnd">#1976D2</color>
+    <color name="errorRed">#FF5252</color>
+    <color name="successGreen">#4CAF50</color>
+
+
+    <color name="primaryLightColor">#E3F2FD</color>
+    <color name="switch_track_color">#E0E0E0</color>
+</resources>

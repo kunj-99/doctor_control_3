@@ -1,0 +1,12 @@
+<!-- bg_bottom_nav.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/white"/> <!-- Background color -->
+    <corners
+        android:topLeftRadius="20dp"
+        android:topRightRadius="20dp"/> <!-- Curved corners -->
+    <padding
+        android:bottom="8dp"
+        android:left="16dp"
+        android:right="16dp"
+        android:top="8dp"/>
+</shape>
