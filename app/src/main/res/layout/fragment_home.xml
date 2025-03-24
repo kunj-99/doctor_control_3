@@ -96,7 +96,7 @@
             </androidx.cardview.widget.CardView>
 
 
-            <!-- Upcoming Appointments Card -->
+            <!-- your patients  Card -->
             <androidx.cardview.widget.CardView
                 android:layout_width="0dp"
                 android:layout_height="150dp"
@@ -133,7 +133,6 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="15"
                         android:textColor="@color/primaryColor"
                         android:textSize="24sp"
                         android:textStyle="bold" />
@@ -178,7 +177,6 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="5"
                         android:textColor="@color/primaryColor"
                         android:textSize="24sp"
                         android:textStyle="bold" />
@@ -219,7 +217,6 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Active"
                         android:textColor="@color/textSecondary"
                         android:textSize="14sp" />
 
@@ -229,12 +226,13 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:checked="true"
                         android:thumbTint="@color/primaryColor"
                         android:trackTint="@color/switch_track_color"
-                        tools:ignore="UseSwitchCompatOrMaterialXml" /> <!-- Define this color in colors.xml -->
+                        tools:ignore="UseSwitchCompatOrMaterialXml" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
+
+
 
         </GridLayout>
 
