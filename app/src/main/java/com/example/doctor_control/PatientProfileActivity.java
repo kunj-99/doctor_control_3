@@ -3,10 +3,18 @@ package com.example.doctor_control;
 import android.os.Bundle;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class PatientProfileActivity extends AppCompatActivity {
 
@@ -16,13 +24,15 @@ public class PatientProfileActivity extends AppCompatActivity {
             tvMobile, tvEmail, tvEmergencyContact, tvMedicalHistory,
             tvAllergies, tvMedications;
 
+    // Base URL for the profile API endpoint
+    private static final String PROFILE_URL = "http://sxm.a58.mytemp.website/get_profile.php?patient_id=";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_patient_profile);
 
         initializeViews();
-
         loadPatientData();
     }
 
@@ -42,33 +52,80 @@ public class PatientProfileActivity extends AppCompatActivity {
     }
 
     private void loadPatientData() {
-        // Set patient details (Replace with actual API/database data)
-        tvFullName.setText("Sarah Johnson");
-        tvDob.setText("March 15, 1985");
-        tvGender.setText("Female");
-        tvBloodGroup.setText("AB+");
-        tvAddress.setText("456 Health Avenue\nWellness City, HC 12345");
-        tvMobile.setText("+1 (555) 123-4567");
-        tvEmail.setText("sarah.j@medicalmail.com");
-        tvEmergencyContact.setText("John Johnson - +1 (555) 765-4321");
-        tvMedicalHistory.setText("• Hypertension (2018)\n• Appendectomy (2015)");
-        tvAllergies.setText("• Penicillin\n• Shellfish");
-        tvMedications.setText("• Lisinopril 10mg daily\n• Metformin 500mg twice daily");
+        // Retrieve patient_id from Intent extras (assumed to be passed to this activity)
+        String patientId = getIntent().getStringExtra("patient_id");
+        if (patientId == null || patientId.isEmpty()) {
+            Toast.makeText(this, "Patient ID not provided", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String url = PROFILE_URL + patientId;
 
-        // Load profile image using Glide
-        Glide.with(this)
-                .load(R.drawable.pr_ic_profile_placeholder) // Change to actual URL if needed
-                .apply(RequestOptions.circleCropTransform())
-                .placeholder(R.drawable.pr_ic_profile_placeholder)
-                .error(R.drawable.pr_ic_profile_placeholder)
-                .into(profileImage);
-    }
+        // Create a request queue for Volley
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
 
+        // Create a GET request for a JSON object
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
+                Request.Method.GET,
+                url,
+                null,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            // Check status of response
+                            String status = response.getString("status");
+                            if (status.equals("success")) {
+                                JSONObject data = response.getJSONObject("data");
 
+                                // Update UI with dynamic data
+                                tvFullName.setText(data.optString("full_name", "N/A"));
+                                tvDob.setText(data.optString("date_of_birth", "N/A"));
+                                tvGender.setText(data.optString("gender", "N/A"));
+                                tvBloodGroup.setText(data.optString("blood_group", "N/A"));
+                                tvAddress.setText(data.optString("address", "N/A"));
+                                tvMobile.setText(data.optString("mobile", "N/A"));
+                                tvEmail.setText(data.optString("email", "N/A"));
+                                String emergencyName = data.optString("emergency_contact_name", "");
+                                String emergencyNumber = data.optString("emergency_contact_number", "");
+                                tvEmergencyContact.setText(emergencyName + " - " + emergencyNumber);
+                                tvMedicalHistory.setText(data.optString("medical_history", "N/A"));
+                                tvAllergies.setText(data.optString("allergies", "N/A"));
+                                tvMedications.setText(data.optString("current_medications", "N/A"));
 
-    @Override
-    public boolean onSupportNavigateUp() {
-        onBackPressed();
-        return true;
+                                // Load profile image using Glide. If profile_picture URL is empty, use a placeholder.
+                                String profilePicUrl = data.optString("profile_picture", "");
+                                if (profilePicUrl != null && !profilePicUrl.isEmpty()) {
+                                    Glide.with(PatientProfileActivity.this)
+                                            .load(profilePicUrl)
+                                            .apply(RequestOptions.circleCropTransform())
+                                            .placeholder(R.drawable.pr_ic_profile_placeholder)
+                                            .error(R.drawable.pr_ic_profile_placeholder)
+                                            .into(profileImage);
+                                } else {
+                                    Glide.with(PatientProfileActivity.this)
+                                            .load(R.drawable.pr_ic_profile_placeholder)
+                                            .apply(RequestOptions.circleCropTransform())
+                                            .into(profileImage);
+                                }
+                            } else {
+                                String message = response.optString("message", "Error retrieving profile");
+                                Toast.makeText(PatientProfileActivity.this, message, Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            Toast.makeText(PatientProfileActivity.this, "JSON Parsing error", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                },
+                new Response.ErrorListener(){
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(PatientProfileActivity.this, "Network error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+
+        // Add the request to the Volley queue
+        requestQueue.add(jsonObjectRequest);
     }
 }
