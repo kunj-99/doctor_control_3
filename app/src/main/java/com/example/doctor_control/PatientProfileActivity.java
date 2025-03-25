@@ -57,7 +57,7 @@ public class PatientProfileActivity extends AppCompatActivity {
 
         // Load profile image using Glide
         Glide.with(this)
-                .load(R.drawable.demo_profile) // Change to actual URL if needed
+                .load(R.drawable.pr_ic_profile_placeholder) // Change to actual URL if needed
                 .apply(RequestOptions.circleCropTransform())
                 .placeholder(R.drawable.pr_ic_profile_placeholder)
                 .error(R.drawable.pr_ic_profile_placeholder)
