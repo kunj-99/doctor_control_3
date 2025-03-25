@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,6 +29,8 @@ import java.util.ArrayList;
 
 public class aRequestFragment extends Fragment {
 
+    private static final String TAG = "aRequestFragment";
+
     private RecyclerView recyclerView;
     private aRequestAdapeter adapter;
     // Use a single ArrayList of Appointment objects
@@ -41,6 +44,7 @@ public class aRequestFragment extends Fragment {
     private Runnable refreshRunnable = new Runnable() {
         @Override
         public void run() {
+            Log.d(TAG, "Refresh Runnable triggered");
             // Clear the list before refreshing data
             appointments.clear();
             fetchDataFromServer();
@@ -52,11 +56,13 @@ public class aRequestFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        Log.d(TAG, "onCreateView called");
         View view = inflater.inflate(R.layout.fragment_request, container, false);
 
         // Retrieve doctor_id from SharedPreferences (using getInt() because it's stored as an Integer)
-        SharedPreferences prefs = getActivity().getSharedPreferences("MY_PREFS_NAME", Context.MODE_PRIVATE);
+        SharedPreferences prefs = getActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
         doctorId = String.valueOf(prefs.getInt("doctor_id", 1)); // Default to 1 if not found
+        Log.d(TAG, "Doctor ID retrieved: " + doctorId);
 
         recyclerView = view.findViewById(R.id.rv_pending_appointments);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -74,15 +80,20 @@ public class aRequestFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        Log.d(TAG, "onResume called");
         // Start periodic refresh only if the fragment is visible
         if (getUserVisibleHint()) {
+            Log.d(TAG, "Fragment is visible. Starting refresh runnable.");
             refreshHandler.postDelayed(refreshRunnable, 30000);
+        } else {
+            Log.d(TAG, "Fragment is not visible in onResume.");
         }
     }
 
     @Override
     public void onPause() {
         super.onPause();
+        Log.d(TAG, "onPause called. Removing refresh callbacks.");
         // Stop periodic refresh when fragment is not in view
         refreshHandler.removeCallbacks(refreshRunnable);
     }
@@ -91,34 +102,42 @@ public class aRequestFragment extends Fragment {
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
+        Log.d(TAG, "setUserVisibleHint: isVisibleToUser = " + isVisibleToUser);
         // Start refresh if the fragment becomes visible and is resumed
         if (isVisibleToUser && isResumed()) {
+            Log.d(TAG, "Fragment visible and resumed. Starting refresh runnable.");
             refreshHandler.postDelayed(refreshRunnable, 30000);
         } else {
+            Log.d(TAG, "Fragment not visible. Removing refresh runnable.");
             refreshHandler.removeCallbacks(refreshRunnable);
         }
     }
 
     private void fetchDataFromServer() {
-        // Replace this URL with your actual endpoint
         String url = "http://sxm.a58.mytemp.website/Doctors/getRequestappointment.php?doctor_id=" + doctorId;
+        Log.d(TAG, "Fetching data from server with URL: " + url);
 
         RequestQueue queue = Volley.newRequestQueue(getContext());
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null, response -> {
+            Log.d(TAG, "Server response: " + response.toString());
             try {
                 boolean success = response.optBoolean("success", false);
+                Log.d(TAG, "Success flag in response: " + success);
                 if (success) {
                     JSONArray dataArray = response.optJSONArray("data");
                     if (dataArray != null) {
                         // Clear current appointments before updating
                         appointments.clear();
+                        Log.d(TAG, "Data array length: " + dataArray.length());
                         for (int i = 0; i < dataArray.length(); i++) {
                             JSONObject appointmentObj = dataArray.getJSONObject(i);
                             // Extract appointment details (adjust keys as per your JSON)
                             String appointmentId = appointmentObj.optString("appointment_id", "0");
-                            String name = appointmentObj.optString("full_name", "N/A");
-                            String problem = appointmentObj.optString("problem", "N/A");
+                            String name = appointmentObj.optString("patient_name", "N/A");
+                            String problem = appointmentObj.optString("reason_for_visit", "N/A");
                             String distance = appointmentObj.optString("distance", "N/A");
+
+                            Log.d(TAG, "Parsed appointment: " + appointmentId + ", " + name + ", " + problem + ", " + distance);
 
                             // Create a new Appointment object and add to the list
                             aRequestAdapeter.Appointment appointment =
@@ -126,19 +145,22 @@ public class aRequestFragment extends Fragment {
                             appointments.add(appointment);
                         }
                         adapter.notifyDataSetChanged();
+                        Log.d(TAG, "Adapter notified. Appointments list size: " + appointments.size());
                     } else {
+                        Log.d(TAG, "Data array is null");
                         Toast.makeText(getContext(), "No appointments found.", Toast.LENGTH_SHORT).show();
                     }
                 } else {
                     String message = response.optString("message", "Failed to load data.");
+                    Log.d(TAG, "Server returned failure: " + message);
                     Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
                 }
             } catch (JSONException e) {
-                e.printStackTrace();
+                Log.e(TAG, "Error parsing JSON", e);
                 Toast.makeText(getContext(), "Error parsing data.", Toast.LENGTH_SHORT).show();
             }
         }, error -> {
-            error.printStackTrace();
+            Log.e(TAG, "Error fetching data from server", error);
             Toast.makeText(getContext(), "Error fetching data from server.", Toast.LENGTH_SHORT).show();
         });
 

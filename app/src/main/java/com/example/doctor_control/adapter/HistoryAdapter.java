@@ -29,7 +29,6 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
         return new ViewHolder(view);
     }
 
-
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         HistoryItem item = historyItems.get(position);
@@ -45,7 +44,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
             holder.tvPaymentStatus.setBackgroundResource(R.drawable.bg_payment_pending);
         }
 
-        // Handle Card Click with smooth animation
+        // Toggle the button container visibility with smooth animation
         holder.itemView.setOnClickListener(v -> {
             if (holder.buttonContainer.getVisibility() == View.GONE) {
                 holder.buttonContainer.setVisibility(View.VISIBLE);
@@ -55,13 +54,13 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
                         holder.buttonContainer.setVisibility(View.GONE));
             }
         });
+
+        // Pass the patient_id to the PatientProfileActivity via intent extras
         holder.btnViewProfile.setOnClickListener(v -> {
             Intent intent = new Intent(v.getContext(), PatientProfileActivity.class);
-            // Pass patient ID or other data
-
+            intent.putExtra("patient_id", item.getPatientId());
             v.getContext().startActivity(intent);
         });
-
     }
 
     @Override
