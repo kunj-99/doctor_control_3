@@ -6,10 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/white"
     android:fillViewport="true"
-
     android:padding="16dp">
-
-
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -102,7 +99,7 @@
                 android:layout_height="wrap_content"
                 android:hint="Weight (kg)">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/tilReason"
+                    android:id="@+id/etWeight"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="numberDecimal"/>
@@ -125,7 +122,7 @@
                 android:layout_height="wrap_content"
                 android:hint="Date">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/tilDate"
+                    android:id="@+id/etDate"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="date"/>
@@ -200,6 +197,40 @@
                         android:inputType="text"/>
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
+            <!-- Inserted just after Vital Signs section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Additional Observations"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"/>
+
+            <!-- Symptoms -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Symptoms">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSymptoms"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minLines="3"
+                    android:inputType="textMultiLine"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Respiratory System -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Respiratory System">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etRespiratorySystem"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"/>
+            </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Medications Section -->
             <TextView
@@ -209,39 +240,44 @@
                 android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:layout_marginTop="16dp"/>
+                android:layout_marginTop="16dp" />
 
+            <!-- Container for all medication rows -->
             <LinearLayout
                 android:id="@+id/medications_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <!-- Initial medicine row -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
 
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/medicineNameLayout"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:hint="Medicine Name">
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etMedicine1"
+                            android:id="@+id/etMedicine"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"/>
+                            android:layout_height="wrap_content" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/dosageLayout"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:hint="Dosage">
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etDosage1"
+                            android:id="@+id/etDosage"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"/>
+                            android:layout_height="wrap_content" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
             </LinearLayout>
@@ -252,7 +288,7 @@
                 android:layout_height="wrap_content"
                 android:text="+ Add More"
                 android:layout_gravity="end"
-                android:layout_marginTop="8dp"/>
+                android:layout_marginTop="8dp" />
 
             <!-- Other Sections -->
             <TextView
