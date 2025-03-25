@@ -48,4 +48,15 @@
         <color name="primaryLightColor">#E3F2FD</color>
         <color name="switch_track_color">#E0E0E0</color>
 
+    <color name="primaryDark">#2E7D32</color>
+    <color name="vgreen">#212121</color>
+    <color name="lightgreen">#2E7D32</color>
+    <color name="darkgreen">#1B5E20</color>
+    <color name="lightBackground">#F5F5F5</color>
+    <color name="textdark">#212121</color>
+    <color name="grey">#757575</color>
+    <color name="lightgrey">#BDBDBD</color>
+    <!--    <color name="white">#FFFFFF</color>-->
+    <color name="divider">#E0E0E0</color>
+
 </resources>
