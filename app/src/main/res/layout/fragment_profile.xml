@@ -14,7 +14,7 @@
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
-        <!-- Profile Image -->
+        <!-- Profile Image with clickable attributes -->
         <ImageView
             android:id="@+id/profile_image"
             android:layout_width="120dp"
@@ -24,7 +24,10 @@
             android:background="@drawable/bg_circle"
             android:contentDescription="Doctor Profile"
             android:layout_marginTop="16dp"
-            android:elevation="6dp" />
+            android:elevation="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:onClick="onProfileImageClick" />
 
         <!-- CardView container for editable fields with border -->
         <androidx.cardview.widget.CardView
@@ -153,7 +156,6 @@
                     android:layout_marginTop="4dp"
                     android:paddingLeft="15dp"
                     android:background="@drawable/bg_edit_text" />
-
 
                 <!-- Availability Schedule -->
                 <TextView

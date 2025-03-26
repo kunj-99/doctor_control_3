@@ -252,7 +252,6 @@ public class medical_report extends AppCompatActivity {
             return;
         }
 
-        // Create the JSON request to send the report
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, url, postData,
                 response -> {
                     boolean success = response.optBoolean("success", false);
