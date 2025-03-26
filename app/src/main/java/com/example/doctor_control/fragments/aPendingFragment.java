@@ -27,7 +27,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Objects;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 public class aPendingFragment extends Fragment {
 
@@ -35,9 +37,13 @@ public class aPendingFragment extends Fragment {
 
     private RecyclerView recyclerView;
     private apendingAdapter adapter;
+    // Ensure ArrayList is imported from java.util
     private final ArrayList<apendingAdapter.Appointment> appointments = new ArrayList<>();
     private String doctorId;
+
+    // Handler for periodic refresh
     private final Handler refreshHandler = new Handler();
+    // Auto-refresh runnable set to 5 seconds (5000 ms)
     private final Runnable refreshRunnable = new Runnable() {
         @Override
         public void run() {
@@ -45,20 +51,19 @@ public class aPendingFragment extends Fragment {
             // Clear existing data before fetching fresh data
             appointments.clear();
             fetchDataFromServer();
-            // Schedule next refresh in 20 seconds (20000 milliseconds)
-            refreshHandler.postDelayed(this, 20000);
+            // Schedule next refresh in 5 seconds
+            refreshHandler.postDelayed(this, 5000);
         }
     };
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Log.d(TAG, "onCreateView called");
         View view = inflater.inflate(R.layout.fragment_pending, container, false);
 
         // Retrieve doctor_id from SharedPreferences using "DoctorPrefs"
         SharedPreferences prefs = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
-        doctorId = String.valueOf(prefs.getInt("doctor_id", 0)); // Default to "1" if not found
+        doctorId = String.valueOf(prefs.getInt("doctor_id", 0)); // Defaults to 0 if not found
         Log.d(TAG, "Doctor ID retrieved: " + doctorId);
 
         recyclerView = view.findViewById(R.id.rv_pending_appointments);
@@ -78,30 +83,26 @@ public class aPendingFragment extends Fragment {
     public void onResume() {
         super.onResume();
         Log.d(TAG, "onResume called");
-        // Start periodic refresh only if the fragment is visible
-        if (getUserVisibleHint()) {
-            Log.d(TAG, "Fragment is visible in onResume. Starting refresh runnable.");
-            refreshHandler.postDelayed(refreshRunnable, 20000);
-        } else {
-            Log.d(TAG, "Fragment is not visible in onResume.");
-        }
+        // Start periodic refresh every 5 seconds when fragment is visible
+        refreshHandler.postDelayed(refreshRunnable, 5000);
     }
 
     @Override
     public void onPause() {
         super.onPause();
         Log.d(TAG, "onPause called. Removing refresh callbacks.");
-        // Stop periodic refresh when fragment is not in view
+        // Stop periodic refresh when fragment is not visible
         refreshHandler.removeCallbacks(refreshRunnable);
     }
 
+    // For fragments in a ViewPager: start/stop refresh based on visibility
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
         Log.d(TAG, "setUserVisibleHint: isVisibleToUser = " + isVisibleToUser);
         if (isVisibleToUser && isResumed()) {
             Log.d(TAG, "Fragment visible and resumed in setUserVisibleHint. Starting refresh runnable.");
-            refreshHandler.postDelayed(refreshRunnable, 20000);
+            refreshHandler.postDelayed(refreshRunnable, 5000);
         } else {
             Log.d(TAG, "Fragment not visible in setUserVisibleHint. Removing refresh runnable.");
             refreshHandler.removeCallbacks(refreshRunnable);
@@ -109,54 +110,69 @@ public class aPendingFragment extends Fragment {
     }
 
     private void fetchDataFromServer() {
-        // Replace this URL with your actual API endpoint
         String url = "http://sxm.a58.mytemp.website/Doctors/getPendingappointment.php?doctor_id=" + doctorId;
         Log.d(TAG, "Fetching data from URL: " + url);
 
         RequestQueue queue = Volley.newRequestQueue(requireContext());
-        @SuppressLint("NotifyDataSetChanged") JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null, response -> {
+        @SuppressLint("NotifyDataSetChanged")
+        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null, response -> {
             Log.d(TAG, "Response: " + response.toString());
             try {
-                boolean success = response.optBoolean("success", false);
-                Log.d(TAG, "Success flag: " + success);
-                if (success) {
-                    JSONArray dataArray = response.optJSONArray("data");
-                    if (dataArray != null) {
-                        // Clear existing data before updating
-                        appointments.clear();
-                        Log.d(TAG, "Data array length: " + dataArray.length());
-                        for (int i = 0; i < dataArray.length(); i++) {
-                            JSONObject appointmentObj = dataArray.getJSONObject(i);
-                            // Adjust these keys as per your JSON structure
-                            String appointmentId = appointmentObj.optString("appointment_id", "0");
-                            String name = appointmentObj.optString("patient_name", "N/A");
-                            String problem = appointmentObj.optString("reason_for_visit", "N/A");
-                            String distance = appointmentObj.optString("distance", "N/A");
+                JSONObject root = new JSONObject(response.toString());
+                boolean success = root.getBoolean("success");
 
-                            Log.d(TAG, "Parsed appointment: " + appointmentId + ", " + name + ", " + problem + ", " + distance);
-
-                            // Create and add an Appointment object
-                            appointments.add(new apendingAdapter.Appointment(appointmentId, name, problem, distance));
-                        }
-                        adapter.notifyDataSetChanged();
-                        Log.d(TAG, "Adapter updated. Total appointments: " + appointments.size());
-                    } else {
-                        Toast.makeText(getContext(), "No pending appointments found.", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "Data array is null");
-                    }
-                } else {
-                    String message = response.optString("message", "Failed to load data.");
-                    Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
-                    Log.d(TAG, "Server returned failure: " + message);
+                if (!success) {
+                    Toast.makeText(getContext(), "No pending appointments found.", Toast.LENGTH_SHORT).show();
+                    adapter.notifyDataSetChanged();
+                    return;
                 }
+
+                JSONArray arr = root.getJSONArray("appointments");
+
+                // Clear current data and repopulate
+                appointments.clear();
+
+                // If the array is empty, show a toast and update adapter
+                if (arr.length() == 0) {
+                    Toast.makeText(getContext(), "No pending appointments found.", Toast.LENGTH_SHORT).show();
+                    adapter.notifyDataSetChanged();
+                    return;
+                }
+
+                // Optionally load locally stored completed report IDs
+                SharedPreferences prefs = requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
+                HashSet<String> completedSet = new HashSet<>(prefs.getStringSet("completed_reports", new HashSet<>()));
+
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject obj = arr.getJSONObject(i);
+                    String apptId = obj.getString("appointment_id");
+
+                    // Create an Appointment object (ensure your adapter's Appointment class is defined)
+                    apendingAdapter.Appointment appointment = new apendingAdapter.Appointment(
+                            apptId,
+                            obj.getString("patient_name"),
+                            obj.getString("reason_for_visit"),
+                            obj.getString("time_slot")
+                    );
+                    appointments.add(appointment);
+                }
+                adapter.notifyDataSetChanged();
+                Log.d(TAG, "Adapter updated. Total appointments: " + appointments.size());
             } catch (JSONException e) {
-                Log.e(TAG, "Error parsing JSON", e);
-                Toast.makeText(getContext(), "Error parsing data.", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "JSON parsing error: ", e);
+                Toast.makeText(getContext(), "Parse error: " + e.getMessage(), Toast.LENGTH_LONG).show();
             }
         }, error -> {
-            Log.e(TAG, "Error fetching data from server", error);
-            Toast.makeText(getContext(), "Error fetching data from server.", Toast.LENGTH_SHORT).show();
-        });
+            Log.e(TAG, "Volley error: ", error);
+            Toast.makeText(getContext(), "Network error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+        }) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<>();
+                params.put("doctor_id", doctorId);
+                return params;
+            }
+        };
 
         queue.add(request);
     }

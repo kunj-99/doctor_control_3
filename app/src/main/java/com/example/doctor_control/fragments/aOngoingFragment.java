@@ -50,12 +50,15 @@ public class aOngoingFragment extends Fragment {
         public void run() {
             Log.d(TAG, "Auto-refresh triggered");
             fetchAppointmentsData(doctorId);
-            // Schedule next refresh in 10 seconds (10000 milliseconds)
-            refreshHandler.postDelayed(this, 10000);
+            // Schedule next refresh in 5 seconds (5000 milliseconds)
+            refreshHandler.postDelayed(this, 5000);
         }
     };
 
     private ActivityResultLauncher<Intent> reportLauncher;
+
+    // Declare a variable to track fragment visibility
+    private boolean isActivityVisible = false;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -113,16 +116,14 @@ public class aOngoingFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // Start periodic refresh only if the fragment is visible
-        if (getUserVisibleHint()) {
-            refreshHandler.postDelayed(refreshRunnable, 10000);
-        }
+        isActivityVisible = true;
+        refreshHandler.postDelayed(refreshRunnable, 5000);
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        // Stop periodic refresh when fragment is not visible
+        isActivityVisible = false;
         refreshHandler.removeCallbacks(refreshRunnable);
     }
 
@@ -131,8 +132,10 @@ public class aOngoingFragment extends Fragment {
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
         if (isVisibleToUser && isResumed()) {
-            refreshHandler.postDelayed(refreshRunnable, 10000);
+            isActivityVisible = true;
+            refreshHandler.postDelayed(refreshRunnable, 5000);
         } else {
+            isActivityVisible = false;
             refreshHandler.removeCallbacks(refreshRunnable);
         }
     }
@@ -211,6 +214,20 @@ public class aOngoingFragment extends Fragment {
         };
 
         queue.add(request);
+    }
+
+    private void updateDoctorAutoStatus() {
+        String updateUrl = "http://sxm.a58.mytemp.website/update_doctor_status.php";
+        StringRequest updateRequest = new StringRequest(Request.Method.GET, updateUrl,
+                response -> {
+                    // Minimal logging
+                },
+                error -> {
+                    // Minimal logging
+                }
+        );
+        RequestQueue queue = Volley.newRequestQueue(requireContext());
+        queue.add(updateRequest);
     }
 
     @Override

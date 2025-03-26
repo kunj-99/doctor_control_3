@@ -24,8 +24,8 @@ import java.util.ArrayList;
 
 public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.ViewHolder> {
 
-    private Context context;
-    private ArrayList<Appointment> appointments;
+    private final Context context;
+    private final ArrayList<Appointment> appointments;
 
     public aRequestAdapeter(Context context, ArrayList<Appointment> appointments) {
         this.context = context;
@@ -79,10 +79,10 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
 
     // Appointment model to hold appointment details
     public static class Appointment {
-        private String appointmentId;
-        private String fullName;
-        private String problem;
-        private String distance;
+        private final String appointmentId;
+        private final String fullName;
+        private final String problem;
+        private final String distance;
 
         public Appointment(String appointmentId, String fullName, String problem, String distance) {
             this.appointmentId = appointmentId;

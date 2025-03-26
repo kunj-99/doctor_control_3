@@ -1,5 +1,6 @@
 package com.example.doctor_control.fragments;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -26,6 +27,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
 
 public class aRequestFragment extends Fragment {
 
@@ -33,41 +38,38 @@ public class aRequestFragment extends Fragment {
 
     private RecyclerView recyclerView;
     private aRequestAdapeter adapter;
-    // Use a single ArrayList of Appointment objects
-    private ArrayList<aRequestAdapeter.Appointment> appointments = new ArrayList<>();
-
-    // Doctor ID loaded from SharedPreferences
+    private final ArrayList<aRequestAdapeter.Appointment> appointments = new ArrayList<>();
     private String doctorId;
 
     // Handler for periodic refresh
-    private Handler refreshHandler = new Handler();
-    private Runnable refreshRunnable = new Runnable() {
+    private final Handler refreshHandler = new Handler();
+    // Auto-refresh runnable with interval of 5 seconds (5000 milliseconds)
+    private final Runnable refreshRunnable = new Runnable() {
         @Override
         public void run() {
-            Log.d(TAG, "Refresh Runnable triggered");
-            // Clear the list before refreshing data
+            Log.d(TAG, "Auto-refresh triggered");
+            // Clear the list before fetching fresh data
             appointments.clear();
             fetchDataFromServer();
-            // Schedule next refresh in 30 seconds (30000 milliseconds)
-            refreshHandler.postDelayed(this, 30000);
+            // Schedule next refresh in 5 seconds
+            refreshHandler.postDelayed(this, 5000);
         }
     };
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Log.d(TAG, "onCreateView called");
         View view = inflater.inflate(R.layout.fragment_request, container, false);
 
         // Retrieve doctor_id from SharedPreferences (using getInt() because it's stored as an Integer)
-        SharedPreferences prefs = getActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
+        SharedPreferences prefs = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
         doctorId = String.valueOf(prefs.getInt("doctor_id", 1)); // Default to 1 if not found
         Log.d(TAG, "Doctor ID retrieved: " + doctorId);
 
         recyclerView = view.findViewById(R.id.rv_pending_appointments);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        // Initialize the adapter with context and appointments list
+        // Initialize the adapter with the appointments list
         adapter = new aRequestAdapeter(getContext(), appointments);
         recyclerView.setAdapter(adapter);
 
@@ -81,34 +83,28 @@ public class aRequestFragment extends Fragment {
     public void onResume() {
         super.onResume();
         Log.d(TAG, "onResume called");
-        // Start periodic refresh only if the fragment is visible
-        if (getUserVisibleHint()) {
-            Log.d(TAG, "Fragment is visible. Starting refresh runnable.");
-            refreshHandler.postDelayed(refreshRunnable, 30000);
-        } else {
-            Log.d(TAG, "Fragment is not visible in onResume.");
-        }
+        // Start periodic refresh every 5 seconds when fragment is visible
+        refreshHandler.postDelayed(refreshRunnable, 5000);
     }
 
     @Override
     public void onPause() {
         super.onPause();
         Log.d(TAG, "onPause called. Removing refresh callbacks.");
-        // Stop periodic refresh when fragment is not in view
+        // Stop periodic refresh when fragment is not visible
         refreshHandler.removeCallbacks(refreshRunnable);
     }
 
-    // This method is useful if the fragment is used within a ViewPager
+    // For fragments in a ViewPager: start/stop refresh based on visibility
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
         Log.d(TAG, "setUserVisibleHint: isVisibleToUser = " + isVisibleToUser);
-        // Start refresh if the fragment becomes visible and is resumed
         if (isVisibleToUser && isResumed()) {
-            Log.d(TAG, "Fragment visible and resumed. Starting refresh runnable.");
-            refreshHandler.postDelayed(refreshRunnable, 30000);
+            Log.d(TAG, "Fragment visible and resumed in setUserVisibleHint. Starting refresh runnable.");
+            refreshHandler.postDelayed(refreshRunnable, 5000);
         } else {
-            Log.d(TAG, "Fragment not visible. Removing refresh runnable.");
+            Log.d(TAG, "Fragment not visible in setUserVisibleHint. Removing refresh runnable.");
             refreshHandler.removeCallbacks(refreshRunnable);
         }
     }
@@ -117,9 +113,10 @@ public class aRequestFragment extends Fragment {
         String url = "http://sxm.a58.mytemp.website/Doctors/getRequestappointment.php?doctor_id=" + doctorId;
         Log.d(TAG, "Fetching data from server with URL: " + url);
 
-        RequestQueue queue = Volley.newRequestQueue(getContext());
+        RequestQueue queue = Volley.newRequestQueue(requireContext());
+        @SuppressLint("NotifyDataSetChanged")
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null, response -> {
-            Log.d(TAG, "Server response: " + response.toString());
+            Log.d(TAG, "Response: " + response.toString());
             try {
                 boolean success = response.optBoolean("success", false);
                 Log.d(TAG, "Success flag in response: " + success);
@@ -131,7 +128,7 @@ public class aRequestFragment extends Fragment {
                         Log.d(TAG, "Data array length: " + dataArray.length());
                         for (int i = 0; i < dataArray.length(); i++) {
                             JSONObject appointmentObj = dataArray.getJSONObject(i);
-                            // Extract appointment details (adjust keys as per your JSON)
+                            // Extract appointment details (adjust keys as per your JSON structure)
                             String appointmentId = appointmentObj.optString("appointment_id", "0");
                             String name = appointmentObj.optString("patient_name", "N/A");
                             String problem = appointmentObj.optString("reason_for_visit", "N/A");
@@ -162,7 +159,14 @@ public class aRequestFragment extends Fragment {
         }, error -> {
             Log.e(TAG, "Error fetching data from server", error);
             Toast.makeText(getContext(), "Error fetching data from server.", Toast.LENGTH_SHORT).show();
-        });
+        }) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<>();
+                params.put("doctor_id", doctorId);
+                return params;
+            }
+        };
 
         queue.add(request);
     }
