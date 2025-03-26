@@ -10,10 +10,6 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.CheckBox;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -27,6 +23,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -37,9 +34,9 @@ public class medical_report extends AppCompatActivity {
     private static final int REQUEST_CAMERA = 1;
     private static final int REQUEST_GALLERY = 2;
 
-    private LinearLayout virtualReportForm, directUploadSection, medicationsContainer;
-    private RadioGroup radioGroupUploadType;
-    private ImageView ivReportImage;
+    private android.widget.LinearLayout virtualReportForm, directUploadSection, medicationsContainer;
+    private android.widget.RadioGroup radioGroupUploadType;
+    private android.widget.ImageView ivReportImage;
     private MaterialButton btnUploadImage, btnSaveReport, btnAddMedicine;
     private Uri selectedImageUri;
     private Bitmap selectedBitmap; // Holds the gallery image for upload
@@ -187,7 +184,6 @@ public class medical_report extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
             if (requestCode == REQUEST_CAMERA && data != null) {
-                // Image from camera is displayed but not used for upload
                 Bitmap photo = (Bitmap) data.getExtras().get("data");
                 ivReportImage.setImageBitmap(photo);
                 ivReportImage.setVisibility(View.VISIBLE);
@@ -223,17 +219,27 @@ public class medical_report extends AppCompatActivity {
         JSONObject postData = new JSONObject();
 
         try {
-            // Collect common form data
+            // Collect common form data from all EditTexts
             postData.put("appointment_id", appointmentId);
             postData.put("patient_name", etPatientName.getText().toString());
             postData.put("age", etAge.getText().toString());
             postData.put("sex", etSex.getText().toString());
+            postData.put("weight", etWeight.getText().toString());
             postData.put("patient_address", etAddress.getText().toString());
             postData.put("visit_date", etDate.getText().toString());
+            postData.put("temperature", etTemperature.getText().toString());
+            postData.put("pulse", etPulse.getText().toString());
+            postData.put("spo2", etSpo2.getText().toString());
+            postData.put("blood_pressure", etBloodPressure.getText().toString());
+            postData.put("report_type", etReportType.getText().toString());
+            postData.put("symptoms", etSymptoms.getText().toString());
+            postData.put("respiratory_system", etRespiratorySystem.getText().toString());
+
+            // Also add doctor name and signature
             postData.put("doctor_name", etSignature.getText().toString());
             postData.put("doctor_signature", etSignature.getText().toString());
 
-            // Process based on the selected option
+            // Process based on the selected option (image upload vs. virtual report)
             if (selectedRadioId == R.id.radioDirectUpload) {
                 // For Direct Upload, ensure that an image is selected
                 if (selectedImageUri == null || selectedBitmap == null) {
@@ -244,8 +250,34 @@ public class medical_report extends AppCompatActivity {
                 postData.put("report_photo", imageString);
             } else if (selectedRadioId == R.id.radioVirtualReport) {
                 // For Virtual Report, bypass image upload.
-                postData.put("report_photo", ""); // Optionally, omit or leave as empty string based on backend requirements.
+                postData.put("report_photo", "");
             }
+
+            // New: Collect medicine details from the medicationsContainer
+            // Iterate through each child view in the container
+            JSONArray medicineArray = new JSONArray();
+            int childCount = medicationsContainer.getChildCount();
+            for (int i = 0; i < childCount; i++) {
+                View child = medicationsContainer.getChildAt(i);
+                TextInputLayout medicineNameLayout = child.findViewById(R.id.medicineNameLayout);
+                TextInputLayout dosageLayout = child.findViewById(R.id.dosageLayout);
+                String medicineName = "";
+                String dosage = "";
+                if (medicineNameLayout.getEditText() != null) {
+                    medicineName = medicineNameLayout.getEditText().getText().toString().trim();
+                }
+                if (dosageLayout.getEditText() != null) {
+                    dosage = dosageLayout.getEditText().getText().toString().trim();
+                }
+                if (!medicineName.isEmpty() && !dosage.isEmpty()) {
+                    JSONObject medObject = new JSONObject();
+                    medObject.put("medicine_name", medicineName);
+                    medObject.put("dosage", dosage);
+                    medicineArray.put(medObject);
+                }
+            }
+            postData.put("medicines", medicineArray);
+
         } catch (Exception e) {
             e.printStackTrace();
             showError("Failed to collect form data.");
@@ -274,8 +306,7 @@ public class medical_report extends AppCompatActivity {
         requestQueue.add(request);
     }
 
-
-    // Helper method to convert a Bitmap to a Base64 string
+    // Helper method to convert a Bitmap to a Base64 encoded string
     private String getStringImage(Bitmap bmp) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         bmp.compress(Bitmap.CompressFormat.JPEG, 100, baos);
@@ -290,11 +321,10 @@ public class medical_report extends AppCompatActivity {
     private void showSuccess(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
 
-        // Set result to return to fragment
         Intent resultIntent = new Intent();
         resultIntent.putExtra("report_submitted", true);
         resultIntent.putExtra("appointment_id", appointmentId);
         setResult(RESULT_OK, resultIntent);
-        finish(); // Go back to fragment
+        finish();
     }
 }

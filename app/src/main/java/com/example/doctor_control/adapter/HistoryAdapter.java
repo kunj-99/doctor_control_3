@@ -11,14 +11,19 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.doctor_control.HistoryItem;
 import com.example.doctor_control.PatientProfileActivity;
 import com.example.doctor_control.R;
+import com.example.doctor_control.view_patient_report;
+
 import java.util.List;
 
 public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHolder> {
 
     private List<HistoryItem> historyItems;
+    private List<String> appointmentIds; // New list for appointment IDs
 
-    public HistoryAdapter(List<HistoryItem> historyItems) {
+    // Updated constructor to accept both lists
+    public HistoryAdapter(List<HistoryItem> historyItems, List<String> appointmentIds) {
         this.historyItems = historyItems;
+        this.appointmentIds = appointmentIds;
     }
 
     @NonNull
@@ -50,15 +55,28 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
                 holder.buttonContainer.setVisibility(View.VISIBLE);
                 holder.buttonContainer.animate().alpha(1.0f).setDuration(200);
             } else {
-                holder.buttonContainer.animate().alpha(0.0f).setDuration(200).withEndAction(() ->
-                        holder.buttonContainer.setVisibility(View.GONE));
+                holder.buttonContainer.animate().alpha(0.0f).setDuration(200)
+                        .withEndAction(() -> holder.buttonContainer.setVisibility(View.GONE));
             }
         });
 
-        // Pass the patient_id to the PatientProfileActivity via intent extras
+        // Example: Passing patient_id to PatientProfileActivity
         holder.btnViewProfile.setOnClickListener(v -> {
             Intent intent = new Intent(v.getContext(), PatientProfileActivity.class);
             intent.putExtra("patient_id", item.getPatientId());
+            v.getContext().startActivity(intent);
+        });
+
+        // Pass the appointment ID from the separate list to activities
+        holder.btnViewBill.setOnClickListener(v -> {
+//            Intent intent = new Intent(v.getContext(), PatientProfileActivity.class);
+//            intent.putExtra("appointment_id", appointmentIds.get(position));
+//            v.getContext().startActivity(intent);
+        });
+
+        holder.btnViewReport.setOnClickListener(v -> {
+            Intent intent = new Intent(v.getContext(), view_patient_report.class);
+            intent.putExtra("appointment_id", appointmentIds.get(position));
             v.getContext().startActivity(intent);
         });
     }
@@ -73,7 +91,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
         public Button btnViewBill, btnViewReport, btnViewProfile;
         public View buttonContainer;
 
-        public ViewHolder(View itemView) {
+        public ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvPatientName = itemView.findViewById(R.id.tv_patient_name);
             tvAppointmentDate = itemView.findViewById(R.id.tv_appointment_date);

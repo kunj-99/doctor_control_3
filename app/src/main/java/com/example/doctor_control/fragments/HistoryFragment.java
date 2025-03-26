@@ -16,8 +16,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.doctor_control.R;
@@ -35,22 +33,23 @@ public class HistoryFragment extends Fragment {
     private static final String TAG = "HistoryFragment";
     private RecyclerView rvHistory;
     private HistoryAdapter historyAdapter;
+    // List of HistoryItem objects (assumed to include all appointment details)
     private final ArrayList<HistoryItem> historyItems = new ArrayList<>();
+    // Separate list to hold appointment IDs
+    private final ArrayList<String> appointmentIds = new ArrayList<>();
     private RequestQueue requestQueue;
 
     // Updated URL with doctor_id parameter
     private static final String BASE_URL = "http://sxm.a58.mytemp.website/Doctors/gethistory.php?doctor_id=";
-
-    // Handler for periodic refresh (every 5 seconds)
     private final Handler refreshHandler = new Handler();
+    // Auto-refresh every 5 seconds (5000 ms)
     private final Runnable refreshRunnable = new Runnable() {
         @Override
         public void run() {
             Log.d(TAG, "Auto-refresh triggered");
-            // Clear existing items and fetch fresh data
             historyItems.clear();
+            appointmentIds.clear();
             fetchHistoryData(getDoctorId());
-            // Schedule next refresh in 5 seconds (5000 ms)
             refreshHandler.postDelayed(this, 5000);
         }
     };
@@ -58,20 +57,18 @@ public class HistoryFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_history, container, false);
 
-        // Initialize RecyclerView and list
         rvHistory = view.findViewById(R.id.rv_history);
         rvHistory.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        // Clear lists and initialize adapter with both history items and appointment IDs
         historyItems.clear();
-        historyAdapter = new HistoryAdapter(historyItems);
+        appointmentIds.clear();
+        historyAdapter = new HistoryAdapter(historyItems, appointmentIds);
         rvHistory.setAdapter(historyAdapter);
 
-        // Initialize Volley request queue
         requestQueue = Volley.newRequestQueue(getContext());
-
-        // Fetch history data using the doctor_id from SharedPreferences
         fetchHistoryData(getDoctorId());
 
         return view;
@@ -93,41 +90,45 @@ public class HistoryFragment extends Fragment {
                 Request.Method.GET,
                 url,
                 null,
-                new Response.Listener<JSONArray>() {
-                    @Override
-                    public void onResponse(JSONArray response) {
-                        Log.d(TAG, "Received response with length: " + response.length());
-                        try {
-                            // Parse JSON and add items to historyItems list
-                            for (int i = 0; i < response.length(); i++) {
-                                JSONObject object = response.getJSONObject(i);
+                response -> {
+                    Log.d(TAG, "Received response with length: " + response.length());
+                    try {
+                        // Clear current lists before adding new data
+                        historyItems.clear();
+                        appointmentIds.clear();
 
-                                // Extract values from JSON (adjust keys as needed)
-                                String patientName = object.getString("patient_name");
-                                String appointmentDate = object.getString("appointment_date");
-                                String symptoms = object.getString("reason_for_visit");
-                                // Use optBoolean to handle missing "flag"
-                                boolean flag = object.optBoolean("flag", false);
-                                String patientId = object.getString("patient_id");
+                        for (int i = 0; i < response.length(); i++) {
+                            JSONObject object = response.getJSONObject(i);
 
-                                HistoryItem item = new HistoryItem(patientName, appointmentDate, symptoms, flag, patientId);
-                                historyItems.add(item);
-                                Log.d(TAG, "Added history item: " + patientName);
-                            }
-                            historyAdapter.notifyDataSetChanged();
-                            Log.d(TAG, "History adapter notified. Total items: " + historyItems.size());
-                        } catch (JSONException e) {
-                            Log.e(TAG, "Error parsing JSON response", e);
-                            Toast.makeText(getContext(), "No appointments found.", Toast.LENGTH_SHORT).show();
+                            // Extract appointment ID and add it to the separate list
+                            String apptId = object.getString("appointment_id");
+                            appointmentIds.add(apptId);
+
+                            // Extract other values from JSON
+                            String patientName = object.getString("patient_name");
+                            String appointmentDate = object.getString("appointment_date");
+                            String symptoms = object.getString("reason_for_visit");
+                            boolean flag = object.optBoolean("flag", false);
+                            String patientId = object.getString("patient_id");
+
+                            // Create a HistoryItem including the appointment ID as the last parameter.
+                            HistoryItem item = new HistoryItem(patientName, appointmentDate, symptoms, flag, patientId, apptId);
+                            historyItems.add(item);
+                            Log.d(TAG, "Added history item: " + patientName + ", appointmentId: " + apptId);
                         }
+                        historyAdapter.notifyDataSetChanged();
+                        Log.d(TAG, "History adapter notified. Total items: " + historyItems.size());
+                        if (historyItems.isEmpty()) {
+                            Toast.makeText(getContext(), "No pending appointments found.", Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (JSONException e) {
+                        Log.e(TAG, "Error parsing JSON response", e);
+                        Toast.makeText(getContext(), "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 },
-                new Response.ErrorListener(){
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        Log.e(TAG, "Volley error in fetching history data", error);
-                        Toast.makeText(getContext(), "Error fetching data from server.", Toast.LENGTH_SHORT).show();
-                    }
+                error -> {
+                    Log.e(TAG, "Volley error in fetching history data", error);
+                    Toast.makeText(getContext(), "Error fetching data from server.", Toast.LENGTH_SHORT).show();
                 }
         );
         requestQueue.add(jsonArrayRequest);

@@ -15,8 +15,10 @@
         android:theme="@style/Theme.Doctor_control"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
+        <activity
+            android:name=".view_patient_report"
+            android:exported="false" />
         <activity android:name=".PatientProfileActivity" />
-
         <activity
             android:name=".otp_verification"
             android:exported="false" />
@@ -31,9 +33,7 @@
         </activity>
         <activity
             android:name=".MainActivity"
-            android:exported="true">
-
-        </activity>
+            android:exported="true"></activity>
         <activity android:name=".medical_report" />
     </application>
 
