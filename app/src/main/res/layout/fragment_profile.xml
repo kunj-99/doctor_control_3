@@ -154,24 +154,6 @@
                     android:paddingLeft="15dp"
                     android:background="@drawable/bg_edit_text" />
 
-                <!-- Consultation Fee -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Consultation Fee"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:layout_marginTop="16dp" />
-
-                <EditText
-                    android:id="@+id/et_consultation_fee"
-                    android:layout_width="match_parent"
-                    android:layout_height="45dp"
-                    android:hint="e.g. 500.00"
-                    android:paddingLeft="15dp"
-                    android:inputType="numberDecimal"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/bg_edit_text" />
 
                 <!-- Availability Schedule -->
                 <TextView
@@ -190,25 +172,6 @@
                     android:hint="e.g. Mon - Fri, 10am - 5pm"
                     android:inputType="text"
                     android:paddingLeft="15dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/bg_edit_text" />
-
-                <!-- Location -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Location"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:layout_marginTop="16dp" />
-
-                <EditText
-                    android:id="@+id/et_location"
-                    android:layout_width="match_parent"
-                    android:layout_height="45dp"
-                    android:paddingLeft="15dp"
-                    android:hint="Enter location"
-                    android:inputType="textMultiLine"
                     android:layout_marginTop="4dp"
                     android:background="@drawable/bg_edit_text" />
 
