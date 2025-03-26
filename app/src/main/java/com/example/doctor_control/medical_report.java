@@ -216,17 +216,14 @@ public class medical_report extends AppCompatActivity {
     }
 
     private void saveReport() {
-        // Removed all validations; proceed only if a gallery image is selected.
-        if (selectedImageUri == null || selectedBitmap == null) {
-            showError("Please select an image from gallery.");
-            return;
-        }
+        // Determine which radio button is selected
+        int selectedRadioId = radioGroupUploadType.getCheckedRadioButtonId();
 
         String url = "http://sxm.a58.mytemp.website/Doctors/insert_medical_report.php";
-
         JSONObject postData = new JSONObject();
+
         try {
-            // Only minimal data is uploaded as per new requirements
+            // Collect common form data
             postData.put("appointment_id", appointmentId);
             postData.put("patient_name", etPatientName.getText().toString());
             postData.put("age", etAge.getText().toString());
@@ -235,21 +232,32 @@ public class medical_report extends AppCompatActivity {
             postData.put("visit_date", etDate.getText().toString());
             postData.put("doctor_name", etSignature.getText().toString());
             postData.put("doctor_signature", etSignature.getText().toString());
-            // Convert the selected gallery image to Base64 and add it to the payload
-            String imageString = getStringImage(selectedBitmap);
-            postData.put("report_photo", imageString);
+
+            // Process based on the selected option
+            if (selectedRadioId == R.id.radioDirectUpload) {
+                // For Direct Upload, ensure that an image is selected
+                if (selectedImageUri == null || selectedBitmap == null) {
+                    showError("Please select an image from gallery.");
+                    return;
+                }
+                String imageString = getStringImage(selectedBitmap);
+                postData.put("report_photo", imageString);
+            } else if (selectedRadioId == R.id.radioVirtualReport) {
+                // For Virtual Report, bypass image upload.
+                postData.put("report_photo", ""); // Optionally, omit or leave as empty string based on backend requirements.
+            }
         } catch (Exception e) {
             e.printStackTrace();
             showError("Failed to collect form data.");
             return;
         }
 
+        // Create the JSON request to send the report
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, url, postData,
                 response -> {
                     boolean success = response.optBoolean("success", false);
                     if (success) {
                         showSuccess("Report saved successfully.");
-
                         Intent resultIntent = new Intent();
                         resultIntent.putExtra("report_submitted", true);
                         resultIntent.putExtra("appointment_id", appointmentId);
@@ -266,6 +274,7 @@ public class medical_report extends AppCompatActivity {
 
         requestQueue.add(request);
     }
+
 
     // Helper method to convert a Bitmap to a Base64 string
     private String getStringImage(Bitmap bmp) {
