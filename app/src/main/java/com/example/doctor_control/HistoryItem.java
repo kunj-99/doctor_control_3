@@ -5,17 +5,18 @@ public class HistoryItem {
     private String appointmentDate;
     private String problem;
     private boolean paymentReceived;
-    private String patientId; // Added field
+    private String patientId;
+    private String appointmentId; // New field for appointment ID
 
-    public HistoryItem(String patientName, String appointmentDate, String problem, boolean paymentReceived, String patientId) {
+    public HistoryItem(String patientName, String appointmentDate, String problem, boolean paymentReceived, String patientId, String appointmentId) {
         this.patientName = patientName;
         this.appointmentDate = appointmentDate;
         this.problem = problem;
         this.paymentReceived = paymentReceived;
         this.patientId = patientId;
+        this.appointmentId = appointmentId;
     }
 
-    // Existing getters
     public String getPatientName() {
         return patientName;
     }
@@ -32,8 +33,11 @@ public class HistoryItem {
         return paymentReceived;
     }
 
-    // New getter for patientId
     public String getPatientId() {
         return patientId;
+    }
+
+    public String getAppointmentId() {
+        return appointmentId;
     }
 }
