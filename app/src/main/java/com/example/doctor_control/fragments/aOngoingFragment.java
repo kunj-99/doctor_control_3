@@ -47,7 +47,7 @@ public class aOngoingFragment extends Fragment {
 
     private RecyclerView recyclerView;
     private aOngoingAdapter adapter;
-    private ArrayList<String> patientNames, problems, distances, appointmentIds;
+    private ArrayList<String> patientNames, problems, distances, appointmentIds, mapLinks;
     private ArrayList<Boolean> hasReport;
     private String doctorId;
 
@@ -77,6 +77,7 @@ public class aOngoingFragment extends Fragment {
         distances = new ArrayList<>();
         appointmentIds = new ArrayList<>();
         hasReport = new ArrayList<>();
+        mapLinks = new ArrayList<>();
 
         reportLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
             if (result.getResultCode() == getActivity().RESULT_OK && result.getData() != null) {
@@ -94,17 +95,18 @@ public class aOngoingFragment extends Fragment {
                     Log.d("LiveLocationManager", "Stopped tracking for completed appointment: " + apptId);
                 }
 
+                // ✅ Update local data and notify adapter
                 int index = appointmentIds.indexOf(apptId);
                 if (index != -1) {
                     hasReport.set(index, true);
-                    adapter.notifyItemChanged(index);
+                    adapter.notifyItemChanged(index); // UI refresh
                 }
             }
         });
+
+        // Debug logs
         String logs = LiveLocationManager.getInstance().getLocationLogs(getContext());
         Log.d("TrackingHistory", logs);
-
-
 
         SharedPreferences prefs = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
         int id = prefs.getInt("doctor_id", -1);
@@ -170,9 +172,17 @@ public class aOngoingFragment extends Fragment {
                         JSONObject root = new JSONObject(response);
                         if (!root.getBoolean("success")) return;
                         JSONArray arr = root.getJSONArray("appointments");
-                        patientNames.clear(); problems.clear(); distances.clear(); appointmentIds.clear(); hasReport.clear();
+
+                        patientNames.clear();
+                        problems.clear();
+                        distances.clear();
+                        appointmentIds.clear();
+                        hasReport.clear();
+                        mapLinks.clear(); // ✅ clear old map links
+
                         SharedPreferences prefs = requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
                         HashSet<String> completedSet = new HashSet<>(prefs.getStringSet("completed_reports", new HashSet<>()));
+
                         for (int i = 0; i < arr.length(); i++) {
                             JSONObject obj = arr.getJSONObject(i);
                             String apptId = obj.getString("appointment_id");
@@ -180,6 +190,7 @@ public class aOngoingFragment extends Fragment {
                             patientNames.add(obj.getString("patient_name"));
                             problems.add(obj.getString("reason_for_visit"));
                             distances.add(obj.getString("time_slot"));
+                            mapLinks.add(obj.getString("patient_map_link")); // ✅ extract map link
                             hasReport.add(completedSet.contains(apptId));
 
                             // ✅ Save first ongoing appointment ID and start location manager
@@ -191,10 +202,13 @@ public class aOngoingFragment extends Fragment {
                                 LiveLocationManager.getInstance().startLocationUpdates(requireContext().getApplicationContext());
                             }
                         }
+
                         if (adapter == null) {
-                            adapter = new aOngoingAdapter(getContext(), appointmentIds, patientNames, problems, distances, hasReport, reportLauncher);
+                            adapter = new aOngoingAdapter(getContext(), appointmentIds, patientNames, problems, distances, hasReport, mapLinks, reportLauncher);
                             recyclerView.setAdapter(adapter);
-                        } else adapter.notifyDataSetChanged();
+                        } else {
+                            adapter.notifyDataSetChanged(); // ✅ full UI update
+                        }
                     } catch (JSONException e) {
                         Log.e(TAG, "Parse error", e);
                     }
@@ -224,7 +238,6 @@ public class aOngoingFragment extends Fragment {
                 params.put("appointment_id", appointmentId);
                 params.put("latitude", String.valueOf(lat));
                 params.put("longitude", String.valueOf(lon));
-
                 Log.d("LiveLocationSend", "Sending to server: " + params);
                 return params;
             }

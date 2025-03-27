@@ -23,6 +23,7 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.doctor_control.R;
 import com.example.doctor_control.medical_report;
+import com.example.doctor_control.track_patient_location; // 🔄 Make sure this exists
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -37,6 +38,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     private final ArrayList<String> problems;
     private final ArrayList<String> timeSlots;
     private final ArrayList<Boolean> hasReport;
+    private final ArrayList<String> mapLinks; // ✅ New list for map links
     private final ActivityResultLauncher<Intent> launcher;
 
     public aOngoingAdapter(Context context,
@@ -45,6 +47,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                            ArrayList<String> problems,
                            ArrayList<String> timeSlots,
                            ArrayList<Boolean> hasReport,
+                           ArrayList<String> mapLinks, // ✅ Accept in constructor
                            ActivityResultLauncher<Intent> launcher) {
         this.context = context;
         this.appointmentIds = appointmentIds;
@@ -52,6 +55,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         this.problems = problems;
         this.timeSlots = timeSlots;
         this.hasReport = hasReport;
+        this.mapLinks = mapLinks; // ✅ Store for use
         this.launcher = launcher;
     }
 
@@ -71,7 +75,6 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
 
         boolean reportSubmitted = hasReport.get(position);
 
-        // Enable or disable the "Complete" button based on the reportSubmitted flag.
         if (reportSubmitted) {
             holder.btnComplete.setEnabled(true);
             holder.btnComplete.setBackgroundColor(ContextCompat.getColor(context, R.color.primaryColor));
@@ -82,20 +85,25 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             holder.btnComplete.setTextColor(ContextCompat.getColor(context, R.color.gray));
         }
 
+        // ✅ TRACK button click: launch tracking activity with map link
         holder.btnTrack.setOnClickListener(v -> {
-            // Optional: Add tracking functionality if needed.
+            String mapLink = mapLinks.get(position);
+            if (mapLink != null && !mapLink.isEmpty()) {
+                Intent intent = new Intent(context, track_patient_location.class); // 🔄 Create this activity
+                intent.putExtra("map_link", mapLink);
+                context.startActivity(intent);
+            } else {
+                Toast.makeText(context, "Map link not available", Toast.LENGTH_SHORT).show();
+            }
         });
 
-        // When "View" is clicked, launch the medical_report activity.
         holder.btnView.setOnClickListener(v -> {
             Intent intent = new Intent(context, medical_report.class);
             intent.putExtra("appointment_id", appointmentIds.get(position));
-            launcher.launch(intent); // Using ActivityResultLauncher to receive result.
+            launcher.launch(intent);
         });
 
-        // When "Complete" button is clicked, update status to Completed.
         holder.btnComplete.setOnClickListener(v -> {
-            // Only allow update if the button is enabled.
             if (holder.btnComplete.isEnabled()) {
                 updateAppointmentStatus(appointmentIds.get(position), position);
             }
@@ -107,9 +115,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         return appointmentIds.size();
     }
 
-    // Helper method to update appointment status via Volley.
     private void updateAppointmentStatus(String appointmentId, int position) {
-        String url = "http://sxm.a58.mytemp.website/Doctors/update_appointment_status.php"; // adjust URL if needed
+        String url = "http://sxm.a58.mytemp.website/Doctors/update_appointment_status.php";
         JSONObject payload = new JSONObject();
         try {
             payload.put("appointment_id", appointmentId);
@@ -125,9 +132,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                     boolean success = response.optBoolean("success", false);
                     if (success) {
                         Toast.makeText(context, "Appointment marked as Completed", Toast.LENGTH_SHORT).show();
-                        // Optionally, update the UI if needed.
                         hasReport.set(position, true);
-                        notifyItemChanged(position);
+                        notifyItemChanged(position); // ✅ Refresh UI
                     } else {
                         Toast.makeText(context, "Failed to update status", Toast.LENGTH_SHORT).show();
                     }
@@ -136,6 +142,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                     error.printStackTrace();
                     Toast.makeText(context, "Network error while updating status", Toast.LENGTH_SHORT).show();
                 });
+
         RequestQueue queue = Volley.newRequestQueue(context);
         queue.add(request);
     }
