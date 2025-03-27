@@ -2,6 +2,7 @@ package com.example.doctor_control.fragments;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
@@ -25,6 +26,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.example.doctor_control.BackgroundService;
 import com.example.doctor_control.R;
 
 import org.json.JSONException;
@@ -88,29 +90,34 @@ public class home extends Fragment {
         if (!doctorId.isEmpty() && statusToggle != null && statusText != null && statusIcon != null) {
             fetchDoctorStatus(statusText, statusToggle, statusIcon);
         }
+
+        // Start the service to keep the doctor active
+        Intent serviceIntent = new Intent(getContext(), BackgroundService.class);
+        getContext().startService(serviceIntent);
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Stop the service when the fragment is destroyed
+        Intent serviceIntent = new Intent(getContext(), BackgroundService.class);
+        getContext().stopService(serviceIntent);
+    }
 
-    private void attachStatusToggleListener(final Switch statusToggle, final TextView statusText, final ImageView statusIcon) {
+    private void attachStatusToggleListener(@NonNull final Switch statusToggle, final TextView statusText, final ImageView statusIcon) {
         statusToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @SuppressLint("SetTextI18n")
             @Override
             public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
-                // Immediately update the text to show that update is in progress
                 statusText.setText("Updating status...");
-                // Disable the toggle while the update is in progress
                 statusToggle.setEnabled(false);
-
-                // Optional: simulate a loader delay before updating the status
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        updateDoctorStatus(isChecked, statusText, statusToggle, statusIcon);
-                    }
-                }, 500); // 500ms delay; adjust as needed
+                new Handler().postDelayed(() -> updateDoctorStatus(isChecked, statusText, statusToggle, statusIcon), 500);
             }
         });
     }
+
+
+
 
     /**
      * This method sends a request to update the doctor's status.
@@ -351,5 +358,6 @@ public class home extends Fragment {
 
         RequestQueue requestQueue = Volley.newRequestQueue(getContext());
         requestQueue.add(stringRequest);
+
     }
 }

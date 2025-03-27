@@ -18,6 +18,7 @@
         android:theme="@style/Theme.Doctor_control"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
+        <service android:name=".BackgroundService" />
         <activity
             android:name=".view_patient_report"
             android:exported="false" />
