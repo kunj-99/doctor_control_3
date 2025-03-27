@@ -43,6 +43,8 @@ dependencies {
 
     implementation ("com.android.volley:volley:1.2.1")
     implementation ("com.github.bumptech.glide:glide:4.15.1")
+    implementation ("com.google.android.gms:play-services-location:21.0.1")
+
 
     implementation ("androidx.cardview:cardview:1.0.0")
 }
