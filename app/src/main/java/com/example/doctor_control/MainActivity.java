@@ -1,6 +1,7 @@
 package com.example.doctor_control;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 
 import androidx.activity.EdgeToEdge;
@@ -31,6 +32,9 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+        String logs = LiveLocationManager.getInstance().getLocationLogs(getApplicationContext());
+        Log.d("TrackingHistory", logs);
+
 
         // Initialize ViewPager2 and set its adapter
         viewPager = findViewById(R.id.view_pager);

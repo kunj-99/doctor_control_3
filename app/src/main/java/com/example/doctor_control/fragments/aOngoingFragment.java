@@ -28,11 +28,8 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.doctor_control.R;
 import com.example.doctor_control.adapter.aOngoingAdapter;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
+import com.example.doctor_control.LiveLocationManager;
+import com.google.android.gms.location.*;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -88,6 +85,15 @@ public class aOngoingFragment extends Fragment {
                 HashSet<String> completedSet = new HashSet<>(prefs.getStringSet("completed_reports", new HashSet<>()));
                 completedSet.add(apptId);
                 prefs.edit().putStringSet("completed_reports", completedSet).apply();
+
+                // ✅ STOP LOCATION IF APPOINTMENT COMPLETED
+                String ongoingId = prefs.getString("ongoing_appointment_id", null);
+                if (ongoingId != null && ongoingId.equals(apptId)) {
+                    prefs.edit().remove("ongoing_appointment_id").apply();
+                    LiveLocationManager.getInstance().stopLocationUpdates(requireContext());
+                    Log.d("LiveLocationManager", "Stopped tracking for completed appointment: " + apptId);
+                }
+
                 int index = appointmentIds.indexOf(apptId);
                 if (index != -1) {
                     hasReport.set(index, true);
@@ -95,6 +101,10 @@ public class aOngoingFragment extends Fragment {
                 }
             }
         });
+        String logs = LiveLocationManager.getInstance().getLocationLogs(getContext());
+        Log.d("TrackingHistory", logs);
+
+
 
         SharedPreferences prefs = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
         int id = prefs.getInt("doctor_id", -1);
@@ -165,11 +175,21 @@ public class aOngoingFragment extends Fragment {
                         HashSet<String> completedSet = new HashSet<>(prefs.getStringSet("completed_reports", new HashSet<>()));
                         for (int i = 0; i < arr.length(); i++) {
                             JSONObject obj = arr.getJSONObject(i);
-                            appointmentIds.add(obj.getString("appointment_id"));
+                            String apptId = obj.getString("appointment_id");
+                            appointmentIds.add(apptId);
                             patientNames.add(obj.getString("patient_name"));
                             problems.add(obj.getString("reason_for_visit"));
                             distances.add(obj.getString("time_slot"));
-                            hasReport.add(completedSet.contains(obj.getString("appointment_id")));
+                            hasReport.add(completedSet.contains(apptId));
+
+                            // ✅ Save first ongoing appointment ID and start location manager
+                            if (i == 0) {
+                                SharedPreferences.Editor editor = prefs.edit();
+                                editor.putString("ongoing_appointment_id", apptId);
+                                editor.apply();
+
+                                LiveLocationManager.getInstance().startLocationUpdates(requireContext().getApplicationContext());
+                            }
                         }
                         if (adapter == null) {
                             adapter = new aOngoingAdapter(getContext(), appointmentIds, patientNames, problems, distances, hasReport, reportLauncher);
