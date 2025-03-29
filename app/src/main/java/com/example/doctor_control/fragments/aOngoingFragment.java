@@ -1,6 +1,7 @@
 package com.example.doctor_control.fragments;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -16,6 +17,7 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -105,7 +107,7 @@ public class aOngoingFragment extends Fragment {
         });
 
         // Debug logs
-        String logs = LiveLocationManager.getInstance().getLocationLogs(getContext());
+        String logs = LiveLocationManager.getInstance().getLocationLogs(requireContext());
         Log.d("TrackingHistory", logs);
 
         SharedPreferences prefs = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
@@ -120,8 +122,8 @@ public class aOngoingFragment extends Fragment {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireContext());
         locationCallback = new LocationCallback() {
             @Override
-            public void onLocationResult(LocationResult result) {
-                if (result != null && !appointmentIds.isEmpty()) {
+            public void onLocationResult(@NonNull LocationResult result) {
+                if (!appointmentIds.isEmpty()) {
                     double lat = result.getLastLocation().getLatitude();
                     double lon = result.getLastLocation().getLongitude();
                     Log.d("LiveLocationCheck", "Location: " + lat + ", " + lon);
@@ -140,9 +142,9 @@ public class aOngoingFragment extends Fragment {
         super.onResume();
         refreshHandler.postDelayed(refreshRunnable, 5000);
 
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
         }
 
         LocationRequest locationRequest = LocationRequest.create()
@@ -166,7 +168,7 @@ public class aOngoingFragment extends Fragment {
     private void fetchAppointmentsData(String doctorId) {
         String url = "http://sxm.a58.mytemp.website/Doctors/getOngoingAppointment.php";
         RequestQueue queue = Volley.newRequestQueue(requireContext());
-        StringRequest request = new StringRequest(Request.Method.POST, url,
+        @SuppressLint("NotifyDataSetChanged") StringRequest request = new StringRequest(Request.Method.POST, url,
                 response -> {
                     try {
                         JSONObject root = new JSONObject(response);
