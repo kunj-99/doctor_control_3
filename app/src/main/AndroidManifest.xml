@@ -62,4 +62,9 @@
             tools:ignore="ForegroundServicePermission" />
     </application>
 
+    <meta-data
+        android:name="com.google.android.geo.API_KEY"
+        android:value="AIzaSyCkUxQSJ1jNt0q_CcugieFl5vezsNAUxe0"/>
+
+
 </manifest>

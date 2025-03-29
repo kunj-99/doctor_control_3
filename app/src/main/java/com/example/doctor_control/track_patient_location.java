@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.doctor_control.R;
@@ -42,20 +43,25 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final String TAG = "TrackPatientLocation";
     // Replace with your actual Google Directions API key.
-    private static final String API_KEY = "YOUR_ACTUAL_API_KEY";
+    private static final String API_KEY = "AIzaSyCkUxQSJ1jNt0q_CcugieFl5vezsNAUxe0";
 
     private MapView mapView;
     private GoogleMap gMap;
     private FusedLocationProviderClient fusedLocationClient;
     private LatLng currentLocation;
     private LatLng destinationLocation;
+    private TextView tvDistance, tvDuration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_track_patient_location);
 
-        // Initialize FusedLocationProviderClient for current location.
+        // Initialize TextViews.
+        tvDistance = findViewById(R.id.tvDistance);
+        tvDuration = findViewById(R.id.tvDuration);
+
+        // Initialize FusedLocationProviderClient.
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         // Initialize MapView.
@@ -107,9 +113,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         }
     }
 
-    /**
-     * Fetch the current location using FusedLocationProviderClient.
-     */
     private void fetchCurrentLocation() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -128,9 +131,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         });
     }
 
-    /**
-     * Called when the MapView is ready.
-     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
         gMap = googleMap;
@@ -144,10 +144,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         }
     }
 
-    /**
-     * Update the map: add markers for current location and destination,
-     * then fetch and draw the route.
-     */
     private void updateMap() {
         // Clear existing markers.
         gMap.clear();
@@ -176,9 +172,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         }
     }
 
-    /**
-     * Build the Google Directions API URL.
-     */
     private String getDirectionsUrl(LatLng origin, LatLng dest) {
         String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
         String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
@@ -189,9 +182,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         return "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
     }
 
-    /**
-     * AsyncTask to download route data from the Google Directions API.
-     */
     private class FetchRouteTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... url) {
@@ -202,20 +192,36 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                 return null;
             }
         }
+
         @Override
         protected void onPostExecute(String result) {
             Log.d(TAG, "Directions JSON response: " + result);
             if (result != null) {
+                // Parse JSON for distance and duration.
+                try {
+                    JSONObject jsonObject = new JSONObject(result);
+                    JSONArray routes = jsonObject.getJSONArray("routes");
+                    if (routes.length() > 0) {
+                        JSONObject firstRoute = routes.getJSONObject(0);
+                        JSONArray legs = firstRoute.getJSONArray("legs");
+                        if (legs.length() > 0) {
+                            JSONObject firstLeg = legs.getJSONObject(0);
+                            String distanceText = firstLeg.getJSONObject("distance").getString("text");
+                            String durationText = firstLeg.getJSONObject("duration").getString("text");
+                            tvDistance.setText("Distance: " + distanceText);
+                            tvDuration.setText("Duration: " + durationText);
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error parsing route info: " + e.toString());
+                }
+                // Continue to parse and draw the route polyline.
                 new ParserTask().execute(result);
             } else {
                 Toast.makeText(track_patient_location.this, "Failed to retrieve route", Toast.LENGTH_SHORT).show();
             }
         }
     }
-
-    /**
-     * Download data from a URL.
-     */
     private String downloadUrl(String strUrl) throws Exception {
         String data = "";
         InputStream iStream = null;
@@ -257,6 +263,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                 return null;
             }
         }
+
         @Override
         protected void onPostExecute(List<List<LatLng>> result) {
             if (result == null || result.isEmpty()) {
@@ -391,14 +398,8 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 fetchCurrentLocation();
                 if (gMap != null) {
-                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                        // TODO: Consider calling
-                        //    ActivityCompat#requestPermissions
-                        // here to request the missing permissions, and then overriding
-                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                        //                                          int[] grantResults)
-                        // to handle the case where the user grants the permission. See the documentation
-                        // for ActivityCompat#requestPermissions for more details.
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                         return;
                     }
                     gMap.setMyLocationEnabled(true);
