@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -14,9 +15,12 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.Manifest;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.android.volley.AuthFailureError;
@@ -37,6 +41,9 @@ import java.util.Map;
 
 public class home extends Fragment {
 
+    // Define a constant for the location permission request code.
+    private static final int REQUEST_LOCATION_PERMISSION = 1;
+
     private SharedPreferences doctorPrefs;
     // Doctor ID is stored in "DoctorPrefs"
     private String doctorId;
@@ -53,6 +60,14 @@ public class home extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         doctorPrefs = getActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
+
+        // Check for location permission. Make sure to use requireContext() or getContext() instead of 'this'.
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(requireActivity(),
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    REQUEST_LOCATION_PERMISSION);
+        }
 
         // Log all SharedPreferences key/value pairs for debugging
         for (Map.Entry<String, ?> entry : doctorPrefs.getAll().entrySet()) {
@@ -115,9 +130,6 @@ public class home extends Fragment {
             }
         });
     }
-
-
-
 
     /**
      * This method sends a request to update the doctor's status.
@@ -358,6 +370,5 @@ public class home extends Fragment {
 
         RequestQueue requestQueue = Volley.newRequestQueue(getContext());
         requestQueue.add(stringRequest);
-
     }
 }

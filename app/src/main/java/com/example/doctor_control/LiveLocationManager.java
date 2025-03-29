@@ -89,7 +89,7 @@ public class LiveLocationManager {
         Log.d(TAG, "[LOG] Location logs cleared.");
     }
 
-    // 🔥 Embedded Foreground Service
+    // Updated Embedded Foreground Service with additional permission check for FOREGROUND_SERVICE_LOCATION.
     public static class LocationForegroundService extends Service {
 
         private FusedLocationProviderClient locationClient;
@@ -145,12 +145,24 @@ public class LiveLocationManager {
                 }
             };
 
+            // Check for ACCESS_FINE_LOCATION permission
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                     == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+
+                // For Android S (API level 31) and above, also check for FOREGROUND_SERVICE_LOCATION permission.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                        ContextCompat.checkSelfPermission(this, "android.permission.FOREGROUND_SERVICE_LOCATION")
+                                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    Log.w(TAG, "[SERVICE] Foreground service location permission not granted.");
+                    stopSelf();
+                    return;
+                }
+
                 locationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper());
                 Log.d(TAG, "[SERVICE] Location updates started.");
             } else {
-                Log.w(TAG, "[SERVICE] Location permission not granted.");
+                Log.w(TAG, "[SERVICE] ACCESS_FINE_LOCATION permission not granted.");
+                stopSelf();
             }
         }
 
