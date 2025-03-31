@@ -1,10 +1,12 @@
 package com.example.doctor_control.fragments;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -16,6 +18,7 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -29,7 +32,12 @@ import com.android.volley.toolbox.Volley;
 import com.example.doctor_control.R;
 import com.example.doctor_control.adapter.aOngoingAdapter;
 import com.example.doctor_control.LiveLocationManager;
-import com.google.android.gms.location.*;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -44,6 +52,7 @@ public class aOngoingFragment extends Fragment {
 
     private static final String TAG = "aOngoingFragment";
     private static final String LIVE_LOCATION_URL = "http://sxm.a58.mytemp.website/update_live_location.php";
+    private static final int REFRESH_INTERVAL = 5000; // 5 seconds
 
     private RecyclerView recyclerView;
     private aOngoingAdapter adapter;
@@ -54,15 +63,11 @@ public class aOngoingFragment extends Fragment {
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
 
+    // Handler and Runnable for auto-refresh
     private final Handler refreshHandler = new Handler(Looper.getMainLooper());
-    private final Runnable refreshRunnable = new Runnable() {
-        @Override
-        public void run() {
-            Log.d(TAG, "Auto-refresh triggered");
-            fetchAppointmentsData(doctorId);
-            refreshHandler.postDelayed(this, 5000);
-        }
-    };
+    private Runnable refreshRunnable;
+    private double doctorLat, doctorLon;
+
 
     private ActivityResultLauncher<Intent> reportLauncher;
 
@@ -87,7 +92,7 @@ public class aOngoingFragment extends Fragment {
                 completedSet.add(apptId);
                 prefs.edit().putStringSet("completed_reports", completedSet).apply();
 
-                // ✅ STOP LOCATION IF APPOINTMENT COMPLETED
+                // STOP LOCATION IF APPOINTMENT COMPLETED
                 String ongoingId = prefs.getString("ongoing_appointment_id", null);
                 if (ongoingId != null && ongoingId.equals(apptId)) {
                     prefs.edit().remove("ongoing_appointment_id").apply();
@@ -95,17 +100,17 @@ public class aOngoingFragment extends Fragment {
                     Log.d("LiveLocationManager", "Stopped tracking for completed appointment: " + apptId);
                 }
 
-                // ✅ Update local data and notify adapter
+                // Update local data and notify adapter
                 int index = appointmentIds.indexOf(apptId);
                 if (index != -1) {
                     hasReport.set(index, true);
-                    adapter.notifyItemChanged(index); // UI refresh
+                    adapter.notifyItemChanged(index);
                 }
             }
         });
 
         // Debug logs
-        String logs = LiveLocationManager.getInstance().getLocationLogs(getContext());
+        String logs = LiveLocationManager.getInstance().getLocationLogs(requireContext());
         Log.d("TrackingHistory", logs);
 
         SharedPreferences prefs = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
@@ -120,8 +125,8 @@ public class aOngoingFragment extends Fragment {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireContext());
         locationCallback = new LocationCallback() {
             @Override
-            public void onLocationResult(LocationResult result) {
-                if (result != null && !appointmentIds.isEmpty()) {
+            public void onLocationResult(@NonNull LocationResult result) {
+                if (!appointmentIds.isEmpty()) {
                     double lat = result.getLastLocation().getLatitude();
                     double lon = result.getLastLocation().getLongitude();
                     Log.d("LiveLocationCheck", "Location: " + lat + ", " + lon);
@@ -138,11 +143,11 @@ public class aOngoingFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        refreshHandler.postDelayed(refreshRunnable, 5000);
+        startAutoRefresh();
 
-        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
         }
 
         LocationRequest locationRequest = LocationRequest.create()
@@ -152,20 +157,40 @@ public class aOngoingFragment extends Fragment {
                 .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 
         Log.d(TAG, "Requesting optimized location updates...");
-
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        refreshHandler.removeCallbacks(refreshRunnable);
+        stopAutoRefresh();
         fusedLocationClient.removeLocationUpdates(locationCallback);
+    }
+
+    private void startAutoRefresh() {
+        stopAutoRefresh(); // Remove any pending callbacks first
+        refreshRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isAdded()) {
+                    fetchAppointmentsData(doctorId);
+                    refreshHandler.postDelayed(this, REFRESH_INTERVAL);
+                }
+            }
+        };
+        refreshHandler.postDelayed(refreshRunnable, REFRESH_INTERVAL);
+    }
+
+    private void stopAutoRefresh() {
+        if (refreshRunnable != null) {
+            refreshHandler.removeCallbacks(refreshRunnable);
+        }
     }
 
     private void fetchAppointmentsData(String doctorId) {
         String url = "http://sxm.a58.mytemp.website/Doctors/getOngoingAppointment.php";
         RequestQueue queue = Volley.newRequestQueue(requireContext());
+        @SuppressLint("NotifyDataSetChanged")
         StringRequest request = new StringRequest(Request.Method.POST, url,
                 response -> {
                     try {
@@ -178,7 +203,7 @@ public class aOngoingFragment extends Fragment {
                         distances.clear();
                         appointmentIds.clear();
                         hasReport.clear();
-                        mapLinks.clear(); // ✅ clear old map links
+                        mapLinks.clear();
 
                         SharedPreferences prefs = requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
                         HashSet<String> completedSet = new HashSet<>(prefs.getStringSet("completed_reports", new HashSet<>()));
@@ -189,16 +214,41 @@ public class aOngoingFragment extends Fragment {
                             appointmentIds.add(apptId);
                             patientNames.add(obj.getString("patient_name"));
                             problems.add(obj.getString("reason_for_visit"));
-                            distances.add(obj.getString("time_slot"));
-                            mapLinks.add(obj.getString("patient_map_link")); // ✅ extract map link
+                            // Compute distance from patient_map_link
+                            String distanceStr = obj.getString("time_slot"); // fallback value
+                            String patientMapLink = obj.getString("patient_map_link");
+                            if (!patientMapLink.isEmpty() && patientMapLink.contains("query=")) {
+                                String[] splitArr = patientMapLink.split("query=");
+                                if (splitArr.length > 1) {
+                                    String coordStr = splitArr[1];
+                                    int ampIndex = coordStr.indexOf("&");
+                                    if (ampIndex != -1) {
+                                        coordStr = coordStr.substring(0, ampIndex);
+                                    }
+                                    String[] parts = coordStr.split(",");
+                                    if (parts.length == 2) {
+                                        try {
+                                            double patientLat = Double.parseDouble(parts[0].trim());
+                                            double patientLon = Double.parseDouble(parts[1].trim());
+                                            float[] results = new float[1];
+                                            Location.distanceBetween(doctorLat, doctorLon, patientLat, patientLon, results);
+                                            float distanceInKm = results[0] / 1000.0f;
+                                            distanceStr = String.format("%.2f km", distanceInKm);
+                                        } catch (NumberFormatException e) {
+                                            Log.e(TAG, "Error parsing patient coordinates: " + e.getMessage());
+                                        }
+                                    }
+                                }
+                            }
+                            distances.add(distanceStr);
+                            mapLinks.add(obj.getString("patient_map_link"));
                             hasReport.add(completedSet.contains(apptId));
 
-                            // ✅ Save first ongoing appointment ID and start location manager
+                            // Save first ongoing appointment ID and start location updates
                             if (i == 0) {
                                 SharedPreferences.Editor editor = prefs.edit();
                                 editor.putString("ongoing_appointment_id", apptId);
                                 editor.apply();
-
                                 LiveLocationManager.getInstance().startLocationUpdates(requireContext().getApplicationContext());
                             }
                         }
@@ -207,8 +257,9 @@ public class aOngoingFragment extends Fragment {
                             adapter = new aOngoingAdapter(getContext(), appointmentIds, patientNames, problems, distances, hasReport, mapLinks, reportLauncher);
                             recyclerView.setAdapter(adapter);
                         } else {
-                            adapter.notifyDataSetChanged(); // ✅ full UI update
+                            adapter.notifyDataSetChanged();
                         }
+                        Log.d(TAG, "Adapter updated. Total appointments: " + appointmentIds.size());
                     } catch (JSONException e) {
                         Log.e(TAG, "Parse error", e);
                     }
@@ -225,12 +276,9 @@ public class aOngoingFragment extends Fragment {
 
     private void sendLiveLocationToServer(String doctorId, String appointmentId, double lat, double lon) {
         StringRequest request = new StringRequest(Request.Method.POST, LIVE_LOCATION_URL,
-                response -> {
-                    Log.d("LiveLocationResponse", "Server response: " + response);
-                },
-                error -> {
-                    Log.e("LiveLocationError", "Volley error: " + error.getMessage());
-                }) {
+                response -> Log.d("LiveLocationResponse", "Server response: " + response),
+                error -> Log.e("LiveLocationError", "Volley error: " + error.getMessage())
+        ) {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
