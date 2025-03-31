@@ -36,6 +36,11 @@
             android:text="Duration:"
             android:textColor="@android:color/white"
             android:textSize="16sp" />
+        <Button
+            android:id="@+id/btnNavigation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Start Bike Navigation" />
     </LinearLayout>
 
 </FrameLayout>
