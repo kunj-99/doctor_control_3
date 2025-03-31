@@ -49,7 +49,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final String TAG = "TrackPatientLocation";
     // Replace with your actual Google Directions API key.
-    private static final String API_KEY = "AIzaSyDgbzIYTb6ydLaVxoSAh8eu1JTfCcH-jDk";
+    private static final String API_KEY = "AIzDk";
 
     // Flag for direct navigation mode.
     private boolean directMode = true;
