@@ -21,12 +21,6 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
 
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCkUxQSJ1jNt0q_CcugieFl5vezsNAUxe0"/>
-
-
-
     <activity
             android:name=".track_patient_location"
             android:exported="false" />
@@ -60,11 +54,14 @@
             android:exported="false"
             android:foregroundServiceType="location"
             tools:ignore="ForegroundServicePermission" />
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_key"
+            tools:replace="android:value"/>
+
     </application>
 
-    <meta-data
-        android:name="com.google.android.geo.API_KEY"
-        android:value="AIzaSyCkUxQSJ1jNt0q_CcugieFl5vezsNAUxe0"/>
 
 
 </manifest>

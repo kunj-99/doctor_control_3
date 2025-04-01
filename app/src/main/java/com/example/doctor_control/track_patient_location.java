@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -48,8 +49,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
     private static final String MAPVIEW_BUNDLE_KEY = "MapViewBundleKey";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private static final String TAG = "TrackPatientLocation";
-    // Replace with your actual Google Directions API key.
-    private static final String API_KEY = "AIzDk";
 
     // Flag for direct navigation mode.
     private boolean directMode = true;
@@ -114,12 +113,12 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             return;
         }
 
-        // Optional: Add a button to launch Google Maps navigation (if needed).
+        // Optional: Add a button to launch Google Maps navigation.
         Button btnNavigate = findViewById(R.id.btnNavigation);
         if (btnNavigate != null) {
             btnNavigate.setOnClickListener(v -> {
                 if (destinationLocation != null) {
-                    // "mode=d" means driving. You can use "mode=b" for bicycling if preferred.
+                    // "mode=d" means driving.
                     String uri = "google.navigation:q=" + destinationLocation.latitude + "," + destinationLocation.longitude + "&mode=d";
                     Intent mapIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
                     mapIntent.setPackage("com.google.android.apps.maps");
@@ -144,6 +143,27 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             // Fetch current location and start tracking the best route.
             fetchCurrentLocation();
         }
+    }
+
+    /**
+     * (Optional) Helper method to retrieve the API key from the manifest.
+     * Not used for Directions URL anymore since we use a PHP proxy.
+     */
+    private String getApiKey() {
+        try {
+            ApplicationInfo ai = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
+            if (ai.metaData != null) {
+                Object value = ai.metaData.get("com.google.android.geo.API_KEY");
+                if (value instanceof Integer) {
+                    return getString((Integer) value);
+                } else if (value instanceof String) {
+                    return (String) value;
+                }
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "Failed to load API key", e);
+        }
+        return null;
     }
 
     private void fetchCurrentLocation() {
@@ -174,26 +194,22 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
      * Sets up continuous location updates and updates the route accordingly.
      */
     private void findAndTrackBestRoute() {
-        // Create a location request with a desired interval.
         LocationRequest locationRequest = LocationRequest.create();
         locationRequest.setInterval(5000); // Update every 5 seconds.
         locationRequest.setFastestInterval(3000);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-        // Define the callback for location updates.
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 if (locationResult == null) {
                     return;
                 }
-                // Update current location.
                 currentLocation = new LatLng(
                         locationResult.getLastLocation().getLatitude(),
                         locationResult.getLastLocation().getLongitude()
                 );
                 Log.d(TAG, "Updated current location: " + currentLocation);
-                // Update the route on the map.
                 if (gMap != null) {
                     if (directMode) {
                         startDirectNavigation();
@@ -204,15 +220,8 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             }
         };
 
-        // Request location updates.
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
@@ -226,7 +235,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                 == PackageManager.PERMISSION_GRANTED) {
             gMap.setMyLocationEnabled(true);
         }
-        // When the map is ready, decide if you want to start direct navigation immediately.
         if (directMode && currentLocation != null) {
             startDirectNavigation();
         } else if (currentLocation != null) {
@@ -238,64 +246,60 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
      * Starts direct navigation by drawing the optimized route without showing the current location marker.
      */
     private void startDirectNavigation() {
-        // Clear map and add only the destination marker.
         gMap.clear();
         if (destinationLocation != null) {
             gMap.addMarker(new MarkerOptions()
                     .position(destinationLocation)
                     .title("Destination"));
         }
-        // Center camera on the destination.
         gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(destinationLocation, 12));
-        // Build URL for directions.
         String url = getDirectionsUrl(currentLocation, destinationLocation);
         Log.d(TAG, "Direct Navigation - Directions URL: " + url);
-        // Execute AsyncTask to download and parse the route.
         new FetchRouteTask().execute(url);
     }
 
     /**
-     * Updates the map in normal mode (non-direct mode) by showing both markers and drawing the route.
+     * Updates the map in normal mode by showing both markers and drawing the route.
      */
     private void updateMap() {
         gMap.clear();
 
-        // Only add the current location marker if not in direct mode.
         if (!directMode && currentLocation != null) {
             gMap.addMarker(new MarkerOptions()
                     .position(currentLocation)
                     .title("Current Location")
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
         }
-        // Always add marker for destination.
         if (destinationLocation != null) {
             gMap.addMarker(new MarkerOptions()
                     .position(destinationLocation)
                     .title("Destination"));
         }
-        // Move camera.
         if (currentLocation != null) {
             if (directMode) {
                 gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(destinationLocation, 12));
             } else {
                 gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 12));
             }
-            // Build URL for directions.
             String url = getDirectionsUrl(currentLocation, destinationLocation);
             Log.d(TAG, "Directions URL: " + url);
-            // Execute AsyncTask to download and parse the route.
             new FetchRouteTask().execute(url);
         }
     }
 
+    /**
+     * Builds the URL for fetching directions.
+     *
+     * This method now calls your PHP proxy rather than the Google Directions API directly.
+     * Replace "http://yourserver.com/directions.php" with your actual server URL.
+     */
     private String getDirectionsUrl(LatLng origin, LatLng dest) {
+        String baseUrl = "http://sxm.a58.mytemp.website/Doctors/directions.php?"; // <-- Replace with your server's URL
         String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
         String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
-        // Change mode if needed (e.g., walking, bicycling). Currently set to driving.
         String mode = "mode=driving";
-        String parameters = str_origin + "&" + str_dest + "&" + mode + "&key=" + API_KEY;
-        String output = "json";
-        return "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
+        String parameters = str_origin + "&" + str_dest + "&" + mode;
+        return baseUrl + parameters;
     }
 
     private class FetchRouteTask extends AsyncTask<String, Void, String> {
@@ -313,7 +317,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         protected void onPostExecute(String result) {
             Log.d(TAG, "Directions JSON response: " + result);
             if (result != null) {
-                // Parse JSON for distance and duration.
                 try {
                     JSONObject jsonObject = new JSONObject(result);
                     JSONArray routes = jsonObject.getJSONArray("routes");
@@ -331,7 +334,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                 } catch (Exception e) {
                     Log.e(TAG, "Error parsing route info: " + e.toString());
                 }
-                // Continue to parse and draw the route polyline.
                 new ParserTask().execute(result);
             } else {
                 Toast.makeText(track_patient_location.this, "Failed to retrieve route", Toast.LENGTH_SHORT).show();
@@ -389,7 +391,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             }
             ArrayList<LatLng> points;
             PolylineOptions lineOptions = new PolylineOptions();
-            // Draw each route.
             for (List<LatLng> path : result) {
                 points = new ArrayList<>(path);
                 lineOptions.addAll(points);
@@ -412,14 +413,11 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             List<List<LatLng>> routes = new ArrayList<>();
             try {
                 JSONArray jRoutes = jObject.getJSONArray("routes");
-                // For each route.
                 for (int i = 0; i < jRoutes.length(); i++) {
                     JSONArray jLegs = ((JSONObject) jRoutes.get(i)).getJSONArray("legs");
                     List<LatLng> path = new ArrayList<>();
-                    // For each leg.
                     for (int j = 0; j < jLegs.length(); j++) {
                         JSONArray jSteps = ((JSONObject) jLegs.get(j)).getJSONArray("steps");
-                        // For each step.
                         for (int k = 0; k < jSteps.length(); k++) {
                             String polyline = ((JSONObject) ((JSONObject) jSteps.get(k)).get("polyline")).getString("points");
                             List<LatLng> list = decodePoly(polyline);
@@ -483,7 +481,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
     }
     @Override
     protected void onPause() {
-        // Remove location updates when the activity is paused.
         if (fusedLocationClient != null && locationCallback != null) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
         }

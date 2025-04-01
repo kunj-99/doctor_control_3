@@ -38,7 +38,6 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -66,8 +65,8 @@ public class aOngoingFragment extends Fragment {
     // Handler and Runnable for auto-refresh
     private final Handler refreshHandler = new Handler(Looper.getMainLooper());
     private Runnable refreshRunnable;
-    private double doctorLat, doctorLon;
-
+    // These variables store the doctor's latest location for distance computation.
+    private double doctorLat = 0.0, doctorLon = 0.0;
 
     private ActivityResultLauncher<Intent> reportLauncher;
 
@@ -119,6 +118,7 @@ public class aOngoingFragment extends Fragment {
             Toast.makeText(getContext(), "Doctor ID not found!", Toast.LENGTH_SHORT).show();
         } else {
             doctorId = String.valueOf(id);
+            // We'll fetch appointments data later (after location is updated)
             fetchAppointmentsData(doctorId);
         }
 
@@ -129,7 +129,10 @@ public class aOngoingFragment extends Fragment {
                 if (!appointmentIds.isEmpty()) {
                     double lat = result.getLastLocation().getLatitude();
                     double lon = result.getLastLocation().getLongitude();
-                    Log.d("LiveLocationCheck", "Location: " + lat + ", " + lon);
+                    // Update doctor's location variables so distance calculations are accurate.
+                    doctorLat = lat;
+                    doctorLon = lon;
+                    Log.d("LiveLocationCheck", "Doctor's current location updated: lat=" + lat + ", lon=" + lon);
                     sendLiveLocationToServer(doctorId, appointmentIds.get(0), lat, lon);
                 } else {
                     Log.d("LiveLocationCheck", "No location or no appointments");
@@ -150,6 +153,7 @@ public class aOngoingFragment extends Fragment {
             ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
         }
 
+        // Request location updates.
         LocationRequest locationRequest = LocationRequest.create()
                 .setInterval(15000)
                 .setFastestInterval(10000)
@@ -158,13 +162,24 @@ public class aOngoingFragment extends Fragment {
 
         Log.d(TAG, "Requesting optimized location updates...");
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+
+        // Get last known location (if available) to update doctor's location variables immediately.
+        fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
+            if (location != null) {
+                doctorLat = location.getLatitude();
+                doctorLon = location.getLongitude();
+                Log.d(TAG, "Fetched last known location: lat=" + doctorLat + ", lon=" + doctorLon);
+            } else {
+                Log.d(TAG, "No last known location available.");
+            }
+        });
     }
 
     @Override
     public void onPause() {
         super.onPause();
         stopAutoRefresh();
-        fusedLocationClient.removeLocationUpdates(locationCallback);
+        // We intentionally do not remove location updates here to allow background tracking.
     }
 
     private void startAutoRefresh() {
@@ -214,9 +229,12 @@ public class aOngoingFragment extends Fragment {
                             appointmentIds.add(apptId);
                             patientNames.add(obj.getString("patient_name"));
                             problems.add(obj.getString("reason_for_visit"));
-                            // Compute distance from patient_map_link
+
+                            // Compute distance using patient's map link and the doctor's current location.
                             String distanceStr = obj.getString("time_slot"); // fallback value
                             String patientMapLink = obj.getString("patient_map_link");
+                            Log.d(TAG, "Patient map link: " + patientMapLink);
+
                             if (!patientMapLink.isEmpty() && patientMapLink.contains("query=")) {
                                 String[] splitArr = patientMapLink.split("query=");
                                 if (splitArr.length > 1) {
@@ -230,10 +248,14 @@ public class aOngoingFragment extends Fragment {
                                         try {
                                             double patientLat = Double.parseDouble(parts[0].trim());
                                             double patientLon = Double.parseDouble(parts[1].trim());
+                                            Log.d(TAG, "Parsed patient coordinates: lat=" + patientLat + ", lon=" + patientLon);
                                             float[] results = new float[1];
+                                            Log.d(TAG, "Doctor location for distance calculation: lat=" + doctorLat + ", lon=" + doctorLon);
                                             Location.distanceBetween(doctorLat, doctorLon, patientLat, patientLon, results);
+                                            Log.d(TAG, "Raw distance between (in meters): " + results[0]);
                                             float distanceInKm = results[0] / 1000.0f;
                                             distanceStr = String.format("%.2f km", distanceInKm);
+                                            Log.d(TAG, "Computed distance: " + distanceStr);
                                         } catch (NumberFormatException e) {
                                             Log.e(TAG, "Error parsing patient coordinates: " + e.getMessage());
                                         }
@@ -244,7 +266,7 @@ public class aOngoingFragment extends Fragment {
                             mapLinks.add(obj.getString("patient_map_link"));
                             hasReport.add(completedSet.contains(apptId));
 
-                            // Save first ongoing appointment ID and start location updates
+                            // Save first ongoing appointment ID and start location updates if not already started.
                             if (i == 0) {
                                 SharedPreferences.Editor editor = prefs.edit();
                                 editor.putString("ongoing_appointment_id", apptId);

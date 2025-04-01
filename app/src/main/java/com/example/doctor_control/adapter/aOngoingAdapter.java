@@ -23,7 +23,7 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.doctor_control.R;
 import com.example.doctor_control.medical_report;
-import com.example.doctor_control.track_patient_location; // 🔄 Make sure this exists
+import com.example.doctor_control.track_patient_location; // Ensure this activity exists
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -36,26 +36,27 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     private final ArrayList<String> appointmentIds;
     private final ArrayList<String> patientNames;
     private final ArrayList<String> problems;
-    private final ArrayList<String> timeSlots;
+    // This list contains the distance strings computed in the fragment.
+    private final ArrayList<String> distanceStrings;
     private final ArrayList<Boolean> hasReport;
-    private final ArrayList<String> mapLinks; // ✅ New list for map links
+    private final ArrayList<String> mapLinks;
     private final ActivityResultLauncher<Intent> launcher;
 
     public aOngoingAdapter(Context context,
                            ArrayList<String> appointmentIds,
                            ArrayList<String> patientNames,
                            ArrayList<String> problems,
-                           ArrayList<String> timeSlots,
+                           ArrayList<String> distanceStrings,
                            ArrayList<Boolean> hasReport,
-                           ArrayList<String> mapLinks, // ✅ Accept in constructor
+                           ArrayList<String> mapLinks,
                            ActivityResultLauncher<Intent> launcher) {
         this.context = context;
         this.appointmentIds = appointmentIds;
         this.patientNames = patientNames;
         this.problems = problems;
-        this.timeSlots = timeSlots;
+        this.distanceStrings = distanceStrings;
         this.hasReport = hasReport;
-        this.mapLinks = mapLinks; // ✅ Store for use
+        this.mapLinks = mapLinks;
         this.launcher = launcher;
     }
 
@@ -71,10 +72,10 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         holder.tvPatientName.setText(patientNames.get(position));
         holder.tvProblem.setText("Problem: " + problems.get(position));
-        holder.tvDistance.setText("Time: " + timeSlots.get(position));
+        // Update the label to "Distance:" instead of "Time:"
+        holder.tvDistance.setText("Distance: " + distanceStrings.get(position));
 
         boolean reportSubmitted = hasReport.get(position);
-
         if (reportSubmitted) {
             holder.btnComplete.setEnabled(true);
             holder.btnComplete.setBackgroundColor(ContextCompat.getColor(context, R.color.primaryColor));
@@ -85,11 +86,11 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             holder.btnComplete.setTextColor(ContextCompat.getColor(context, R.color.gray));
         }
 
-        // ✅ TRACK button click: launch tracking activity with map link
+        // TRACK button: launch tracking activity with map link
         holder.btnTrack.setOnClickListener(v -> {
             String mapLink = mapLinks.get(position);
             if (mapLink != null && !mapLink.isEmpty()) {
-                Intent intent = new Intent(context, track_patient_location.class); // 🔄 Create this activity
+                Intent intent = new Intent(context, track_patient_location.class);
                 intent.putExtra("map_link", mapLink);
                 context.startActivity(intent);
             } else {
@@ -133,7 +134,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                     if (success) {
                         Toast.makeText(context, "Appointment marked as Completed", Toast.LENGTH_SHORT).show();
                         hasReport.set(position, true);
-                        notifyItemChanged(position); // ✅ Refresh UI
+                        notifyItemChanged(position);
                     } else {
                         Toast.makeText(context, "Failed to update status", Toast.LENGTH_SHORT).show();
                     }
