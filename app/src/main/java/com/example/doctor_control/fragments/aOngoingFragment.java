@@ -99,7 +99,6 @@ public class aOngoingFragment extends Fragment {
                     Log.d("LiveLocationManager", "Stopped tracking for completed appointment: " + apptId);
                 }
 
-                // Update local data and notify adapter
                 int index = appointmentIds.indexOf(apptId);
                 if (index != -1) {
                     hasReport.set(index, true);
@@ -108,7 +107,6 @@ public class aOngoingFragment extends Fragment {
             }
         });
 
-        // Debug logs
         String logs = LiveLocationManager.getInstance().getLocationLogs(requireContext());
         Log.d("TrackingHistory", logs);
 

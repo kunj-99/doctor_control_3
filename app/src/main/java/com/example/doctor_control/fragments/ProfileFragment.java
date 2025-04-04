@@ -2,7 +2,9 @@ package com.example.doctor_control.fragments;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -42,7 +44,8 @@ public class ProfileFragment extends Fragment {
 
     private final String FETCH_URL = "http://sxm.a58.mytemp.website/Doctors/get_doctor.php";
     private final String UPDATE_URL = "http://sxm.a58.mytemp.website/Doctors/update_doctor.php";
-    private final int doctorId = 10; // replace with dynamic id
+    // Remove the static doctorId and declare as member variable
+    private int doctorId;
 
     private static final int REQUEST_GALLERY = 2;
     private Bitmap selectedBitmap; // holds the newly selected image bitmap
@@ -61,6 +64,15 @@ public class ProfileFragment extends Fragment {
         etAvailabilitySchedule = view.findViewById(R.id.et_availability_schedule);
         profileImage = view.findViewById(R.id.profile_image);
         btnSaveProfile = view.findViewById(R.id.btn_save_profile);
+
+        // Retrieve the doctor_id from SharedPreferences dynamically
+        SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
+        doctorId = sharedPreferences.getInt("doctor_id", 0); // 0 is the default value if not found
+
+        // Optional: Check if the doctorId is valid
+        if (doctorId == 0) {
+            Toast.makeText(getContext(), "Invalid doctor id. Please login.", Toast.LENGTH_SHORT).show();
+        }
 
         // Set click listener to open gallery when profile image is clicked
         profileImage.setOnClickListener(v -> openGallery());
