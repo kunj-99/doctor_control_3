@@ -66,7 +66,7 @@ public class aOngoingFragment extends Fragment {
     private final Handler refreshHandler = new Handler(Looper.getMainLooper());
     private Runnable refreshRunnable;
     // These variables store the doctor's latest location for distance computation.
-    private double doctorLat = 0.0, doctorLon = 0.0;
+    private double doctorLat, doctorLon ;
 
     private ActivityResultLauncher<Intent> reportLauncher;
 

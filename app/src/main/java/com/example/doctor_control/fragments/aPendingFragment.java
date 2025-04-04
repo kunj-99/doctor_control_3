@@ -8,7 +8,6 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -182,7 +181,7 @@ public class aPendingFragment extends Fragment {
                     JSONObject obj = arr.getJSONObject(i);
                     String apptId = obj.getString("appointment_id");
 
-                    // Instead of using the time_slot field, we compute the distance.
+                    // Extract the patient_map_link from JSON
                     String patientMapLink = obj.optString("patient_map_link", "");
                     String distanceStr = "N/A";
                     if (!patientMapLink.isEmpty() && patientMapLink.contains("query=")) {
@@ -214,12 +213,13 @@ public class aPendingFragment extends Fragment {
                             obj.getString("patient_name") + ", " +
                             obj.getString("reason_for_visit") + ", " + distanceStr);
 
-                    // Create an Appointment object using the computed distance
+                    // Create an Appointment object using the computed distance and include the patientMapLink
                     apendingAdapter.Appointment appointment = new apendingAdapter.Appointment(
                             apptId,
                             obj.getString("patient_name"),
                             obj.getString("reason_for_visit"),
-                            distanceStr
+                            distanceStr,
+                            patientMapLink  // Passing the map link to the Appointment model
                     );
                     appointments.add(appointment);
                 }
