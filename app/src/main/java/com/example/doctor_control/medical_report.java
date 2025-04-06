@@ -305,7 +305,6 @@ public class medical_report extends AppCompatActivity {
             postData.put("symptoms", etSymptoms.getText().toString());
             postData.put("respiratory_system", etRespiratorySystem.getText().toString());
 
-            // Also add doctor name and signature
             postData.put("doctor_name", etSignature.getText().toString());
             postData.put("doctor_signature", etSignature.getText().toString());
 
