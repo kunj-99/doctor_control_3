@@ -215,6 +215,76 @@ public class medical_report extends AppCompatActivity {
         // Determine which radio button is selected
         int selectedRadioId = radioGroupUploadType.getCheckedRadioButtonId();
 
+        // If no radio button is selected, show a toast and return.
+        if (selectedRadioId == -1) {
+            Toast.makeText(this, "Please select an upload type.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // If Virtual Report is selected, perform full field validation (showing all errors at once).
+        if (selectedRadioId == R.id.radioVirtualReport) {
+            boolean hasError = false;
+            if (etPatientName.getText().toString().trim().isEmpty()) {
+                etPatientName.setError("Patient Name is required.");
+                hasError = true;
+            }
+            if (etAge.getText().toString().trim().isEmpty()) {
+                etAge.setError("Age is required.");
+                hasError = true;
+            }
+            if (etSex.getText().toString().trim().isEmpty()) {
+                etSex.setError("Sex is required.");
+                hasError = true;
+            }
+            if (etWeight.getText().toString().trim().isEmpty()) {
+                etWeight.setError("Weight is required.");
+                hasError = true;
+            }
+            if (etAddress.getText().toString().trim().isEmpty()) {
+                etAddress.setError("Address is required.");
+                hasError = true;
+            }
+            if (etDate.getText().toString().trim().isEmpty()) {
+                etDate.setError("Visit Date is required.");
+                hasError = true;
+            }
+            if (etTemperature.getText().toString().trim().isEmpty()) {
+                etTemperature.setError("Temperature is required.");
+                hasError = true;
+            }
+            if (etPulse.getText().toString().trim().isEmpty()) {
+                etPulse.setError("Pulse is required.");
+                hasError = true;
+            }
+            if (etSpo2.getText().toString().trim().isEmpty()) {
+                etSpo2.setError("SPO2 is required.");
+                hasError = true;
+            }
+            if (etBloodPressure.getText().toString().trim().isEmpty()) {
+                etBloodPressure.setError("Blood Pressure is required.");
+                hasError = true;
+            }
+            if (etReportType.getText().toString().trim().isEmpty()) {
+                etReportType.setError("Report Type is required.");
+                hasError = true;
+            }
+            if (etSymptoms.getText().toString().trim().isEmpty()) {
+                etSymptoms.setError("Symptoms are required.");
+                hasError = true;
+            }
+            if (etRespiratorySystem.getText().toString().trim().isEmpty()) {
+                etRespiratorySystem.setError("Respiratory System details are required.");
+                hasError = true;
+            }
+            if (etSignature.getText().toString().trim().isEmpty()) {
+                etSignature.setError("Doctor Signature is required.");
+                hasError = true;
+            }
+            if (hasError) {
+                return;
+            }
+        }
+
         String url = "http://sxm.a58.mytemp.website/Doctors/insert_medical_report.php";
         JSONObject postData = new JSONObject();
 
@@ -235,7 +305,6 @@ public class medical_report extends AppCompatActivity {
             postData.put("symptoms", etSymptoms.getText().toString());
             postData.put("respiratory_system", etRespiratorySystem.getText().toString());
 
-            // Also add doctor name and signature
             postData.put("doctor_name", etSignature.getText().toString());
             postData.put("doctor_signature", etSignature.getText().toString());
 
@@ -243,7 +312,7 @@ public class medical_report extends AppCompatActivity {
             if (selectedRadioId == R.id.radioDirectUpload) {
                 // For Direct Upload, ensure that an image is selected
                 if (selectedImageUri == null || selectedBitmap == null) {
-                    showError("Please select an image from gallery.");
+                    Toast.makeText(this, "Please select an image from gallery.", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 String imageString = getStringImage(selectedBitmap);
@@ -254,7 +323,6 @@ public class medical_report extends AppCompatActivity {
             }
 
             // New: Collect medicine details from the medicationsContainer
-            // Iterate through each child view in the container
             JSONArray medicineArray = new JSONArray();
             int childCount = medicationsContainer.getChildCount();
             for (int i = 0; i < childCount; i++) {
@@ -280,7 +348,7 @@ public class medical_report extends AppCompatActivity {
 
         } catch (Exception e) {
             e.printStackTrace();
-            showError("Failed to collect form data.");
+            Toast.makeText(this, "Failed to collect form data.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -288,23 +356,24 @@ public class medical_report extends AppCompatActivity {
                 response -> {
                     boolean success = response.optBoolean("success", false);
                     if (success) {
-                        showSuccess("Report saved successfully.");
+                        Toast.makeText(this, "Report saved successfully.", Toast.LENGTH_SHORT).show();
                         Intent resultIntent = new Intent();
                         resultIntent.putExtra("report_submitted", true);
                         resultIntent.putExtra("appointment_id", appointmentId);
                         setResult(RESULT_OK, resultIntent);
                         finish();
                     } else {
-                        showError("Failed to save report.");
+                        Toast.makeText(this, "Failed to save report.", Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
                     error.printStackTrace();
-                    showError("Error sending report to server.");
+                    Toast.makeText(this, "Error sending report to server.", Toast.LENGTH_SHORT).show();
                 });
 
         requestQueue.add(request);
     }
+
 
     // Helper method to convert a Bitmap to a Base64 encoded string
     private String getStringImage(Bitmap bmp) {
