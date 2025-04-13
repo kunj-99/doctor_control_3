@@ -12,7 +12,6 @@ import com.example.doctor_control.HistoryItem;
 import com.example.doctor_control.PatientProfileActivity;
 import com.example.doctor_control.R;
 import com.example.doctor_control.view_patient_report;
-
 import java.util.List;
 
 public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHolder> {
@@ -41,12 +40,28 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
         holder.tvAppointmentDate.setText("Appointment Date: " + item.getAppointmentDate());
         holder.tvProblem.setText("Problem: " + item.getProblem());
 
-        if (item.isPaymentReceived()) {
-            holder.tvPaymentStatus.setText("Payment Received");
-            holder.tvPaymentStatus.setBackgroundResource(R.drawable.bg_payment_status);
-        } else {
-            holder.tvPaymentStatus.setText("Payment Pending");
+        // Check the status field
+        String status = item.getStatus();
+        if (status.equalsIgnoreCase("cancelled") || status.equalsIgnoreCase("cancelled_by_doctor")) {
+            // If cancelled, show the status instead of payment status
+            holder.tvPaymentStatus.setText(status);
+            // Optionally change the background for cancelled status as desired.
             holder.tvPaymentStatus.setBackgroundResource(R.drawable.bg_payment_pending);
+            // Disable the bill and report buttons
+            holder.btnViewBill.setEnabled(false);
+            holder.btnViewReport.setEnabled(false);
+        } else {
+            // Normal behavior: show payment status based on paymentReceived flag
+            if (item.isPaymentReceived()) {
+                holder.tvPaymentStatus.setText("Payment Received");
+                holder.tvPaymentStatus.setBackgroundResource(R.drawable.bg_payment_status);
+            } else {
+                holder.tvPaymentStatus.setText("Payment Pending");
+                holder.tvPaymentStatus.setBackgroundResource(R.drawable.bg_payment_pending);
+            }
+            // Ensure that the buttons are enabled for regular appointments
+            holder.btnViewBill.setEnabled(true);
+            holder.btnViewReport.setEnabled(true);
         }
 
         // Toggle the button container visibility with smooth animation
@@ -60,20 +75,22 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
             }
         });
 
-        // Example: Passing patient_id to PatientProfileActivity
+        // Pass patient_id to PatientProfileActivity
         holder.btnViewProfile.setOnClickListener(v -> {
             Intent intent = new Intent(v.getContext(), PatientProfileActivity.class);
             intent.putExtra("patient_id", item.getPatientId());
             v.getContext().startActivity(intent);
         });
 
-        // Pass the appointment ID from the separate list to activities
+        // Bill button click event (currently commented; add Bill activity logic as needed)
         holder.btnViewBill.setOnClickListener(v -> {
-//            Intent intent = new Intent(v.getContext(), PatientProfileActivity.class);
-//            intent.putExtra("appointment_id", appointmentIds.get(position));
-//            v.getContext().startActivity(intent);
+            // Example: Start Bill Activity
+            // Intent intent = new Intent(v.getContext(), BillActivity.class);
+            // intent.putExtra("appointment_id", appointmentIds.get(position));
+            // v.getContext().startActivity(intent);
         });
 
+        // Report button click event: pass appointment ID to view_patient_report activity
         holder.btnViewReport.setOnClickListener(v -> {
             Intent intent = new Intent(v.getContext(), view_patient_report.class);
             intent.putExtra("appointment_id", appointmentIds.get(position));

@@ -111,10 +111,13 @@ public class HistoryFragment extends Fragment {
                             boolean flag = object.optBoolean("flag", false);
                             String patientId = object.getString("patient_id");
 
-                            // Create a HistoryItem including the appointment ID as the last parameter.
-                            HistoryItem item = new HistoryItem(patientName, appointmentDate, symptoms, flag, patientId, apptId);
+                            // Extract the status field
+                            String status = object.optString("status", "Unknown");
+
+                            // Create a HistoryItem including the new status field.
+                            HistoryItem item = new HistoryItem(patientName, appointmentDate, symptoms, flag, patientId, apptId, status);
                             historyItems.add(item);
-                            Log.d(TAG, "Added history item: " + patientName + ", appointmentId: " + apptId);
+                            Log.d(TAG, "Added history item: " + patientName + ", appointmentId: " + apptId + ", status: " + status);
                         }
                         historyAdapter.notifyDataSetChanged();
                         Log.d(TAG, "History adapter notified. Total items: " + historyItems.size());
