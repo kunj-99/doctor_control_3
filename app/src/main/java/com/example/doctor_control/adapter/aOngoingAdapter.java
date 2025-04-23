@@ -104,8 +104,9 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         holder.btnView.setOnClickListener(v -> {
             Intent intent = new Intent(context, medical_report.class);
             intent.putExtra("appointment_id", appointmentIds.get(position));
-            launcher.launch(intent);
+            context.startActivity(intent); // 🎯 No launcher, no crash, just go
         });
+
 
         // COMPLETE button
         holder.btnComplete.setOnClickListener(v -> {
