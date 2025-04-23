@@ -33,24 +33,21 @@ public class HistoryFragment extends Fragment {
     private static final String TAG = "HistoryFragment";
     private RecyclerView rvHistory;
     private HistoryAdapter historyAdapter;
-    // List of HistoryItem objects (assumed to include all appointment details)
-    private final ArrayList<HistoryItem> historyItems = new ArrayList<>();
-    // Separate list to hold appointment IDs
-    private final ArrayList<String> appointmentIds = new ArrayList<>();
-    private RequestQueue requestQueue;
 
-    // Updated URL with doctor_id parameter
+    // Main lists used by adapter
+    private final ArrayList<HistoryItem> historyItems = new ArrayList<>();
+    private final ArrayList<String> appointmentIds = new ArrayList<>();
+
+    private RequestQueue requestQueue;
     private static final String BASE_URL = "http://sxm.a58.mytemp.website/Doctors/gethistory.php?doctor_id=";
+
     private final Handler refreshHandler = new Handler();
-    // Auto-refresh every 5 seconds (5000 ms)
     private final Runnable refreshRunnable = new Runnable() {
         @Override
         public void run() {
             Log.d(TAG, "Auto-refresh triggered");
-            historyItems.clear();
-            appointmentIds.clear();
             fetchHistoryData(getDoctorId());
-            refreshHandler.postDelayed(this, 5000);
+            refreshHandler.postDelayed(this, 2000); // Fast refresh every 2 seconds
         }
     };
 
@@ -62,14 +59,12 @@ public class HistoryFragment extends Fragment {
         rvHistory = view.findViewById(R.id.rv_history);
         rvHistory.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        // Clear lists and initialize adapter with both history items and appointment IDs
-        historyItems.clear();
-        appointmentIds.clear();
         historyAdapter = new HistoryAdapter(historyItems, appointmentIds);
         rvHistory.setAdapter(historyAdapter);
 
         requestQueue = Volley.newRequestQueue(getContext());
-        fetchHistoryData(getDoctorId());
+
+        fetchHistoryData(getDoctorId()); // Initial load
 
         return view;
     }
@@ -92,59 +87,67 @@ public class HistoryFragment extends Fragment {
                 null,
                 response -> {
                     Log.d(TAG, "Received response with length: " + response.length());
-                    try {
-                        // Clear current lists before adding new data
-                        historyItems.clear();
-                        appointmentIds.clear();
 
+                    // Use temporary lists to prevent RecyclerView inconsistency
+                    ArrayList<HistoryItem> tempHistoryItems = new ArrayList<>();
+                    ArrayList<String> tempAppointmentIds = new ArrayList<>();
+
+                    try {
                         for (int i = 0; i < response.length(); i++) {
                             JSONObject object = response.getJSONObject(i);
 
-                            // Extract appointment ID and add it to the separate list
                             String apptId = object.getString("appointment_id");
-                            appointmentIds.add(apptId);
-
-                            // Extract other values from JSON
                             String patientName = object.getString("patient_name");
                             String appointmentDate = object.getString("appointment_date");
                             String symptoms = object.getString("reason_for_visit");
                             boolean flag = object.optBoolean("flag", false);
                             String patientId = object.getString("patient_id");
 
-                            // Create a HistoryItem including the appointment ID as the last parameter.
-                            HistoryItem item = new HistoryItem(patientName, appointmentDate, symptoms, flag, patientId, apptId);
-                            historyItems.add(item);
-                            Log.d(TAG, "Added history item: " + patientName + ", appointmentId: " + apptId);
+                            tempAppointmentIds.add(apptId);
+                            tempHistoryItems.add(new HistoryItem(patientName, appointmentDate, symptoms, flag, patientId, apptId));
+
+                            Log.d(TAG, "Parsed item: " + patientName + " | " + apptId);
                         }
+
+                        // Apply updates safely after all parsing is done
+                        historyItems.clear();
+                        historyItems.addAll(tempHistoryItems);
+
+                        appointmentIds.clear();
+                        appointmentIds.addAll(tempAppointmentIds);
+
                         historyAdapter.notifyDataSetChanged();
-                        Log.d(TAG, "History adapter notified. Total items: " + historyItems.size());
+                        Log.d(TAG, "Adapter updated. Total history items: " + historyItems.size());
+
                         if (historyItems.isEmpty()) {
-                            Toast.makeText(getContext(), "No pending appointments found.", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getContext(), "No appointment history found.", Toast.LENGTH_SHORT).show();
                         }
+
                     } catch (JSONException e) {
-                        Log.e(TAG, "Error parsing JSON response", e);
+                        Log.e(TAG, "JSON parsing error", e);
                         Toast.makeText(getContext(), "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
-                    Log.e(TAG, "Volley error in fetching history data", error);
+                    Log.e(TAG, "Volley error fetching history data", error);
                     Toast.makeText(getContext(), "Error fetching data from server.", Toast.LENGTH_SHORT).show();
                 }
         );
+
         requestQueue.add(jsonArrayRequest);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        Log.d(TAG, "onResume called");
-        refreshHandler.postDelayed(refreshRunnable, 5000);
+        Log.d(TAG, "onResume: Starting auto-refresh");
+        refreshHandler.postDelayed(refreshRunnable, 2000);
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        Log.d(TAG, "onPause called. Removing refresh callbacks.");
+        Log.d(TAG, "onPause: Stopping auto-refresh");
         refreshHandler.removeCallbacks(refreshRunnable);
     }
 }

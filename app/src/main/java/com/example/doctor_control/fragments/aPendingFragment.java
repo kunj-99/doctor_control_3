@@ -47,20 +47,20 @@ public class aPendingFragment extends Fragment {
     private final ArrayList<apendingAdapter.Appointment> appointments = new ArrayList<>();
     private String doctorId;
 
-    // We'll store the doctor's current location here
+    // Doctor’s current location variables
     private double doctorLat, doctorLon;
     private FusedLocationProviderClient fusedLocationClient;
 
     // Handler for periodic refresh
     private final Handler refreshHandler = new Handler();
-    // Auto-refresh runnable set to 5 seconds (5000 ms)
+    // Auto-refresh runnable set to refresh every 5 seconds (5000 ms)
     private final Runnable refreshRunnable = new Runnable() {
         @Override
         public void run() {
             Log.d(TAG, "Auto-refresh triggered");
             appointments.clear();
             fetchDataFromServer();
-            refreshHandler.postDelayed(this, 5000);
+            refreshHandler.postDelayed(this, 1000); // Adjust the delay here if needed
         }
     };
 
@@ -74,25 +74,26 @@ public class aPendingFragment extends Fragment {
         doctorId = String.valueOf(prefs.getInt("doctor_id", 0)); // Defaults to 0 if not found
         Log.d(TAG, "Doctor ID retrieved: " + doctorId);
 
+        // Setup RecyclerView and Adapter
         recyclerView = view.findViewById(R.id.rv_pending_appointments);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-
-        // Initialize the adapter with the appointments list
         adapter = new apendingAdapter(getContext(), appointments);
         recyclerView.setAdapter(adapter);
 
-        // Initialize fusedLocationClient to get doctor's current location
+        // Initialize location client
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireContext());
 
-        // Check location permission and then fetch the doctor's current location
+        // Check for location permission and fetch location
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
+            // Request permission if not granted
             ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-            // In this case, you may choose to call fetchDataFromServer() with default (0,0) values
+            // Use default location values if permission is not granted
             doctorLat = 0;
             doctorLon = 0;
             fetchDataFromServer();
         } else {
+            // Get the last known location
             fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
                 if (location != null) {
                     doctorLat = location.getLatitude();
@@ -119,16 +120,22 @@ public class aPendingFragment extends Fragment {
     public void onResume() {
         super.onResume();
         Log.d(TAG, "onResume called");
-        refreshHandler.postDelayed(refreshRunnable, 5000);
+        // Start the periodic refresh when the fragment resumes
+        refreshHandler.postDelayed(refreshRunnable, 1000);
     }
 
     @Override
     public void onPause() {
         super.onPause();
         Log.d(TAG, "onPause called. Removing refresh callbacks.");
+        // Remove callbacks to stop refresh when the fragment is paused
         refreshHandler.removeCallbacks(refreshRunnable);
     }
 
+    /**
+     * Note: setUserVisibleHint is deprecated in newer Fragment versions.
+     * If using a ViewPager, consider using setMaxLifecycle instead.
+     */
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
@@ -142,7 +149,10 @@ public class aPendingFragment extends Fragment {
         }
     }
 
-    // This method fetches pending appointments from the server and computes distance based on patient_map_link
+    /**
+     * This method fetches pending appointments from the server and calculates the distance
+     * between the doctor and the patient's location using the map link.
+     */
     @SuppressLint("NotifyDataSetChanged")
     private void fetchDataFromServer() {
         String url = "http://sxm.a58.mytemp.website/Doctors/getPendingappointment.php?doctor_id=" + doctorId;
@@ -163,17 +173,16 @@ public class aPendingFragment extends Fragment {
 
                 JSONArray arr = root.getJSONArray("appointments");
 
-                // Clear current data and repopulate
+                // Clear current data and repopulate the appointments list
                 appointments.clear();
 
-                // If the array is empty, show a toast and update adapter
                 if (arr.length() == 0) {
                     Toast.makeText(getContext(), "No pending appointments found.", Toast.LENGTH_SHORT).show();
                     adapter.notifyDataSetChanged();
                     return;
                 }
 
-                // Optionally load locally stored completed report IDs
+                // Load any locally stored completed report IDs (optional)
                 SharedPreferences prefs = requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
                 HashSet<String> completedSet = new HashSet<>(prefs.getStringSet("completed_reports", new HashSet<>()));
 
@@ -181,7 +190,7 @@ public class aPendingFragment extends Fragment {
                     JSONObject obj = arr.getJSONObject(i);
                     String apptId = obj.getString("appointment_id");
 
-                    // Extract the patient_map_link from JSON
+                    // Extract the patient_map_link if available
                     String patientMapLink = obj.optString("patient_map_link", "");
                     String distanceStr = "N/A";
                     if (!patientMapLink.isEmpty() && patientMapLink.contains("query=")) {
@@ -213,16 +222,17 @@ public class aPendingFragment extends Fragment {
                             obj.getString("patient_name") + ", " +
                             obj.getString("reason_for_visit") + ", " + distanceStr);
 
-                    // Create an Appointment object using the computed distance and include the patientMapLink
+                    // Create and add an Appointment object using the computed distance and map link
                     apendingAdapter.Appointment appointment = new apendingAdapter.Appointment(
                             apptId,
                             obj.getString("patient_name"),
                             obj.getString("reason_for_visit"),
                             distanceStr,
-                            patientMapLink  // Passing the map link to the Appointment model
+                            patientMapLink  // Pass the map link into the Appointment object
                     );
                     appointments.add(appointment);
                 }
+                // Notify adapter about data changes
                 adapter.notifyDataSetChanged();
                 Log.d(TAG, "Adapter updated. Total appointments: " + appointments.size());
             } catch (JSONException e) {
@@ -233,6 +243,7 @@ public class aPendingFragment extends Fragment {
             Log.e(TAG, "Volley error: ", error);
             Toast.makeText(getContext(), "Network error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
         }) {
+            // Although this is a GET request, you can override getParams() if you ever switch to POST
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();

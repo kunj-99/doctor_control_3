@@ -45,20 +45,18 @@ public class aRequestFragment extends Fragment {
     private final ArrayList<aRequestAdapeter.Appointment> appointments = new ArrayList<>();
     private String doctorId;
 
-    // Doctor's current location (fetched on the spot)
+    // Doctor's current location
     private double doctorLat, doctorLon;
     private FusedLocationProviderClient fusedLocationProviderClient;
 
-    // Handler for periodic refresh
+    // Handler for periodic refresh with a 1.5-second interval
     private final Handler refreshHandler = new Handler();
-    // Auto-refresh runnable with interval of 5 seconds (5000 milliseconds)
     private final Runnable refreshRunnable = new Runnable() {
         @Override
         public void run() {
             Log.d(TAG, "Auto-refresh triggered");
-            appointments.clear();
             fetchDataFromServer();
-            refreshHandler.postDelayed(this, 5000);
+            refreshHandler.postDelayed(this, 1500); // Set to 1500 ms (1.5 seconds)
         }
     };
 
@@ -67,32 +65,32 @@ public class aRequestFragment extends Fragment {
         Log.d(TAG, "onCreateView called");
         View view = inflater.inflate(R.layout.fragment_request, container, false);
 
-        // Retrieve doctor_id from SharedPreferences (for identifier only)
+        // Retrieve doctor_id from SharedPreferences (default to 1 if not found)
         doctorId = String.valueOf(requireActivity()
                 .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
-                .getInt("doctor_id", 1)); // Default to 1 if not found
+                .getInt("doctor_id", 1));
         Log.d(TAG, "Doctor ID retrieved: " + doctorId);
 
+        // Setup RecyclerView and adapter
         recyclerView = view.findViewById(R.id.rv_pending_appointments);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new aRequestAdapeter(getContext(), appointments);
         recyclerView.setAdapter(adapter);
 
-        // Initialize the fused location client to get current location
+        // Initialize fused location provider client
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
-        // Check location permissions
+        // Check for location permissions; if not granted, request them
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // Request location permissions if not granted
             ActivityCompat.requestPermissions(requireActivity(),
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                     REQUEST_LOCATION_PERMISSION);
-            // Return the view; location fetching will occur after permissions are granted.
+            // Return view; the location and data fetching will occur after permissions are granted.
             return view;
         }
 
-        // Fetch doctor's current location and then data from server
+        // Fetch the doctor's current location, then load appointments
         fusedLocationProviderClient.getLastLocation().addOnSuccessListener(location -> {
             if (location != null) {
                 doctorLat = location.getLatitude();
@@ -103,7 +101,6 @@ public class aRequestFragment extends Fragment {
                 doctorLat = 0;
                 doctorLon = 0;
             }
-            // Now fetch the appointments data from the server
             fetchDataFromServer();
         }).addOnFailureListener(e -> {
             Log.e(TAG, "Error fetching doctor location", e);
@@ -119,7 +116,7 @@ public class aRequestFragment extends Fragment {
     public void onResume() {
         super.onResume();
         Log.d(TAG, "onResume called");
-        refreshHandler.postDelayed(refreshRunnable, 5000);
+        refreshHandler.postDelayed(refreshRunnable, 1500);
     }
 
     @Override
@@ -129,15 +126,19 @@ public class aRequestFragment extends Fragment {
         refreshHandler.removeCallbacks(refreshRunnable);
     }
 
+    /**
+     * Although setUserVisibleHint is deprecated in newer Android versions, if you're
+     * using it to control visibility, update the refresh runnable accordingly.
+     */
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
         Log.d(TAG, "setUserVisibleHint: isVisibleToUser = " + isVisibleToUser);
         if (isVisibleToUser && isResumed()) {
-            Log.d(TAG, "Fragment visible and resumed in setUserVisibleHint. Starting refresh runnable.");
-            refreshHandler.postDelayed(refreshRunnable, 5000);
+            Log.d(TAG, "Fragment visible and resumed. Starting refresh runnable.");
+            refreshHandler.postDelayed(refreshRunnable, 1500);
         } else {
-            Log.d(TAG, "Fragment not visible in setUserVisibleHint. Removing refresh runnable.");
+            Log.d(TAG, "Fragment not visible. Removing refresh runnable.");
             refreshHandler.removeCallbacks(refreshRunnable);
         }
     }
@@ -156,18 +157,18 @@ public class aRequestFragment extends Fragment {
                 if (success) {
                     JSONArray dataArray = response.optJSONArray("data");
                     if (dataArray != null) {
-                        appointments.clear();
+                        // Build a temporary list of appointments
+                        ArrayList<aRequestAdapeter.Appointment> newAppointments = new ArrayList<>();
                         Log.d(TAG, "Data array length: " + dataArray.length());
                         for (int i = 0; i < dataArray.length(); i++) {
                             JSONObject appointmentObj = dataArray.getJSONObject(i);
                             String appointmentId = appointmentObj.optString("appointment_id", "0");
                             String name = appointmentObj.optString("patient_name", "N/A");
                             String problem = appointmentObj.optString("reason_for_visit", "N/A");
-                            // The response now gives a Google Maps URL
                             String patientMapLink = appointmentObj.optString("patient_map_link", "");
                             String distanceStr = "N/A";
 
-                            // Parse the URL to extract coordinates from the query parameter
+                            // Parse the map URL to calculate the distance
                             if (!patientMapLink.isEmpty() && patientMapLink.contains("query=")) {
                                 String[] splitArr = patientMapLink.split("query=");
                                 if (splitArr.length > 1) {
@@ -196,8 +197,11 @@ public class aRequestFragment extends Fragment {
                             Log.d(TAG, "Parsed appointment: " + appointmentId + ", " + name + ", " + problem + ", " + distanceStr);
                             aRequestAdapeter.Appointment appointment =
                                     new aRequestAdapeter.Appointment(appointmentId, name, problem, distanceStr);
-                            appointments.add(appointment);
+                            newAppointments.add(appointment);
                         }
+                        // Replace old data only once new data is ready to avoid flashing an empty list.
+                        appointments.clear();
+                        appointments.addAll(newAppointments);
                         adapter.notifyDataSetChanged();
                         Log.d(TAG, "Adapter notified. Appointments list size: " + appointments.size());
                     } else {
@@ -219,7 +223,7 @@ public class aRequestFragment extends Fragment {
         }) {
             @Override
             protected Map<String, String> getParams() {
-                // Although this is a GET request, parameters can be added if needed.
+                // In this GET request, we include the doctor_id as a parameter.
                 Map<String, String> params = new HashMap<>();
                 params.put("doctor_id", doctorId);
                 return params;

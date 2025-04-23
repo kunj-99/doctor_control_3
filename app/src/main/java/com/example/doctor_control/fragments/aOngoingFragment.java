@@ -51,7 +51,7 @@ public class aOngoingFragment extends Fragment {
 
     private static final String TAG = "aOngoingFragment";
     private static final String LIVE_LOCATION_URL = "http://sxm.a58.mytemp.website/update_live_location.php";
-    private static final int REFRESH_INTERVAL = 5000; // 5 seconds
+    private static final int REFRESH_INTERVAL = 2000; // 5 seconds
 
     private RecyclerView recyclerView;
     private aOngoingAdapter adapter;

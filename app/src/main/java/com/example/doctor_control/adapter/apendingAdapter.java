@@ -19,7 +19,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.doctor_control.R;
-import com.example.doctor_control.track_patient_location; // Ensure this activity exists
+import com.example.doctor_control.track_patient_location;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -52,13 +52,13 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
         holder.tvProblem.setText("Problem: " + appointment.getProblem());
         holder.tvDistance.setText(appointment.getDistance());
 
-        // Confirm button action: update appointment status to "Confirmed"
+        // Confirm button action
         holder.btnCanform.setOnClickListener(v -> {
             Log.d(TAG, "Confirm clicked for appointment ID: " + appointment.getAppointmentId());
             updateAppointmentStatus(appointment.getAppointmentId(), "Confirmed", position);
         });
 
-        // Track button action: launch track_patient_location activity with the map link
+        // Track button action
         holder.btnTrack.setOnClickListener(v -> {
             Log.d(TAG, "Track clicked for appointment ID: " + appointment.getAppointmentId());
             String mapLink = appointment.getMapLink();
@@ -91,15 +91,14 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
         }
     }
 
-    // Appointment model class to hold pending appointment details.
+    // Model class
     public static class Appointment {
         private final String appointmentId;
         private final String name;
         private final String problem;
         private final String distance;
-        private final String mapLink;  // New field for the map link
+        private final String mapLink;
 
-        // Updated constructor to include the map link
         public Appointment(String appointmentId, String name, String problem, String distance, String mapLink) {
             this.appointmentId = appointmentId;
             this.name = name;
@@ -147,9 +146,17 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
                     boolean success = response.optBoolean("success", false);
                     if (success) {
                         Toast.makeText(context, "Appointment updated successfully.", Toast.LENGTH_SHORT).show();
-                        appointments.remove(position);
-                        notifyItemRemoved(position);
-                        notifyItemRangeChanged(position, appointments.size());
+
+                        // ✅ Fix: Prevent crash on invalid index
+                        if (position >= 0 && position < appointments.size()) {
+                            appointments.remove(position);
+                            notifyItemRemoved(position);
+                            notifyItemRangeChanged(position, appointments.size());
+                        } else {
+                            Log.e(TAG, "Invalid position: " + position + ", size: " + appointments.size());
+                            notifyDataSetChanged(); // fallback refresh
+                        }
+
                     } else {
                         String message = response.optString("message", "Failed to update appointment.");
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
