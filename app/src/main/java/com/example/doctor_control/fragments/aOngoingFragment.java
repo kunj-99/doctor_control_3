@@ -12,7 +12,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -51,7 +50,6 @@ public class aOngoingFragment extends Fragment {
             "http://sxm.a58.mytemp.website/update_live_location.php";
     private static final long APPT_REFRESH_MS = 5000L;
 
-
     private RecyclerView recyclerView;
     private aOngoingAdapter adapter;
     private RequestQueue queue;
@@ -80,7 +78,6 @@ public class aOngoingFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_ongoing, container, false);
-
 
         queue = Volley.newRequestQueue(requireContext());
         fusedClient = LocationServices
