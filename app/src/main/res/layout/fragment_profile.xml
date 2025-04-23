@@ -2,11 +2,11 @@
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="@color/white"
-    android:padding="16dp">
+    android:background="@color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,183 +14,229 @@
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
-        <!-- Profile Image with clickable attributes -->
-        <ImageView
-            android:id="@+id/profile_image"
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:src="@drawable/pr_ic_profile_placeholder"
-            android:scaleType="centerCrop"
-            android:background="@drawable/bg_circle"
-            android:contentDescription="Doctor Profile"
-            android:layout_marginTop="16dp"
-            android:elevation="6dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:onClick="onProfileImageClick" />
+        <!-- Profile Header with Background -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="250dp"
+            android:background="@drawable/bg_profile_header_gradient"
+            android:elevation="4dp">
 
-        <!-- CardView container for editable fields with border -->
+            <!-- Profile Image with Circular Background -->
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:layout_marginTop="40dp">
+
+                <ImageView
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:src="@drawable/bg_circle_white"
+                    android:scaleType="centerCrop"
+                    android:alpha="0.9"/>
+
+                <ImageView
+                    android:id="@+id/profile_image"
+                    android:layout_width="110dp"
+                    android:layout_height="110dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/pr_ic_profile_placeholder"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="Doctor Profile"
+                    android:elevation="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:onClick="onProfileImageClick"/>
+            </FrameLayout>
+        </RelativeLayout>
+
+        <!-- Profile Content Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="4dp">
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"
+            android:layout_marginTop="-40dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="8dp"
+
+            app:cardBackgroundColor="@color/white">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="24dp"
+                android:paddingTop="10dp">
 
                 <!-- Full Name -->
-                <TextView
+                <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Full Name"
-                    android:textStyle="bold"
-                    android:textSize="14sp" />
+                    android:layout_marginTop="8dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
 
-                <EditText
-                    android:id="@+id/et_full_name"
-                    android:layout_width="match_parent"
-                    android:layout_height="45dp"
-                    android:hint="Enter full name"
-                    android:paddingLeft="15dp"
-                    android:inputType="textPersonName"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/bg_edit_text" />
+                    app:boxStrokeColor="@color/primaryColor"
+                    app:hintTextColor="@color/primaryColor">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_full_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Full Name"
+                        android:textSize="16sp"
+                        android:inputType="textPersonName"/>
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Specialization -->
-                <TextView
+                <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Specialization"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:layout_marginTop="16dp" />
+                    android:layout_marginTop="16dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
 
-                <EditText
-                    android:id="@+id/et_specialization"
-                    android:layout_width="match_parent"
-                    android:layout_height="45dp"
-                    android:hint="Enter specialization"
-                    android:inputType="text"
-                    android:paddingLeft="15dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/bg_edit_text" />
+                    app:boxStrokeColor="@color/primaryColor"
+                    app:hintTextColor="@color/primaryColor">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_specialization"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Specialization"
+                        android:textSize="16sp"
+                        android:inputType="text"/>
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Qualification -->
-                <TextView
+                <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Qualification"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:layout_marginTop="16dp" />
+                    android:layout_marginTop="16dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
 
-                <EditText
-                    android:id="@+id/et_qualification"
-                    android:layout_width="match_parent"
-                    android:layout_height="45dp"
-                    android:hint="Enter qualification"
-                    android:inputType="text"
-                    android:paddingLeft="15dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/bg_edit_text" />
+                    app:boxStrokeColor="@color/primaryColor"
+                    app:hintTextColor="@color/primaryColor">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_qualification"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Qualification"
+                        android:textSize="16sp"
+                        android:inputType="text"/>
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Experience (Years) -->
-                <TextView
+                <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Experience (in years)"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:layout_marginTop="16dp" />
+                    android:layout_marginTop="16dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
 
-                <EditText
-                    android:id="@+id/et_experience_years"
-                    android:layout_width="match_parent"
-                    android:layout_height="45dp"
-                    android:hint="e.g. 10"
-                    android:paddingLeft="15dp"
-                    android:inputType="number"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/bg_edit_text" />
+                    app:boxStrokeColor="@color/primaryColor"
+                    app:hintTextColor="@color/primaryColor">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_experience_years"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Experience (in years)"
+                        android:textSize="16sp"
+                        android:inputType="number"/>
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- License Number -->
-                <TextView
+                <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="License Number"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:layout_marginTop="16dp" />
+                    android:layout_marginTop="16dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
 
-                <EditText
-                    android:id="@+id/et_license_number"
-                    android:layout_width="match_parent"
-                    android:layout_height="45dp"
-                    android:paddingLeft="15dp"
-                    android:hint="Enter license number"
-                    android:inputType="text"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/bg_edit_text" />
+                    app:boxStrokeColor="@color/primaryColor"
+                    app:hintTextColor="@color/primaryColor">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_license_number"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="License Number"
+                        android:textSize="16sp"
+                        android:inputType="text"/>
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Hospital Affiliation -->
-                <TextView
+                <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Hospital Affiliation"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:paddingLeft="15dp"
-                    android:layout_marginTop="16dp" />
+                    android:layout_marginTop="16dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
 
-                <EditText
-                    android:id="@+id/et_hospital_affiliation"
-                    android:layout_width="match_parent"
-                    android:layout_height="45dp"
-                    android:hint="Enter hospital affiliation"
-                    android:inputType="text"
-                    android:layout_marginTop="4dp"
-                    android:paddingLeft="15dp"
-                    android:background="@drawable/bg_edit_text" />
+                    app:boxStrokeColor="@color/primaryColor"
+                    app:hintTextColor="@color/primaryColor">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_hospital_affiliation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Hospital Affiliation"
+                        android:textSize="16sp"
+                        android:inputType="text"/>
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Availability Schedule -->
-                <TextView
+                <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Availability"
-                    android:textStyle="bold"
-                    android:paddingLeft="15dp"
-                    android:textSize="14sp"
-                    android:layout_marginTop="16dp" />
+                    android:layout_marginTop="16dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
 
-                <EditText
-                    android:id="@+id/et_availability_schedule"
-                    android:layout_width="match_parent"
-                    android:layout_height="45dp"
-                    android:hint="e.g. Mon - Fri, 10am - 5pm"
-                    android:inputType="text"
-                    android:paddingLeft="15dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/bg_edit_text" />
+                    app:boxStrokeColor="@color/primaryColor"
+                    app:hintTextColor="@color/primaryColor">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_availability_schedule"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Availability (e.g. Mon-Fri, 10am-5pm)"
+                        android:textSize="16sp"
+                        android:inputType="text"/>
+                </com.google.android.material.textfield.TextInputLayout>
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Button to Edit/Save Profile -->
-        <Button
+        <!-- Save Button -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_save_profile"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Edit Profile"
-            android:textAllCaps="false"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
             android:layout_marginTop="32dp"
-            android:backgroundTint="@color/primaryColor"
-            android:textColor="@color/white"
-            android:textSize="16sp" />
+            android:layout_marginBottom="32dp"
+            android:text="Save Profile"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            app:cornerRadius="8dp"
+            app:backgroundTint="@color/primaryColor"
+            app:rippleColor="@color/white"
+            style="@style/Widget.MaterialComponents.Button"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_logout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
+
+            android:layout_marginBottom="32dp"
+            android:text="Logout"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            app:cornerRadius="8dp"
+            app:backgroundTint="#F44747"
+            app:rippleColor="@color/white"
+            style="@style/Widget.MaterialComponents.Button"/>
 
     </LinearLayout>
 </ScrollView>

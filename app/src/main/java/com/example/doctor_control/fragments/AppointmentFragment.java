@@ -47,6 +47,7 @@ public class AppointmentFragment extends Fragment {
             switch (pos) {
                 case 0:
                     tab.setText("Ongoing");
+
                     break;
                 case 1:
                     tab.setText("Pending");
