@@ -1,6 +1,5 @@
 package com.example.doctor_control.adapter;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
@@ -26,6 +25,10 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
+/**
+ * Adapter for pending appointments, showing name, problem, distance,
+ * and Confirm / Track buttons.
+ */
 public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHolder> {
 
     private static final String TAG = "apendingAdapter";
@@ -40,27 +43,25 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
     @NonNull
     @Override
     public apendingAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_pending, parent, false);
+        View view = LayoutInflater.from(context)
+                .inflate(R.layout.item_pending, parent, false);
         return new ViewHolder(view);
     }
 
-    @SuppressLint("SetTextI18n")
     @Override
-    public void onBindViewHolder(@NonNull apendingAdapter.ViewHolder holder, final int position) {
-        final Appointment appointment = appointments.get(position);
+    public void onBindViewHolder(@NonNull apendingAdapter.ViewHolder holder, int position) {
+        Appointment appointment = appointments.get(position);
         holder.tvPatientName.setText(appointment.getName());
         holder.tvProblem.setText("Problem: " + appointment.getProblem());
-        holder.tvDistance.setText(appointment.getDistance());
+        holder.tvDistance.setText("Distance: " + appointment.getDistance());
 
-        // Confirm button action
         holder.btnCanform.setOnClickListener(v -> {
-            Log.d(TAG, "Confirm clicked for appointment ID: " + appointment.getAppointmentId());
+            Log.d(TAG, "Confirm clicked for ID: " + appointment.getAppointmentId());
             updateAppointmentStatus(appointment.getAppointmentId(), "Confirmed", position);
         });
 
-        // Track button action
         holder.btnTrack.setOnClickListener(v -> {
-            Log.d(TAG, "Track clicked for appointment ID: " + appointment.getAppointmentId());
+            Log.d(TAG, "Track clicked for ID: " + appointment.getAppointmentId());
             String mapLink = appointment.getMapLink();
             if (mapLink != null && !mapLink.isEmpty()) {
                 Intent intent = new Intent(context, track_patient_location.class);
@@ -77,96 +78,90 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
         return appointments.size();
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvPatientName, tvProblem, tvDistance;
         Button btnCanform, btnTrack;
 
-        public ViewHolder(@NonNull View itemView) {
+        ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvPatientName = itemView.findViewById(R.id.tv_patient_name);
-            tvProblem = itemView.findViewById(R.id.tv_problem);
-            tvDistance = itemView.findViewById(R.id.tv_distans);
-            btnCanform = itemView.findViewById(R.id.btn_canform);
-            btnTrack = itemView.findViewById(R.id.btn_track);
+            tvProblem     = itemView.findViewById(R.id.tv_problem);
+            tvDistance    = itemView.findViewById(R.id.tv_distans);
+            btnCanform    = itemView.findViewById(R.id.btn_canform);
+            btnTrack      = itemView.findViewById(R.id.btn_track);
         }
     }
 
-    // Model class
+    /**
+     * Model for a pending appointment.
+     * Distance and mapLink can be updated externally.
+     */
     public static class Appointment {
         private final String appointmentId;
         private final String name;
         private final String problem;
-        private final String distance;
+        private String distance;       // now mutable
         private final String mapLink;
 
-        public Appointment(String appointmentId, String name, String problem, String distance, String mapLink) {
+        public Appointment(String appointmentId,
+                           String name,
+                           String problem,
+                           String distance,
+                           String mapLink) {
             this.appointmentId = appointmentId;
-            this.name = name;
-            this.problem = problem;
+            this.name          = name;
+            this.problem       = problem;
+            this.distance      = distance;
+            this.mapLink       = mapLink;
+        }
+
+        public String getAppointmentId() { return appointmentId; }
+        public String getName()          { return name; }
+        public String getProblem()       { return problem; }
+        public String getDistance()      { return distance; }
+        public String getMapLink()       { return mapLink; }
+
+        /** Allows fragment to update driving distance when ready */
+        public void setDistance(String distance) {
             this.distance = distance;
-            this.mapLink = mapLink;
-        }
-
-        public String getAppointmentId() {
-            return appointmentId;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getProblem() {
-            return problem;
-        }
-
-        public String getDistance() {
-            return distance;
-        }
-
-        public String getMapLink() {
-            return mapLink;
         }
     }
 
-    private void updateAppointmentStatus(String appointmentId, String newStatus, int position) {
+    private void updateAppointmentStatus(String appointmentId,
+                                         String newStatus,
+                                         int position) {
         String url = "http://sxm.a58.mytemp.website/Doctors/update_appointment_status.php";
-        JSONObject postData = new JSONObject();
+        JSONObject payload = new JSONObject();
         try {
-            postData.put("appointment_id", appointmentId);
-            postData.put("status", newStatus);
+            payload.put("appointment_id", appointmentId);
+            payload.put("status", newStatus);
         } catch (JSONException e) {
-            e.printStackTrace();
-            Toast.makeText(context, "Error preparing data.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Error preparing request.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         RequestQueue queue = Volley.newRequestQueue(context);
-        JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, url, postData,
+        JsonObjectRequest req = new JsonObjectRequest(
+                Request.Method.POST, url, payload,
                 response -> {
                     boolean success = response.optBoolean("success", false);
                     if (success) {
-                        Toast.makeText(context, "Appointment updated successfully.", Toast.LENGTH_SHORT).show();
-
-                        // ✅ Fix: Prevent crash on invalid index
-                        if (position >= 0 && position < appointments.size()) {
-                            appointments.remove(position);
-                            notifyItemRemoved(position);
-                            notifyItemRangeChanged(position, appointments.size());
-                        } else {
-                            Log.e(TAG, "Invalid position: " + position + ", size: " + appointments.size());
-                            notifyDataSetChanged(); // fallback refresh
-                        }
-
+                        Toast.makeText(context,
+                                "Appointment confirmed", Toast.LENGTH_SHORT).show();
+                        appointments.remove(position);
+                        notifyItemRemoved(position);
+                        notifyItemRangeChanged(position, appointments.size());
                     } else {
-                        String message = response.optString("message", "Failed to update appointment.");
-                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context,
+                                response.optString("message","Update failed"),
+                                Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
-                    error.printStackTrace();
-                    Toast.makeText(context, "Error updating appointment.", Toast.LENGTH_SHORT).show();
-                });
-
-        queue.add(request);
+                    Toast.makeText(context,
+                            "Network error", Toast.LENGTH_SHORT).show();
+                }
+        );
+        queue.add(req);
     }
 }

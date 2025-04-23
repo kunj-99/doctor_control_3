@@ -4,9 +4,9 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,14 +14,15 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.android.volley.Request;
 import com.android.volley.RequestQueue;
-import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.example.doctor_control.DistanceCalculator;
 import com.example.doctor_control.R;
 import com.example.doctor_control.adapter.aRequestAdapeter;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -32,82 +33,61 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 public class aRequestFragment extends Fragment {
-
     private static final String TAG = "aRequestFragment";
-    private static final int REQUEST_LOCATION_PERMISSION = 100;
+    private static final int REFRESH_INTERVAL = 5000;
 
     private RecyclerView recyclerView;
     private aRequestAdapeter adapter;
     private final ArrayList<aRequestAdapeter.Appointment> appointments = new ArrayList<>();
     private String doctorId;
+    private RequestQueue queue;
 
-    // Doctor's current location
+    private FusedLocationProviderClient fusedClient;
     private double doctorLat, doctorLon;
-    private FusedLocationProviderClient fusedLocationProviderClient;
 
-    // Handler for periodic refresh with a 1.5-second interval
-    private final Handler refreshHandler = new Handler();
-    private final Runnable refreshRunnable = new Runnable() {
-        @Override
-        public void run() {
-            Log.d(TAG, "Auto-refresh triggered");
-            fetchDataFromServer();
-            refreshHandler.postDelayed(this, 1500); // Set to 1500 ms (1.5 seconds)
-        }
-    };
+    private final Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private Runnable refreshRunnable;
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        Log.d(TAG, "onCreateView called");
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_request, container, false);
+        queue = Volley.newRequestQueue(requireContext());
+        fusedClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
-        // Retrieve doctor_id from SharedPreferences (default to 1 if not found)
-        doctorId = String.valueOf(requireActivity()
-                .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
-                .getInt("doctor_id", 1));
-        Log.d(TAG, "Doctor ID retrieved: " + doctorId);
-
-        // Setup RecyclerView and adapter
         recyclerView = view.findViewById(R.id.rv_pending_appointments);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+
         adapter = new aRequestAdapeter(getContext(), appointments);
         recyclerView.setAdapter(adapter);
 
-        // Initialize fused location provider client
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(requireActivity());
+        doctorId = String.valueOf(getActivity()
+                .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
+                .getInt("doctor_id", 1));
 
-        // Check for location permissions; if not granted, request them
-        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(requireActivity(),
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
-                    REQUEST_LOCATION_PERMISSION);
-            // Return view; the location and data fetching will occur after permissions are granted.
-            return view;
+        // Prime doctor location once
+        if (ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    getActivity(),
+                    new String[]{ Manifest.permission.ACCESS_FINE_LOCATION },
+                    0
+            );
+        } else {
+            fusedClient.getLastLocation()
+                    .addOnSuccessListener(loc -> {
+                        if (loc != null) {
+                            doctorLat = loc.getLatitude();
+                            doctorLon = loc.getLongitude();
+                        }
+                        // kick off first load
+                        fetchDataFromServer();
+                    });
         }
-
-        // Fetch the doctor's current location, then load appointments
-        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(location -> {
-            if (location != null) {
-                doctorLat = location.getLatitude();
-                doctorLon = location.getLongitude();
-                Log.d(TAG, "Doctor current location: " + doctorLat + ", " + doctorLon);
-            } else {
-                Log.d(TAG, "Doctor location is null; using default values 0,0");
-                doctorLat = 0;
-                doctorLon = 0;
-            }
-            fetchDataFromServer();
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Error fetching doctor location", e);
-            doctorLat = 0;
-            doctorLon = 0;
-            fetchDataFromServer();
-        });
 
         return view;
     }
@@ -115,121 +95,98 @@ public class aRequestFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        Log.d(TAG, "onResume called");
-        refreshHandler.postDelayed(refreshRunnable, 1500);
+        startAutoRefresh();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        Log.d(TAG, "onPause called. Removing refresh callbacks.");
-        refreshHandler.removeCallbacks(refreshRunnable);
+        stopAutoRefresh();
     }
 
-    /**
-     * Although setUserVisibleHint is deprecated in newer Android versions, if you're
-     * using it to control visibility, update the refresh runnable accordingly.
-     */
-    @Override
-    public void setUserVisibleHint(boolean isVisibleToUser) {
-        super.setUserVisibleHint(isVisibleToUser);
-        Log.d(TAG, "setUserVisibleHint: isVisibleToUser = " + isVisibleToUser);
-        if (isVisibleToUser && isResumed()) {
-            Log.d(TAG, "Fragment visible and resumed. Starting refresh runnable.");
-            refreshHandler.postDelayed(refreshRunnable, 1500);
-        } else {
-            Log.d(TAG, "Fragment not visible. Removing refresh runnable.");
+    private void startAutoRefresh() {
+        stopAutoRefresh();
+        refreshRunnable = () -> {
+            if (isAdded()) {
+                fetchDataFromServer();
+                refreshHandler.postDelayed(refreshRunnable, REFRESH_INTERVAL);
+            }
+        };
+        refreshHandler.postDelayed(refreshRunnable, REFRESH_INTERVAL);
+    }
+
+    private void stopAutoRefresh() {
+        if (refreshRunnable != null) {
             refreshHandler.removeCallbacks(refreshRunnable);
         }
     }
 
     @SuppressLint("NotifyDataSetChanged")
     private void fetchDataFromServer() {
-        String url = "http://sxm.a58.mytemp.website/Doctors/getRequestappointment.php?doctor_id=" + doctorId;
-        Log.d(TAG, "Fetching data from server with URL: " + url);
+        String url = "http://sxm.a58.mytemp.website/Doctors/getRequestappointment.php"
+                + "?doctor_id=" + doctorId;
+        Log.d(TAG, "Fetching data: " + url);
 
-        RequestQueue queue = Volley.newRequestQueue(requireContext());
-        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null, response -> {
-            Log.d(TAG, "Response: " + response.toString());
-            try {
-                boolean success = response.optBoolean("success", false);
-                Log.d(TAG, "Success flag in response: " + success);
-                if (success) {
-                    JSONArray dataArray = response.optJSONArray("data");
-                    if (dataArray != null) {
-                        // Build a temporary list of appointments
-                        ArrayList<aRequestAdapeter.Appointment> newAppointments = new ArrayList<>();
-                        Log.d(TAG, "Data array length: " + dataArray.length());
-                        for (int i = 0; i < dataArray.length(); i++) {
-                            JSONObject appointmentObj = dataArray.getJSONObject(i);
-                            String appointmentId = appointmentObj.optString("appointment_id", "0");
-                            String name = appointmentObj.optString("patient_name", "N/A");
-                            String problem = appointmentObj.optString("reason_for_visit", "N/A");
-                            String patientMapLink = appointmentObj.optString("patient_map_link", "");
-                            String distanceStr = "N/A";
+        queue.add(new StringRequest(
+                com.android.volley.Request.Method.GET, url,
+                response -> {
+                    try {
+                        JSONObject root = new JSONObject(response);
+                        boolean success = root.optBoolean("success", false);
+                        JSONArray data = root.optJSONArray("data");
 
-                            // Parse the map URL to calculate the distance
-                            if (!patientMapLink.isEmpty() && patientMapLink.contains("query=")) {
-                                String[] splitArr = patientMapLink.split("query=");
-                                if (splitArr.length > 1) {
-                                    String coordStr = splitArr[1];
-                                    // Remove any trailing parameters if present
-                                    int ampIndex = coordStr.indexOf("&");
-                                    if (ampIndex != -1) {
-                                        coordStr = coordStr.substring(0, ampIndex);
-                                    }
-                                    String[] parts = coordStr.split(",");
-                                    if (parts.length == 2) {
-                                        try {
-                                            double patientLat = Double.parseDouble(parts[0].trim());
-                                            double patientLon = Double.parseDouble(parts[1].trim());
-                                            float[] results = new float[1];
-                                            Location.distanceBetween(doctorLat, doctorLon, patientLat, patientLon, results);
-                                            float distanceInKm = results[0] / 1000.0f;
-                                            distanceStr = String.format("%.2f km", distanceInKm);
-                                        } catch (NumberFormatException e) {
-                                            Log.e(TAG, "Error parsing patient coordinates: " + e.getMessage());
-                                        }
-                                    }
-                                }
-                            }
-
-                            Log.d(TAG, "Parsed appointment: " + appointmentId + ", " + name + ", " + problem + ", " + distanceStr);
-                            aRequestAdapeter.Appointment appointment =
-                                    new aRequestAdapeter.Appointment(appointmentId, name, problem, distanceStr);
-                            newAppointments.add(appointment);
-                        }
-                        // Replace old data only once new data is ready to avoid flashing an empty list.
                         appointments.clear();
-                        appointments.addAll(newAppointments);
-                        adapter.notifyDataSetChanged();
-                        Log.d(TAG, "Adapter notified. Appointments list size: " + appointments.size());
-                    } else {
-                        Log.d(TAG, "Data array is null");
-                        Toast.makeText(getContext(), "No appointments found.", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
-                    String message = response.optString("message", "Failed to load data.");
-                    Log.d(TAG, "Server returned failure: " + message);
-                    Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
-                }
-            } catch (JSONException e) {
-                Log.e(TAG, "Error parsing JSON", e);
-                Toast.makeText(getContext(), "Error parsing data.", Toast.LENGTH_SHORT).show();
-            }
-        }, error -> {
-            Log.e(TAG, "Error fetching data from server", error);
-            Toast.makeText(getContext(), "Error fetching data from server.", Toast.LENGTH_SHORT).show();
-        }) {
-            @Override
-            protected Map<String, String> getParams() {
-                // In this GET request, we include the doctor_id as a parameter.
-                Map<String, String> params = new HashMap<>();
-                params.put("doctor_id", doctorId);
-                return params;
-            }
-        };
+                        if (!success || data == null || data.length() == 0) {
+                            adapter.notifyDataSetChanged();
+                            Toast.makeText(getContext(),
+                                    success ? "No requests found." : root.optString("message"),
+                                    Toast.LENGTH_SHORT).show();
+                            return;
+                        }
 
-        queue.add(request);
+                        // Collect map links
+                        List<String> links = new ArrayList<>();
+                        for (int i = 0; i < data.length(); i++) {
+                            JSONObject obj = data.getJSONObject(i);
+                            String apptId  = obj.optString("appointment_id", "0");
+                            String name    = obj.optString("patient_name", "N/A");
+                            String problem = obj.optString("reason_for_visit","N/A");
+                            String link    = obj.optString("patient_map_link","");
+
+                            appointments.add(new aRequestAdapeter.Appointment(
+                                    apptId, name, problem, "…"
+                            ));
+                            links.add(link);
+                        }
+
+                        adapter.notifyDataSetChanged();
+
+                        // Single batch distance lookup
+                        DistanceCalculator.calculateDistanceBatch(
+                                requireActivity(),
+                                queue,
+                                doctorLat,
+                                doctorLon,
+                                links,
+                                distanceList -> {
+                                    for (int i = 0; i < distanceList.size(); i++) {
+                                        appointments.get(i).setDistance(distanceList.get(i));
+                                    }
+                                    adapter.notifyDataSetChanged();
+                                }
+                        );
+
+                    } catch (JSONException je) {
+                        Log.e(TAG, "JSON parse error", je);
+                        Toast.makeText(getContext(),
+                                "Error parsing data.", Toast.LENGTH_SHORT).show();
+                    }
+                },
+                error -> {
+                    Log.e(TAG, "Network error", error);
+                    Toast.makeText(getContext(),
+                            "Error fetching data.", Toast.LENGTH_SHORT).show();
+                }
+        ));
     }
 }

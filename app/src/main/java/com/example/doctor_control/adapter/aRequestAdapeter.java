@@ -34,28 +34,26 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
 
     @NonNull
     @Override
-    public aRequestAdapeter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(context)
                 .inflate(R.layout.item_request, parent, false);
         return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull aRequestAdapeter.ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Appointment appointment = appointments.get(position);
         holder.tvPatientName.setText(appointment.getFullName());
         holder.tvProblem.setText("Problem: " + appointment.getProblem());
         holder.tvDistance.setText(appointment.getDistance());
 
-        holder.btnAccept.setOnClickListener(v -> {
-            // Update appointment status to "Pending"
-            updateAppointmentStatus(appointment.getAppointmentId(), "Pending", position);
-        });
+        holder.btnAccept.setOnClickListener(v ->
+                updateAppointmentStatus(appointment.getAppointmentId(), "Pending", position)
+        );
 
-        holder.btnReject.setOnClickListener(v -> {
-            // Update appointment status to "Cancelled_by_doctor"
-            updateAppointmentStatus(appointment.getAppointmentId(), "Cancelled_by_doctor", position);
-        });
+        holder.btnReject.setOnClickListener(v ->
+                updateAppointmentStatus(appointment.getAppointmentId(), "Cancelled_by_doctor", position)
+        );
     }
 
     @Override
@@ -70,10 +68,10 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvPatientName = itemView.findViewById(R.id.tv_patient_name);
-            tvProblem = itemView.findViewById(R.id.tv_problem);
-            tvDistance = itemView.findViewById(R.id.tv_distans);
-            btnAccept = itemView.findViewById(R.id.btn_accept);
-            btnReject = itemView.findViewById(R.id.btn_reject);
+            tvProblem     = itemView.findViewById(R.id.tv_problem);
+            tvDistance    = itemView.findViewById(R.id.tv_distans);
+            btnAccept     = itemView.findViewById(R.id.btn_accept);
+            btnReject     = itemView.findViewById(R.id.btn_reject);
         }
     }
 
@@ -82,29 +80,24 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         private final String appointmentId;
         private final String fullName;
         private final String problem;
-        private final String distance;
+        private String distance;  // no longer final
 
-        public Appointment(String appointmentId, String fullName, String problem, String distance) {
+        public Appointment(String appointmentId, String fullName,
+                           String problem, String distance) {
             this.appointmentId = appointmentId;
-            this.fullName = fullName;
-            this.problem = problem;
+            this.fullName      = fullName;
+            this.problem       = problem;
+            this.distance      = distance;
+        }
+
+        public String getAppointmentId() { return appointmentId; }
+        public String getFullName()      { return fullName; }
+        public String getProblem()       { return problem; }
+        public String getDistance()      { return distance; }
+
+        // <-- Setter so fragments can update the distance and notify adapter
+        public void setDistance(String distance) {
             this.distance = distance;
-        }
-
-        public String getAppointmentId() {
-            return appointmentId;
-        }
-
-        public String getFullName() {
-            return fullName;
-        }
-
-        public String getProblem() {
-            return problem;
-        }
-
-        public String getDistance() {
-            return distance;
         }
     }
 
@@ -122,24 +115,29 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         }
 
         RequestQueue queue = Volley.newRequestQueue(context);
-        JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, url, postData,
+        JsonObjectRequest request = new JsonObjectRequest(
+                Request.Method.POST, url, postData,
                 response -> {
                     boolean success = response.optBoolean("success", false);
                     if (success) {
-                        Toast.makeText(context, "Appointment updated successfully.", Toast.LENGTH_SHORT).show();
-                        // Remove the appointment from the list and update the adapter
+                        Toast.makeText(context,
+                                "Appointment updated successfully.",
+                                Toast.LENGTH_SHORT).show();
                         appointments.remove(position);
                         notifyItemRemoved(position);
                         notifyItemRangeChanged(position, appointments.size());
                     } else {
-                        String message = response.optString("message", "Failed to update appointment.");
+                        String message = response.optString(
+                                "message", "Failed to update appointment.");
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
                     error.printStackTrace();
-                    Toast.makeText(context, "Error updating appointment.", Toast.LENGTH_SHORT).show();
-                });
+                    Toast.makeText(context,
+                            "Error updating appointment.", Toast.LENGTH_SHORT).show();
+                }
+        );
 
         queue.add(request);
     }
