@@ -104,7 +104,7 @@ public class HistoryFragment extends Fragment {
                             String patientId = object.getString("patient_id");
 
                             tempAppointmentIds.add(apptId);
-                            tempHistoryItems.add(new HistoryItem(patientName, appointmentDate, symptoms, flag, patientId, apptId));
+                            tempHistoryItems.add(new HistoryItem(patientName, appointmentDate, symptoms, flag, patientId, apptId, ""));
 
                             Log.d(TAG, "Parsed item: " + patientName + " | " + apptId);
                         }

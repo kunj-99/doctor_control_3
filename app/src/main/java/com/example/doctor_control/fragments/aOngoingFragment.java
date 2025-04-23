@@ -48,7 +48,7 @@ public class aOngoingFragment extends Fragment {
     private static final String TAG = "aOngoingFragment";
     private static final String LIVE_LOCATION_URL =
             "http://sxm.a58.mytemp.website/update_live_location.php";
-    private static final long APPT_REFRESH_MS = 5000L;
+    private static final long APPT_REFRESH_MS = 2000;
 
     private RecyclerView recyclerView;
     private aOngoingAdapter adapter;
