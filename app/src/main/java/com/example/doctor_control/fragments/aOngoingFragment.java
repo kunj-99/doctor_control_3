@@ -133,7 +133,6 @@ public class aOngoingFragment extends Fragment {
     public void onPause() {
         super.onPause();
         stopAppointmentRefresh();
-        // *We do NOT stop location updates here* – they keep running in background
     }
 
     private void startAppointmentRefresh() {

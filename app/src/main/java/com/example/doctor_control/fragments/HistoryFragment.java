@@ -1,5 +1,6 @@
 package com.example.doctor_control.fragments;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -27,6 +28,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class HistoryFragment extends Fragment {
 
@@ -34,7 +36,6 @@ public class HistoryFragment extends Fragment {
     private RecyclerView rvHistory;
     private HistoryAdapter historyAdapter;
 
-    // Main lists used by adapter
     private final ArrayList<HistoryItem> historyItems = new ArrayList<>();
     private final ArrayList<String> appointmentIds = new ArrayList<>();
 
@@ -47,7 +48,7 @@ public class HistoryFragment extends Fragment {
         public void run() {
             Log.d(TAG, "Auto-refresh triggered");
             fetchHistoryData(getDoctorId());
-            refreshHandler.postDelayed(this, 2000); // Fast refresh every 2 seconds
+            refreshHandler.postDelayed(this, 2000);
         }
     };
 
@@ -62,75 +63,87 @@ public class HistoryFragment extends Fragment {
         historyAdapter = new HistoryAdapter(historyItems, appointmentIds);
         rvHistory.setAdapter(historyAdapter);
 
-        requestQueue = Volley.newRequestQueue(getContext());
+        requestQueue = Volley.newRequestQueue(requireContext());
 
-        fetchHistoryData(getDoctorId()); // Initial load
+        fetchHistoryData(getDoctorId());
 
         return view;
     }
 
     private String getDoctorId() {
-        SharedPreferences sharedPreferences = requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
-        int doctorIdInt = sharedPreferences.getInt("doctor_id", 0);
-        String doctorId = String.valueOf(doctorIdInt);
-        Log.d(TAG, "Retrieved doctor_id: " + doctorId);
-        return doctorId;
+        SharedPreferences prefs = requireContext()
+                .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
+        int id = prefs.getInt("doctor_id", 0);
+        return String.valueOf(id);
     }
 
     private void fetchHistoryData(String doctorId) {
         String url = BASE_URL + doctorId;
         Log.d(TAG, "Fetching history data from URL: " + url);
 
-        JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(
+        @SuppressLint("NotifyDataSetChanged") JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(
                 Request.Method.GET,
                 url,
                 null,
                 response -> {
                     Log.d(TAG, "Received response with length: " + response.length());
 
-                    // Use temporary lists to prevent RecyclerView inconsistency
-                    ArrayList<HistoryItem> tempHistoryItems = new ArrayList<>();
-                    ArrayList<String> tempAppointmentIds = new ArrayList<>();
+                    ArrayList<HistoryItem> tmpItems = new ArrayList<>();
+                    ArrayList<String> tmpIds = new ArrayList<>();
 
                     try {
                         for (int i = 0; i < response.length(); i++) {
-                            JSONObject object = response.getJSONObject(i);
+                            JSONObject obj = response.getJSONObject(i);
 
-                            String apptId = object.getString("appointment_id");
-                            String patientName = object.getString("patient_name");
-                            String appointmentDate = object.getString("appointment_date");
-                            String symptoms = object.getString("reason_for_visit");
-                            boolean flag = object.optBoolean("flag", false);
-                            String patientId = object.getString("patient_id");
+                            String apptId = obj.getString("appointment_id");
+                            String patientName = obj.getString("patient_name");
+                            String appointmentDate = obj.getString("appointment_date");
+                            String symptoms = obj.getString("reason_for_visit");
+                            boolean flag = obj.optBoolean("flag", false);
+                            String patientId = obj.getString("patient_id");
+                            String status = obj.optString("status", "");  // fetch status
 
-                            tempAppointmentIds.add(apptId);
-                            tempHistoryItems.add(new HistoryItem(patientName, appointmentDate, symptoms, flag, patientId, apptId, ""));
+                            tmpIds.add(apptId);
+                            tmpItems.add(new HistoryItem(
+                                    patientName,
+                                    appointmentDate,
+                                    symptoms,
+                                    flag,
+                                    patientId,
+                                    apptId,
+                                    status
+                            ));
 
-                            Log.d(TAG, "Parsed item: " + patientName + " | " + apptId);
+                            Log.d(TAG, "Parsed item: " + patientName + " | " + apptId + " | status=" + status);
                         }
 
-                        // Apply updates safely after all parsing is done
                         historyItems.clear();
-                        historyItems.addAll(tempHistoryItems);
+                        historyItems.addAll(tmpItems);
 
                         appointmentIds.clear();
-                        appointmentIds.addAll(tempAppointmentIds);
+                        appointmentIds.addAll(tmpIds);
 
                         historyAdapter.notifyDataSetChanged();
-                        Log.d(TAG, "Adapter updated. Total history items: " + historyItems.size());
+                        Log.d(TAG, "Adapter updated. Total items: " + historyItems.size());
 
                         if (historyItems.isEmpty()) {
-                            Toast.makeText(getContext(), "No appointment history found.", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getContext(),
+                                    "No appointment history found.",
+                                    Toast.LENGTH_SHORT).show();
                         }
 
                     } catch (JSONException e) {
                         Log.e(TAG, "JSON parsing error", e);
-                        Toast.makeText(getContext(), "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(),
+                                "Parse error: " + e.getMessage(),
+                                Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
                     Log.e(TAG, "Volley error fetching history data", error);
-                    Toast.makeText(getContext(), "Error fetching data from server.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(),
+                            "Error fetching data from server.",
+                            Toast.LENGTH_SHORT).show();
                 }
         );
 
