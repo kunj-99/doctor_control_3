@@ -21,7 +21,10 @@
         <item name="colorControlNormal">@color/gray</item>
         <item name="colorControlHighlight">@color/blue</item>
     </style>
-
+    <style name="MyShapeAppearance" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
     <!-- Reusable Style for Labels -->
     <style name="TextLabel">
         <item name="android:layout_width">match_parent</item>

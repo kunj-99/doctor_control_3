@@ -2,9 +2,11 @@
 <com.example.doctor_control.adapter.TouchInterceptionFrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/tif_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    tools:ignore="MissingClass">
 
     <LinearLayout
         android:orientation="vertical"

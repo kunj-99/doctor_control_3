@@ -1,6 +1,7 @@
 package com.example.doctor_control.fragments;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -32,10 +33,13 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.doctor_control.BackgroundService;
 import com.example.doctor_control.R;
+import com.example.doctor_control.tarmsandcondition;
+import com.example.doctor_control.suppor;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.security.PrivateKey;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,11 +52,18 @@ public class home extends Fragment {
     // Doctor ID is stored in "DoctorPrefs"
     private String doctorId;
 
+    ImageView terms, support;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
+
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_home, container, false);
+
+
+
     }
 
     @Override
@@ -60,7 +71,18 @@ public class home extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         doctorPrefs = getActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
+        terms = view.findViewById(R.id.terms);  // Make sure the ID is correct
+        support = view.findViewById(R.id.support);  // Make sure the ID is correct
 
+        terms.setOnClickListener(v -> {
+            Intent intent = new Intent(getContext(), tarmsandcondition.class);
+            startActivity(intent);
+        });
+
+        support.setOnClickListener(v -> {
+            Intent intent = new Intent(getContext(), suppor.class);
+            startActivity(intent);
+        });
         // Check for location permission. Make sure to use requireContext() or getContext() instead of 'this'.
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {

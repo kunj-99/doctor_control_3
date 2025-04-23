@@ -9,7 +9,7 @@
     <color name="light_gray">#F5F5F5</color>
     <color name="error_red">#FF0000</color>
     <color name="success_green">#0EBE7F</color>
-
+    <color name="card_stroke">#33000000</color>
 
     <color name="primary">#6750A4</color>
     <color name="onPrimary">#FFFFFF</color>
@@ -24,6 +24,10 @@
     <color name="onSurfaceVariant">#49454F</color>
     <color name="outline">#79747E</color>
 
+    <color name="textPrimary">#333333</color>
+    <!-- Gradient Colors -->
+    <color name="gradient_start">#2196F3</color>
+    <color name="gradient_end">#0D47A1</color>
 
     <color name="primary_color">#2196F3</color>
     <color name="text_gray">#757575</color>

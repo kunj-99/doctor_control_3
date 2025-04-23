@@ -1,7 +1,10 @@
 package com.example.doctor_control;
 
 import android.os.Bundle;
+import android.widget.TextView;
+
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -13,11 +16,14 @@ public class MainActivity extends AppCompatActivity {
 
     private ViewPager2 viewPager;
     private BottomNavigationView bottomNavigationView;
-
+    private TextView toolbarTitle;
+    private Toolbar toolbar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        toolbar = findViewById(R.id.toolbar);
+        toolbarTitle = findViewById(R.id.toolbar_title);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -32,15 +38,19 @@ public class MainActivity extends AppCompatActivity {
             int id = item.getItemId();
             if (id == R.id.navigation_home) {
                 viewPager.setCurrentItem(0, true);
+                toolbarTitle.setText("The Doctor Control");
                 return true;
             } else if (id == R.id.navigation_appointment) {
                 viewPager.setCurrentItem(1, true);
+                toolbarTitle.setText("Appointments");
                 return true;
             } else if (id == R.id.navigation_history) {
                 viewPager.setCurrentItem(2, true);
+                toolbarTitle.setText("History");
                 return true;
             } else if (id == R.id.navigation_profile) {
                 viewPager.setCurrentItem(3, true);
+                toolbarTitle.setText("Profile");
                 return true;
             }
             return false;
