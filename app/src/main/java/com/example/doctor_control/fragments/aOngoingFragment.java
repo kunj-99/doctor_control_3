@@ -48,7 +48,7 @@ public class aOngoingFragment extends Fragment {
     private static final String TAG = "aOngoingFragment";
     private static final String LIVE_LOCATION_URL =
             "http://sxm.a58.mytemp.website/update_live_location.php";
-    private static final long APPT_REFRESH_MS = 2000;
+    private static final long APPT_REFRESH_MS = 2000L;
 
     private RecyclerView recyclerView;
     private aOngoingAdapter adapter;
@@ -133,7 +133,7 @@ public class aOngoingFragment extends Fragment {
     public void onPause() {
         super.onPause();
         stopAppointmentRefresh();
-        // **We do NOT stop location updates here** – they keep running in background
+        // *We do NOT stop location updates here* – they keep running in background
     }
 
     private void startAppointmentRefresh() {
