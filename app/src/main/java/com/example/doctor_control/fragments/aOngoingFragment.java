@@ -3,7 +3,6 @@ package com.example.doctor_control.fragments;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -26,13 +25,13 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.doctor_control.DistanceCalculator;
+import com.example.doctor_control.LiveLocationManager;
 import com.example.doctor_control.R;
 import com.example.doctor_control.adapter.aOngoingAdapter;
-import com.example.doctor_control.LiveLocationManager;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
 import org.json.JSONArray;
@@ -41,7 +40,6 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 
 public class aOngoingFragment extends Fragment {
@@ -69,7 +67,7 @@ public class aOngoingFragment extends Fragment {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable refresher;
 
-    // Location updates (only start once)
+    // Location updates
     private FusedLocationProviderClient fusedClient;
     private LocationCallback locationCallback;
     private boolean locationStarted = false;
@@ -80,8 +78,7 @@ public class aOngoingFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_ongoing, container, false);
 
         queue = Volley.newRequestQueue(requireContext());
-        fusedClient = LocationServices
-                .getFusedLocationProviderClient(requireContext());
+        fusedClient = LocationServices.getFusedLocationProviderClient(requireContext());
 
         recyclerView = view.findViewById(R.id.rv_ongoing_appointments);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -93,7 +90,7 @@ public class aOngoingFragment extends Fragment {
                 distances,
                 hasReport,
                 mapLinks,
-                null  // keep your reportLauncher if needed
+                null
         );
         recyclerView.setAdapter(adapter);
 
@@ -103,8 +100,7 @@ public class aOngoingFragment extends Fragment {
                         .getInt("doctor_id", -1)
         );
         if ("-1".equals(doctorId)) {
-            Toast.makeText(getContext(),
-                    "Doctor ID not found!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Doctor ID not found!", Toast.LENGTH_SHORT).show();
         }
 
         locationCallback = new LocationCallback() {
@@ -124,7 +120,6 @@ public class aOngoingFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-
         startAppointmentRefresh();
         ensureLocationUpdates();
     }
@@ -133,7 +128,6 @@ public class aOngoingFragment extends Fragment {
     public void onPause() {
         super.onPause();
         stopAppointmentRefresh();
-        // *We do NOT stop location updates here* – they keep running in background
     }
 
     private void startAppointmentRefresh() {
@@ -163,15 +157,13 @@ public class aOngoingFragment extends Fragment {
             );
             return;
         }
-        // start updates once
+
         LocationRequest req = LocationRequest.create()
                 .setInterval(5000)
                 .setFastestInterval(2500)
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-        fusedClient.requestLocationUpdates(
-                req, locationCallback, Looper.getMainLooper()
-        );
+        fusedClient.requestLocationUpdates(req, locationCallback, Looper.getMainLooper());
         locationStarted = true;
     }
 
@@ -193,12 +185,6 @@ public class aOngoingFragment extends Fragment {
                         mapLinks.clear();
                         hasReport.clear();
 
-                        SharedPreferences prefs = requireContext()
-                                .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
-                        HashSet<String> completedSet = new HashSet<>(
-                                prefs.getStringSet("completed_reports", new HashSet<>())
-                        );
-
                         for (int i = 0; i < arr.length(); i++) {
                             JSONObject o = arr.getJSONObject(i);
                             String id   = o.getString("appointment_id");
@@ -206,17 +192,23 @@ public class aOngoingFragment extends Fragment {
                             String prob = o.getString("reason_for_visit");
                             String link = o.getString("patient_map_link");
 
+                            int reportFlag = o.optInt("has_report", 0); // 💡 Read from JSON
+                            boolean reportExists = reportFlag == 1;
+
                             appointmentIds.add(id);
                             patientNames.add(name);
                             problems.add(prob);
                             distances.add("Calculating...");
                             mapLinks.add(link);
-                            hasReport.add(completedSet.contains(id));
+                            hasReport.add(reportExists);
 
                             if (i == 0) {
-                                prefs.edit()
+                                requireContext()
+                                        .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
+                                        .edit()
                                         .putString("ongoing_appointment_id", id)
                                         .apply();
+
                                 LiveLocationManager.getInstance()
                                         .startLocationUpdates(requireContext().getApplicationContext());
                             }
@@ -260,10 +252,10 @@ public class aOngoingFragment extends Fragment {
             @Override
             protected Map<String,String> getParams() {
                 Map<String,String> p = new HashMap<>();
-                p.put("doctor_id",      doctorId);
+                p.put("doctor_id", doctorId);
                 p.put("appointment_id", apptId);
-                p.put("latitude",       String.valueOf(lat));
-                p.put("longitude",      String.valueOf(lon));
+                p.put("latitude", String.valueOf(lat));
+                p.put("longitude", String.valueOf(lon));
                 return p;
             }
         };

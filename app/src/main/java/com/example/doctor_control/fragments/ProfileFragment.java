@@ -67,10 +67,10 @@ public class ProfileFragment extends Fragment {
 
         // Retrieve the doctor_id from SharedPreferences dynamically
         SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
-        doctorId = sharedPreferences.getInt("doctor_id", 0); // 0 is the default value if not found
+        doctorId = sharedPreferences.getInt("doctor_id", -1); // 0 is the default value if not found
 
         // Optional: Check if the doctorId is valid
-        if (doctorId == 0) {
+        if (doctorId == -1) {
             Toast.makeText(getContext(), "Invalid doctor id. Please login.", Toast.LENGTH_SHORT).show();
         }
 

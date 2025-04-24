@@ -67,7 +67,6 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                 .inflate(R.layout.item_ongoing, parent, false);
         return new ViewHolder(view);
     }
-
     @Override
     public void onBindViewHolder(@NonNull aOngoingAdapter.ViewHolder holder, int position) {
         holder.tvPatientName.setText(patientNames.get(position));
@@ -75,6 +74,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         holder.tvDistance.setText("Distance: " + distanceStrings.get(position));
 
         boolean reportSubmitted = hasReport.get(position);
+
+        // Enable/disable Complete button
         if (reportSubmitted) {
             holder.btnComplete.setEnabled(true);
             holder.btnComplete.setBackgroundColor(
@@ -85,6 +86,25 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             holder.btnComplete.setBackgroundColor(Color.LTGRAY);
             holder.btnComplete.setTextColor(
                     ContextCompat.getColor(context, R.color.gray));
+        }
+
+        // Disable Add/View Report button if already submitted
+        if (reportSubmitted) {
+            holder.btnView.setEnabled(false);
+            holder.btnView.setBackgroundColor(Color.LTGRAY);
+            holder.btnView.setText("Report Added"); // Optional label update
+        } else {
+            holder.btnView.setEnabled(true);
+            holder.btnView.setBackgroundColor(
+                    ContextCompat.getColor(context, R.color.primaryColor));
+            holder.btnView.setTextColor(Color.WHITE);
+            holder.btnView.setText("Add Report");
+
+            holder.btnView.setOnClickListener(v -> {
+                Intent intent = new Intent(context, medical_report.class);
+                intent.putExtra("appointment_id", appointmentIds.get(position));
+                context.startActivity(intent);
+            });
         }
 
         // TRACK button
@@ -99,14 +119,6 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                         Toast.LENGTH_SHORT).show();
             }
         });
-
-        // VIEW REPORT button
-        holder.btnView.setOnClickListener(v -> {
-            Intent intent = new Intent(context, medical_report.class);
-            intent.putExtra("appointment_id", appointmentIds.get(position));
-            context.startActivity(intent); // 🎯 No launcher, no crash, just go
-        });
-
 
         // COMPLETE button
         holder.btnComplete.setOnClickListener(v -> {
