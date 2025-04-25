@@ -27,6 +27,7 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
 import com.example.doctor_control.R;
+import com.example.doctor_control.login;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -64,6 +65,21 @@ public class ProfileFragment extends Fragment {
         etAvailabilitySchedule = view.findViewById(R.id.et_availability_schedule);
         profileImage = view.findViewById(R.id.profile_image);
         btnSaveProfile = view.findViewById(R.id.btn_save_profile);
+        Button btnLogout = view.findViewById(R.id.btn_logout);
+        btnLogout.setOnClickListener(v -> {
+            SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.clear();  // Wipe all stored preferences
+            editor.apply();
+
+            Toast.makeText(getContext(), "Logged out successfully!", Toast.LENGTH_SHORT).show();
+
+            // Redirect to login activity
+            Intent intent = new Intent(requireActivity(), login.class); // Replace with your actual login activity
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+        });
+
 
         // Retrieve the doctor_id from SharedPreferences dynamically
         SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
@@ -188,4 +204,6 @@ public class ProfileFragment extends Fragment {
         byte[] imageBytes = baos.toByteArray();
         return Base64.encodeToString(imageBytes, Base64.DEFAULT);
     }
+
+
 }

@@ -69,7 +69,6 @@ public class login extends AppCompatActivity {
     }
 
     private void checkDoctorMobile(String mobile) {
-        // URL to the doctor's PHP login file that sends the OTP.
         String URL = "http://sxm.a58.mytemp.website/Doctors/login.php";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, URL,
@@ -82,7 +81,6 @@ public class login extends AppCompatActivity {
                         if (success) {
                             Toast.makeText(login.this, "OTP sent successfully. Proceeding to OTP verification.", Toast.LENGTH_SHORT).show();
 
-                            // Pass the mobile number to the OTP verification activity
                             Intent intent = new Intent(login.this, otp_verification.class);
                             intent.putExtra("mobile", mobile);
                             startActivity(intent);
@@ -99,7 +97,6 @@ public class login extends AppCompatActivity {
                 }) {
             @Override
             protected Map<String, String> getParams() {
-                // Send the mobile number as a POST parameter
                 Map<String, String> params = new HashMap<>();
                 params.put("mobile", mobile);
                 return params;
@@ -108,5 +105,12 @@ public class login extends AppCompatActivity {
 
         RequestQueue requestQueue = Volley.newRequestQueue(this);
         requestQueue.add(stringRequest);
+    }
+
+    @Override
+    public void onBackPressed() {
+        // Exit the app
+        super.onBackPressed();
+        finishAffinity();  // close all activities and exit app
     }
 }
