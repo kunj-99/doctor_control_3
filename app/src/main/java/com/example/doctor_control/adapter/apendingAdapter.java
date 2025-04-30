@@ -1,5 +1,6 @@
 package com.example.doctor_control.adapter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
@@ -48,6 +49,7 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
         return new ViewHolder(view);
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(@NonNull apendingAdapter.ViewHolder holder, int position) {
         Appointment appointment = appointments.get(position);
@@ -145,16 +147,21 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
                 Request.Method.POST, url, payload,
                 response -> {
                     boolean success = response.optBoolean("success", false);
+                    String msg = response.optString("message", "Update failed.");
                     if (success) {
                         Toast.makeText(context,
                                 "Appointment confirmed", Toast.LENGTH_SHORT).show();
+
                         appointments.remove(position);
                         notifyItemRemoved(position);
                         notifyItemRangeChanged(position, appointments.size());
                     } else {
-                        Toast.makeText(context,
-                                response.optString("message","Update failed"),
-                                Toast.LENGTH_SHORT).show();
+                        if (msg.toLowerCase().contains("already")) {
+                            // For messages like "already pending"/"already ongoing"
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
+                        }
                     }
                 },
                 error -> {
@@ -162,6 +169,8 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
                             "Network error", Toast.LENGTH_SHORT).show();
                 }
         );
+
         queue.add(req);
     }
+
 }
