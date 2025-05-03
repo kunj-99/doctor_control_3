@@ -53,4 +53,5 @@ dependencies {
 
 
     implementation ("androidx.cardview:cardview:1.0.0")
+    implementation ("pl.droidsonroids.gif:android-gif-drawable:1.2.23")
 }

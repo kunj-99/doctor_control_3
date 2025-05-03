@@ -46,7 +46,7 @@ public class aOngoingFragment extends Fragment {
     private static final String TAG = "aOngoingFragment";
     private static final String LIVE_LOCATION_URL =
             "http://sxm.a58.mytemp.website/update_live_location.php";
-    private static final long APPT_REFRESH_MS = 5000L;
+    private static final long APPT_REFRESH_MS = 10000L; // try 10 seconds
 
     private RecyclerView recyclerView;
     private aOngoingAdapter adapter;
@@ -178,56 +178,86 @@ public class aOngoingFragment extends Fragment {
                         if (!root.getBoolean("success")) return;
                         JSONArray arr = root.getJSONArray("appointments");
 
-                        appointmentIds.clear();
-                        patientNames.clear();
-                        problems.clear();
-                        distances.clear();
-                        mapLinks.clear();
-                        hasReport.clear();
+                        recyclerView.post(() -> {
+                            appointmentIds.clear();
+                            patientNames.clear();
+                            problems.clear();
+                            distances.clear();
+                            mapLinks.clear();
+                            hasReport.clear();
 
-                        for (int i = 0; i < arr.length(); i++) {
-                            JSONObject o = arr.getJSONObject(i);
-                            String id   = o.getString("appointment_id");
-                            String name = o.getString("patient_name");
-                            String prob = o.getString("reason_for_visit");
-                            String link = o.getString("patient_map_link");
+                            for (int i = 0; i < arr.length(); i++) {
+                                JSONObject o = null;
+                                try {
+                                    o = arr.getJSONObject(i);
+                                } catch (JSONException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                String id   = null;
+                                try {
+                                    id = o.getString("appointment_id");
+                                } catch (JSONException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                String name = null;
+                                try {
+                                    name = o.getString("patient_name");
+                                } catch (JSONException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                String prob = null;
+                                try {
+                                    prob = o.getString("reason_for_visit");
+                                } catch (JSONException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                String link = null;
+                                try {
+                                    link = o.getString("patient_map_link");
+                                } catch (JSONException e) {
+                                    throw new RuntimeException(e);
+                                }
 
-                            int reportFlag = o.optInt("has_report", 0); // 💡 Read from JSON
-                            boolean reportExists = reportFlag == 1;
+                                boolean reportExists = o.optInt("has_report", 0) == 1;
 
-                            appointmentIds.add(id);
-                            patientNames.add(name);
-                            problems.add(prob);
-                            distances.add("Calculating...");
-                            mapLinks.add(link);
-                            hasReport.add(reportExists);
+                                appointmentIds.add(id);
+                                patientNames.add(name);
+                                problems.add(prob);
+                                distances.add("Calculating...");
+                                mapLinks.add(link);
+                                hasReport.add(reportExists);
 
-                            if (i == 0) {
-                                requireContext()
-                                        .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
-                                        .edit()
-                                        .putString("ongoing_appointment_id", id)
-                                        .apply();
+                                if (i == 0) {
+                                    requireContext()
+                                            .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
+                                            .edit()
+                                            .putString("ongoing_appointment_id", id)
+                                            .apply();
 
-                                LiveLocationManager.getInstance()
-                                        .startLocationUpdates(requireContext().getApplicationContext());
+                                    LiveLocationManager.getInstance()
+                                            .startLocationUpdates(requireContext().getApplicationContext());
+                                }
                             }
-                        }
 
-                        adapter.notifyDataSetChanged();
+                            adapter.notifyDataSetChanged();
 
-                        for (int i = 0; i < mapLinks.size(); i++) {
-                            final int idx = i;
-                            DistanceCalculator.calculateDistance(
-                                    requireActivity(),
-                                    queue,
-                                    mapLinks.get(idx),
-                                    dist -> {
-                                        distances.set(idx, dist);
-                                        adapter.notifyItemChanged(idx);
-                                    }
-                            );
-                        }
+                            // Recalculate distances after dataset is ready
+                            for (int i = 0; i < mapLinks.size(); i++) {
+                                final int idx = i;
+                                DistanceCalculator.calculateDistance(
+                                        requireActivity(),
+                                        queue,
+                                        mapLinks.get(idx),
+                                        dist -> {
+                                            if (idx < distances.size()) {
+                                                distances.set(idx, dist);
+                                                adapter.notifyItemChanged(idx);
+                                            }
+                                        }
+                                );
+                            }
+                        });
+
                     } catch (JSONException e) {
                         Log.e(TAG, "Parse error", e);
                     }
@@ -235,13 +265,14 @@ public class aOngoingFragment extends Fragment {
                 error -> Log.e(TAG, "Fetch error", error)
         ) {
             @Override
-            protected Map<String,String> getParams() {
-                Map<String,String> p = new HashMap<>();
+            protected Map<String, String> getParams() {
+                Map<String, String> p = new HashMap<>();
                 p.put("doctor_id", doctorId);
                 return p;
             }
         });
     }
+
 
     private void sendLiveLocation(String apptId, double lat, double lon) {
         StringRequest req = new StringRequest(

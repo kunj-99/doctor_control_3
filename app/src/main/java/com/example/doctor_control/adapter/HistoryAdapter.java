@@ -1,5 +1,6 @@
 package com.example.doctor_control.adapter;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.doctor_control.HistoryItem;
 import com.example.doctor_control.PatientProfileActivity;
 import com.example.doctor_control.R;
+import com.example.doctor_control.patient_bill;
 import com.example.doctor_control.view_patient_report;
 import java.util.List;
 
@@ -84,10 +86,9 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
 
         // Bill button click event (currently commented; add Bill activity logic as needed)
         holder.btnViewBill.setOnClickListener(v -> {
-            // Example: Start Bill Activity
-            // Intent intent = new Intent(v.getContext(), BillActivity.class);
-            // intent.putExtra("appointment_id", appointmentIds.get(position));
-            // v.getContext().startActivity(intent);
+             Intent intent = new Intent(v.getContext(), patient_bill.class);
+            intent.putExtra("appointment_id", Integer.parseInt(appointmentIds.get(position)));
+            v.getContext().startActivity(intent);
         });
 
         // Report button click event: pass appointment ID to view_patient_report activity

@@ -1,5 +1,6 @@
 package com.example.doctor_control.adapter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.text.InputType;
 import android.view.LayoutInflater;
@@ -46,6 +47,7 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         return new ViewHolder(view);
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         final Appointment appointment = appointments.get(position);
@@ -155,9 +157,6 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         public void setDistance(String d) { this.distance = d; }
     }
 
-    /**
-     * Now passes the raw ETA value (no conversion) plus unit.
-     */
     private void updateAppointmentStatus(
             String appointmentId,
             String newStatus,

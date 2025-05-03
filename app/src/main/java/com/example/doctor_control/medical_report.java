@@ -114,8 +114,13 @@ public class medical_report extends AppCompatActivity {
     private void fetchAppointmentDetails(String id) {
         String url = "http://sxm.a58.mytemp.website/Doctors/get_appointment_details.php?appointment_id=" + id;
 
+        // 👇 Show loader before network call
+        loaderutil.showLoader(this);
+
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
                 response -> {
+                    // 👇 Hide loader after successful response
+                    loaderutil.hideLoader();
                     try {
                         boolean success = response.optBoolean("success");
                         if (success) {
@@ -124,17 +129,13 @@ public class medical_report extends AppCompatActivity {
                             etSex.setText(response.optString("sex", ""));
                             etAddress.setText(response.optString("address", ""));
                             etDate.setText(response.optString("date", ""));
-
-                            // Do NOT fill report type from API
-                            etReportType.setText("");
-
-                            // Set doctor name into signature field
+                            etReportType.setText(""); // Optional: cleared always
                             etSignature.setText(response.optString("doctor_name", ""));
                         } else {
                             showError("Appointment not found.");
                         }
 
-                        // Fields not returned – set to empty by default
+                        // Optional fields: clear if not sent
                         etWeight.setText("");
                         etTemperature.setText("");
                         etPulse.setText("");
@@ -147,12 +148,15 @@ public class medical_report extends AppCompatActivity {
                     }
                 },
                 error -> {
+                    // 👇 Hide loader on error too
+                    loaderutil.hideLoader();
                     error.printStackTrace();
                     showError("Failed to fetch appointment details.");
                 });
 
         requestQueue.add(request);
     }
+
 
     private void showImagePickerDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -387,13 +391,13 @@ public class medical_report extends AppCompatActivity {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
-    private void showSuccess(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-
-        Intent resultIntent = new Intent();
-        resultIntent.putExtra("report_submitted", true);
-        resultIntent.putExtra("appointment_id", appointmentId);
-        setResult(RESULT_OK, resultIntent);
-        finish();
-    }
+//    private void showSuccess(String message) {
+//        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+//
+//        Intent resultIntent = new Intent();
+//        resultIntent.putExtra("report_submitted", true);
+//        resultIntent.putExtra("appointment_id", appointmentId);
+//        setResult(RESULT_OK, resultIntent);
+//        finish();
+//    }
 }

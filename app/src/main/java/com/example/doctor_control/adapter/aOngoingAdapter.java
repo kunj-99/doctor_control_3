@@ -1,5 +1,6 @@
 package com.example.doctor_control.adapter;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -67,6 +68,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                 .inflate(R.layout.item_ongoing, parent, false);
         return new ViewHolder(view);
     }
+    @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(@NonNull aOngoingAdapter.ViewHolder holder, int position) {
         holder.tvPatientName.setText(patientNames.get(position));
@@ -123,9 +125,13 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         // COMPLETE button
         holder.btnComplete.setOnClickListener(v -> {
             if (holder.btnComplete.isEnabled()) {
-                updateAppointmentStatus(appointmentIds.get(position), position);
+                holder.btnComplete.setText("Completing...");
+                holder.btnComplete.setEnabled(false);
+
+                updateAppointmentStatus(appointmentIds.get(position), position, holder);
             }
         });
+
     }
 
     @Override
@@ -133,7 +139,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         return appointmentIds.size();
     }
 
-    private void updateAppointmentStatus(String appointmentId, int position) {
+    private void updateAppointmentStatus(String appointmentId, int position, ViewHolder holder) {
         String url = "http://sxm.a58.mytemp.website/Doctors/update_appointment_status.php";
         JSONObject payload = new JSONObject();
         try {
@@ -141,38 +147,40 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             payload.put("action", "complete");
         } catch (JSONException e) {
             e.printStackTrace();
-            Toast.makeText(context, "Error creating request.",
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Error creating request.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        JsonObjectRequest request = new JsonObjectRequest(
+        @SuppressLint("SetTextI18n") JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST, url, payload,
                 response -> {
                     boolean success = response.optBoolean("success", false);
                     if (success) {
-                        Toast.makeText(context,
-                                "Appointment marked as Completed",
-                                Toast.LENGTH_SHORT).show();
-                        hasReport.set(position, true);
-                        notifyItemChanged(position);
+                        Toast.makeText(context, "Marked as Completed", Toast.LENGTH_SHORT).show();
+                        // Guarded update to avoid crash
+                        if (position >= 0 && position < hasReport.size()) {
+                            hasReport.set(position, true);
+                            notifyItemChanged(position);
+                        }
                     } else {
-                        Toast.makeText(context,
-                                "Failed to update status",
-                                Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Update failed", Toast.LENGTH_SHORT).show();
+                        holder.btnComplete.setEnabled(true);
+                        holder.btnComplete.setText("Complete");
                     }
                 },
                 error -> {
                     error.printStackTrace();
-                    Toast.makeText(context,
-                            "Network error while updating status",
-                            Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "Network error", Toast.LENGTH_SHORT).show();
+                    holder.btnComplete.setEnabled(true);
+                    holder.btnComplete.setText("Complete");
                 }
         );
 
         RequestQueue queue = Volley.newRequestQueue(context);
         queue.add(request);
     }
+
+
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvPatientName, tvProblem, tvDistance;
