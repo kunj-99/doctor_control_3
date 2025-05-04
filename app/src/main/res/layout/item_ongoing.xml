@@ -29,11 +29,20 @@
             android:text="Problem: Fever and Headache"
             android:textSize="16sp"
             android:textColor="@color/black"/>
+
         <TextView
             android:id="@+id/tv_distans"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="23 km"
+            android:textSize="16sp"
+            android:textColor="@color/black"/>
+
+        <TextView
+            android:id="@+id/tv_price"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="₹ 500"
             android:textSize="16sp"
             android:textColor="@color/black"/>
 
