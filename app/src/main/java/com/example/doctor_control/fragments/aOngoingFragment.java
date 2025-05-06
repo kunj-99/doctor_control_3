@@ -2,17 +2,23 @@ package com.example.doctor_control.fragments;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -28,11 +34,9 @@ import com.example.doctor_control.DistanceCalculator;
 import com.example.doctor_control.LiveLocationManager;
 import com.example.doctor_control.R;
 import com.example.doctor_control.adapter.aOngoingAdapter;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
+import com.example.doctor_control.medical_report;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.*;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -43,45 +47,54 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class aOngoingFragment extends Fragment {
+
     private static final String TAG = "aOngoingFragment";
-    private static final String LIVE_LOCATION_URL =
-            "http://sxm.a58.mytemp.website/update_live_location.php";
-    private static final long APPT_REFRESH_MS = 10000L; // try 10 seconds
+    private static final String LIVE_LOCATION_URL = "http://sxm.a58.mytemp.website/update_live_location.php";
+    private static final long APPT_REFRESH_MS = 5000;
 
     private RecyclerView recyclerView;
     private aOngoingAdapter adapter;
     private RequestQueue queue;
 
-    // Adapter data
     private final ArrayList<String> appointmentIds = new ArrayList<>();
-    private final ArrayList<String> patientNames   = new ArrayList<>();
-    private final ArrayList<String> problems       = new ArrayList<>();
-    private final ArrayList<String> distances      = new ArrayList<>();
-    private final ArrayList<String> mapLinks       = new ArrayList<>();
-    private final ArrayList<Boolean> hasReport     = new ArrayList<>();
+    private final ArrayList<String> patientNames = new ArrayList<>();
+    private final ArrayList<String> problems = new ArrayList<>();
+    private final ArrayList<String> distances = new ArrayList<>();
+    private final ArrayList<String> mapLinks = new ArrayList<>();
+    private final ArrayList<Boolean> hasReport = new ArrayList<>();
 
     private String doctorId;
     private double doctorLat = 0, doctorLon = 0;
-
-    // Appointment refresher
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable refresher;
 
-    // Location updates
     private FusedLocationProviderClient fusedClient;
     private LocationCallback locationCallback;
     private boolean locationStarted = false;
 
+    private ActivityResultLauncher<Intent> reportLauncher;
+    private int lastReportPosition = -1;
+
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_ongoing, container, false);
 
         queue = Volley.newRequestQueue(requireContext());
         fusedClient = LocationServices.getFusedLocationProviderClient(requireContext());
 
+        reportLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK && lastReportPosition != -1) {
+                        hasReport.set(lastReportPosition, true);
+                        adapter.notifyItemChanged(lastReportPosition);
+                        lastReportPosition = -1;
+                    }
+                });
+
         recyclerView = view.findViewById(R.id.rv_ongoing_appointments);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+
         adapter = new aOngoingAdapter(
                 getContext(),
                 appointmentIds,
@@ -90,8 +103,23 @@ public class aOngoingFragment extends Fragment {
                 distances,
                 hasReport,
                 mapLinks,
-                null
+                position -> {
+                    appointmentIds.remove(position);
+                    patientNames.remove(position);
+                    problems.remove(position);
+                    distances.remove(position);
+                    mapLinks.remove(position);
+                    hasReport.remove(position);
+                    adapter.notifyItemRemoved(position);
+                },
+                (appointmentId, position) -> {
+                    lastReportPosition = position;
+                    Intent intent = new Intent(getContext(), medical_report.class);
+                    intent.putExtra("appointment_id", appointmentId);
+                    reportLauncher.launch(intent);
+                }
         );
+
         recyclerView.setAdapter(adapter);
 
         doctorId = String.valueOf(
@@ -99,6 +127,7 @@ public class aOngoingFragment extends Fragment {
                         .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                         .getInt("doctor_id", -1)
         );
+
         if ("-1".equals(doctorId)) {
             Toast.makeText(getContext(), "Doctor ID not found!", Toast.LENGTH_SHORT).show();
         }
@@ -120,8 +149,20 @@ public class aOngoingFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        checkAndPromptGPS();
         startAppointmentRefresh();
         ensureLocationUpdates();
+
+        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        fusedClient.getLastLocation().addOnSuccessListener(location -> {
+            if (location != null && !appointmentIds.isEmpty()) {
+                sendLiveLocation(appointmentIds.get(0), location.getLatitude(), location.getLongitude());
+            }
+        });
     }
 
     @Override
@@ -132,6 +173,7 @@ public class aOngoingFragment extends Fragment {
 
     private void startAppointmentRefresh() {
         stopAppointmentRefresh();
+        fetchAppointments();
         refresher = () -> {
             if (isAdded()) {
                 fetchAppointments();
@@ -147,8 +189,8 @@ public class aOngoingFragment extends Fragment {
 
     private void ensureLocationUpdates() {
         if (locationStarted) return;
-        if (ContextCompat.checkSelfPermission(requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION)
+
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                     requireActivity(),
@@ -187,61 +229,33 @@ public class aOngoingFragment extends Fragment {
                             hasReport.clear();
 
                             for (int i = 0; i < arr.length(); i++) {
-                                JSONObject o = null;
                                 try {
-                                    o = arr.getJSONObject(i);
-                                } catch (JSONException e) {
-                                    throw new RuntimeException(e);
-                                }
-                                String id   = null;
-                                try {
-                                    id = o.getString("appointment_id");
-                                } catch (JSONException e) {
-                                    throw new RuntimeException(e);
-                                }
-                                String name = null;
-                                try {
-                                    name = o.getString("patient_name");
-                                } catch (JSONException e) {
-                                    throw new RuntimeException(e);
-                                }
-                                String prob = null;
-                                try {
-                                    prob = o.getString("reason_for_visit");
-                                } catch (JSONException e) {
-                                    throw new RuntimeException(e);
-                                }
-                                String link = null;
-                                try {
-                                    link = o.getString("patient_map_link");
-                                } catch (JSONException e) {
-                                    throw new RuntimeException(e);
-                                }
+                                    JSONObject o = arr.getJSONObject(i);
+                                    appointmentIds.add(o.getString("appointment_id"));
+                                    patientNames.add(o.getString("patient_name"));
+                                    problems.add(o.getString("reason_for_visit"));
+                                    mapLinks.add(o.getString("patient_map_link"));
+                                    hasReport.add(o.optInt("has_report", 0) == 1);
+                                    distances.add("Calculating...");
 
-                                boolean reportExists = o.optInt("has_report", 0) == 1;
+                                    if (i == 0) {
+                                        requireContext()
+                                                .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
+                                                .edit()
+                                                .putString("ongoing_appointment_id", o.getString("appointment_id"))
+                                                .apply();
 
-                                appointmentIds.add(id);
-                                patientNames.add(name);
-                                problems.add(prob);
-                                distances.add("Calculating...");
-                                mapLinks.add(link);
-                                hasReport.add(reportExists);
+                                        LiveLocationManager.getInstance()
+                                                .startLocationUpdates(requireContext().getApplicationContext());
+                                    }
 
-                                if (i == 0) {
-                                    requireContext()
-                                            .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
-                                            .edit()
-                                            .putString("ongoing_appointment_id", id)
-                                            .apply();
-
-                                    LiveLocationManager.getInstance()
-                                            .startLocationUpdates(requireContext().getApplicationContext());
+                                } catch (JSONException e) {
+                                    Log.e(TAG, "JSON parsing error at index " + i, e);
                                 }
                             }
 
                             adapter.notifyDataSetChanged();
 
-                            // Recalculate distances after dataset is ready
                             for (int i = 0; i < mapLinks.size(); i++) {
                                 final int idx = i;
                                 DistanceCalculator.calculateDistance(
@@ -273,16 +287,15 @@ public class aOngoingFragment extends Fragment {
         });
     }
 
-
     private void sendLiveLocation(String apptId, double lat, double lon) {
         StringRequest req = new StringRequest(
                 Request.Method.POST, LIVE_LOCATION_URL,
                 resp -> Log.d(TAG, "LiveLoc resp: " + resp),
-                err  -> Log.e(TAG, "LiveLoc err: " + err.getMessage())
+                err -> Log.e(TAG, "LiveLoc err: " + err.getMessage())
         ) {
             @Override
-            protected Map<String,String> getParams() {
-                Map<String,String> p = new HashMap<>();
+            protected Map<String, String> getParams() {
+                Map<String, String> p = new HashMap<>();
                 p.put("doctor_id", doctorId);
                 p.put("appointment_id", apptId);
                 p.put("latitude", String.valueOf(lat));
@@ -291,5 +304,27 @@ public class aOngoingFragment extends Fragment {
             }
         };
         queue.add(req);
+    }
+
+    private void checkAndPromptGPS() {
+        LocationRequest locationRequest = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        LocationSettingsRequest settingsRequest = new LocationSettingsRequest.Builder()
+                .addLocationRequest(locationRequest)
+                .setAlwaysShow(true)
+                .build();
+
+        SettingsClient client = LocationServices.getSettingsClient(requireActivity());
+        client.checkLocationSettings(settingsRequest)
+                .addOnFailureListener(e -> {
+                    if (e instanceof ResolvableApiException) {
+                        try {
+                            ((ResolvableApiException) e).startResolutionForResult(requireActivity(), 1011);
+                        } catch (Exception ex) {
+                            Log.e(TAG, "GPS dialog error", ex);
+                        }
+                    }
+                });
     }
 }

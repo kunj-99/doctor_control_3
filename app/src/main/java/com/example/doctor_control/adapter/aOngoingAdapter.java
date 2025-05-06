@@ -2,8 +2,8 @@ package com.example.doctor_control.adapter;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Color;
+import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,7 +11,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,16 +20,16 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.doctor_control.R;
-import com.example.doctor_control.medical_report;
 import com.example.doctor_control.track_patient_location;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
+import android.content.Intent;
 
 public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHolder> {
 
@@ -41,7 +40,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     private final ArrayList<String> distanceStrings;
     private final ArrayList<Boolean> hasReport;
     private final ArrayList<String> mapLinks;
-    private final ActivityResultLauncher<Intent> launcher;
+    private final Consumer<Integer> onAppointmentCompleted;
+    private final BiConsumer<String, Integer> onAddReportClicked;
 
     public aOngoingAdapter(Context context,
                            ArrayList<String> appointmentIds,
@@ -50,7 +50,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                            ArrayList<String> distanceStrings,
                            ArrayList<Boolean> hasReport,
                            ArrayList<String> mapLinks,
-                           ActivityResultLauncher<Intent> launcher) {
+                           Consumer<Integer> onAppointmentCompleted,
+                           BiConsumer<String, Integer> onAddReportClicked) {
         this.context = context;
         this.appointmentIds = appointmentIds;
         this.patientNames = patientNames;
@@ -58,7 +59,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         this.distanceStrings = distanceStrings;
         this.hasReport = hasReport;
         this.mapLinks = mapLinks;
-        this.launcher = launcher;
+        this.onAppointmentCompleted = onAppointmentCompleted;
+        this.onAddReportClicked = onAddReportClicked;
     }
 
     @NonNull
@@ -68,6 +70,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                 .inflate(R.layout.item_ongoing, parent, false);
         return new ViewHolder(view);
     }
+
     @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(@NonNull aOngoingAdapter.ViewHolder holder, int position) {
@@ -77,39 +80,33 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
 
         boolean reportSubmitted = hasReport.get(position);
 
-        // Enable/disable Complete button
-        if (reportSubmitted) {
-            holder.btnComplete.setEnabled(true);
-            holder.btnComplete.setBackgroundColor(
-                    ContextCompat.getColor(context, R.color.primaryColor));
-            holder.btnComplete.setTextColor(Color.WHITE);
-        } else {
-            holder.btnComplete.setEnabled(false);
-            holder.btnComplete.setBackgroundColor(Color.LTGRAY);
-            holder.btnComplete.setTextColor(
-                    ContextCompat.getColor(context, R.color.gray));
-        }
+        // Update Complete button
+        holder.btnComplete.setEnabled(reportSubmitted);
+        holder.btnComplete.setBackgroundColor(reportSubmitted
+                ? ContextCompat.getColor(context, R.color.primaryColor)
+                : Color.LTGRAY);
+        holder.btnComplete.setTextColor(ContextCompat.getColor(context,
+                reportSubmitted ? android.R.color.white : R.color.gray));
 
-        // Disable Add/View Report button if already submitted
+        // Update Add/View Report button
         if (reportSubmitted) {
             holder.btnView.setEnabled(false);
             holder.btnView.setBackgroundColor(Color.LTGRAY);
-            holder.btnView.setText("Report Added"); // Optional label update
+            holder.btnView.setText("Report Added");
         } else {
             holder.btnView.setEnabled(true);
-            holder.btnView.setBackgroundColor(
-                    ContextCompat.getColor(context, R.color.primaryColor));
+            holder.btnView.setBackgroundColor(ContextCompat.getColor(context, R.color.primaryColor));
             holder.btnView.setTextColor(Color.WHITE);
             holder.btnView.setText("Add Report");
 
             holder.btnView.setOnClickListener(v -> {
-                Intent intent = new Intent(context, medical_report.class);
-                intent.putExtra("appointment_id", appointmentIds.get(position));
-                context.startActivity(intent);
+                if (onAddReportClicked != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    onAddReportClicked.accept(appointmentIds.get(position), position);
+                }
             });
         }
 
-        // TRACK button
+        // Track Patient Location
         holder.btnTrack.setOnClickListener(v -> {
             String mapLink = mapLinks.get(position);
             if (mapLink != null && !mapLink.isEmpty()) {
@@ -117,21 +114,18 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                 intent.putExtra("map_link", mapLink);
                 context.startActivity(intent);
             } else {
-                Toast.makeText(context, "Map link not available",
-                        Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Map link not available", Toast.LENGTH_SHORT).show();
             }
         });
 
-        // COMPLETE button
+        // Mark as Complete
         holder.btnComplete.setOnClickListener(v -> {
             if (holder.btnComplete.isEnabled()) {
                 holder.btnComplete.setText("Completing...");
                 holder.btnComplete.setEnabled(false);
-
                 updateAppointmentStatus(appointmentIds.get(position), position, holder);
             }
         });
-
     }
 
     @Override
@@ -151,16 +145,15 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             return;
         }
 
-        @SuppressLint("SetTextI18n") JsonObjectRequest request = new JsonObjectRequest(
+        JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST, url, payload,
                 response -> {
                     boolean success = response.optBoolean("success", false);
                     if (success) {
                         Toast.makeText(context, "Marked as Completed", Toast.LENGTH_SHORT).show();
-                        // Guarded update to avoid crash
-                        if (position >= 0 && position < hasReport.size()) {
-                            hasReport.set(position, true);
-                            notifyItemChanged(position);
+
+                        if (onAppointmentCompleted != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            onAppointmentCompleted.accept(position);
                         }
                     } else {
                         Toast.makeText(context, "Update failed", Toast.LENGTH_SHORT).show();
@@ -180,8 +173,6 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         queue.add(request);
     }
 
-
-
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvPatientName, tvProblem, tvDistance;
         Button btnComplete, btnTrack, btnView;
@@ -189,11 +180,11 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvPatientName = itemView.findViewById(R.id.tv_patient_name);
-            tvProblem     = itemView.findViewById(R.id.tv_problem);
-            tvDistance    = itemView.findViewById(R.id.tv_distans);
-            btnComplete   = itemView.findViewById(R.id.btn_complete);
-            btnTrack      = itemView.findViewById(R.id.btn_cancel);
-            btnView       = itemView.findViewById(R.id.btn_view);
+            tvProblem = itemView.findViewById(R.id.tv_problem);
+            tvDistance = itemView.findViewById(R.id.tv_distans);
+            btnComplete = itemView.findViewById(R.id.btn_complete);
+            btnTrack = itemView.findViewById(R.id.btn_cancel);
+            btnView = itemView.findViewById(R.id.btn_view);
         }
     }
 }
