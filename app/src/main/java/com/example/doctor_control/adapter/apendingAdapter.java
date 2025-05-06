@@ -26,10 +26,6 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
-/**
- * Adapter for pending appointments, showing name, problem, distance,
- * and Confirm / Track buttons.
- */
 public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHolder> {
 
     private static final String TAG = "apendingAdapter";
@@ -57,6 +53,18 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
         holder.tvProblem.setText("Problem: " + appointment.getProblem());
         holder.tvDistance.setText("Distance: " + appointment.getDistance());
 
+        // 💰 Show formatted payment
+        if ("Online".equalsIgnoreCase(appointment.getPaymentMethod())) {
+            holder.tvAmount.setText("₹ " + appointment.getAmount() + " Paid");
+        } else if ("Offline".equalsIgnoreCase(appointment.getPaymentMethod())) {
+            holder.tvAmount.setText("₹ " + appointment.getAmount() + " (Collect in cash)");
+        } else {
+            holder.tvAmount.setText("₹ " + appointment.getAmount());
+        }
+
+        // Show method separately too
+        holder.tvPaymentMethod.setText("Payment Method: " + appointment.getPaymentMethod());
+
         holder.btnCanform.setOnClickListener(v -> {
             Log.d(TAG, "Confirm clicked for ID: " + appointment.getAppointmentId());
             updateAppointmentStatus(appointment.getAppointmentId(), "Confirmed", position);
@@ -81,40 +89,34 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvPatientName, tvProblem, tvDistance;
+        TextView tvPatientName, tvProblem, tvDistance, tvAmount, tvPaymentMethod;
         Button btnCanform, btnTrack;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvPatientName = itemView.findViewById(R.id.tv_patient_name);
-            tvProblem     = itemView.findViewById(R.id.tv_problem);
-            tvDistance    = itemView.findViewById(R.id.tv_distans);
-            btnCanform    = itemView.findViewById(R.id.btn_canform);
-            btnTrack      = itemView.findViewById(R.id.btn_track);
+            tvPatientName    = itemView.findViewById(R.id.tv_patient_name);
+            tvProblem        = itemView.findViewById(R.id.tv_problem);
+            tvDistance       = itemView.findViewById(R.id.tv_distans);
+            tvAmount         = itemView.findViewById(R.id.tv_price1); // 💰 Add in layout
+            tvPaymentMethod  = itemView.findViewById(R.id.tvPaymentMethod2); // 💳 Add in layout
+            btnCanform       = itemView.findViewById(R.id.btn_canform);
+            btnTrack         = itemView.findViewById(R.id.btn_track);
         }
     }
 
-    /**
-     * Model for a pending appointment.
-     * Distance and mapLink can be updated externally.
-     */
     public static class Appointment {
-        private final String appointmentId;
-        private final String name;
-        private final String problem;
-        private String distance;       // now mutable
-        private final String mapLink;
+        private final String appointmentId, name, problem, mapLink, amount, paymentMethod;
+        private String distance;
 
-        public Appointment(String appointmentId,
-                           String name,
-                           String problem,
-                           String distance,
-                           String mapLink) {
+        public Appointment(String appointmentId, String name, String problem,
+                           String distance, String mapLink, String amount, String paymentMethod) {
             this.appointmentId = appointmentId;
-            this.name          = name;
-            this.problem       = problem;
-            this.distance      = distance;
-            this.mapLink       = mapLink;
+            this.name = name;
+            this.problem = problem;
+            this.distance = distance;
+            this.mapLink = mapLink;
+            this.amount = amount;
+            this.paymentMethod = paymentMethod;
         }
 
         public String getAppointmentId() { return appointmentId; }
@@ -122,16 +124,13 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
         public String getProblem()       { return problem; }
         public String getDistance()      { return distance; }
         public String getMapLink()       { return mapLink; }
+        public String getAmount()        { return amount; }
+        public String getPaymentMethod() { return paymentMethod; }
 
-        /** Allows fragment to update driving distance when ready */
-        public void setDistance(String distance) {
-            this.distance = distance;
-        }
+        public void setDistance(String distance) { this.distance = distance; }
     }
 
-    private void updateAppointmentStatus(String appointmentId,
-                                         String newStatus,
-                                         int position) {
+    private void updateAppointmentStatus(String appointmentId, String newStatus, int position) {
         String url = "http://sxm.a58.mytemp.website/Doctors/update_appointment_status.php";
         JSONObject payload = new JSONObject();
         try {
@@ -149,28 +148,21 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
                     boolean success = response.optBoolean("success", false);
                     String msg = response.optString("message", "Update failed.");
                     if (success) {
-                        Toast.makeText(context,
-                                "Appointment confirmed", Toast.LENGTH_SHORT).show();
-
+                        Toast.makeText(context, "Appointment confirmed", Toast.LENGTH_SHORT).show();
                         appointments.remove(position);
                         notifyItemRemoved(position);
                         notifyItemRangeChanged(position, appointments.size());
                     } else {
                         if (msg.toLowerCase().contains("already")) {
-                            // For messages like "already pending"/"already ongoing"
                             Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
                         } else {
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
                         }
                     }
                 },
-                error -> {
-                    Toast.makeText(context,
-                            "Network error", Toast.LENGTH_SHORT).show();
-                }
+                error -> Toast.makeText(context, "Network error", Toast.LENGTH_SHORT).show()
         );
 
         queue.add(req);
     }
-
 }

@@ -55,24 +55,30 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         holder.tvProblem.setText("Problem: " + appointment.getProblem());
         holder.tvDistance.setText(appointment.getDistance());
 
-        // ─── Accept: prompt for ETA (raw value + unit) ──────────────────────
+        if ("Online".equalsIgnoreCase(appointment.getPaymentMethod())) {
+            holder.tvPrice.setText("₹ " + appointment.getTotalPayment() + " Paid");
+        } else if ("Offline".equalsIgnoreCase(appointment.getPaymentMethod())) {
+            holder.tvPrice.setText("₹ " + appointment.getTotalPayment() + " (Collect in cash)");
+        } else {
+            holder.tvPrice.setText("₹ " + appointment.getTotalPayment());
+        }
+
+        holder.tvPaymentMethod.setText("Payment Method: " + appointment.getPaymentMethod());
+
         holder.btnAccept.setOnClickListener(v -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
             builder.setTitle("Enter ETA");
 
-            // Build dialog layout
             LinearLayout layout = new LinearLayout(context);
             layout.setOrientation(LinearLayout.VERTICAL);
             int pad = (int)(16 * context.getResources().getDisplayMetrics().density);
             layout.setPadding(pad, pad, pad, pad);
 
-            // 1) Number input
             EditText input = new EditText(context);
             input.setInputType(InputType.TYPE_CLASS_NUMBER);
             input.setHint("Value");
             layout.addView(input);
 
-            // 2) Unit selector
             Spinner unitSpinner = new Spinner(context);
             String[] units = {"Minutes", "Hours"};
             ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(
@@ -92,16 +98,15 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
                     Toast.makeText(context, "Please enter ETA value", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                // ← RAW value, no *60 conversion
                 int rawEta = Integer.parseInt(valStr);
-                String unit  = ((String)unitSpinner.getSelectedItem()).toLowerCase();
+                String unit = ((String) unitSpinner.getSelectedItem()).toLowerCase();
 
                 updateAppointmentStatus(
                         appointment.getAppointmentId(),
                         "Pending",
                         position,
-                        rawEta,   // exactly what was entered
-                        unit      // "minutes" or "hours"
+                        rawEta,
+                        unit
                 );
             });
 
@@ -109,7 +114,6 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             builder.show();
         });
 
-        // ─── Reject: no ETA needed ───────────────────────────────────────────
         holder.btnReject.setOnClickListener(v ->
                 updateAppointmentStatus(
                         appointment.getAppointmentId(),
@@ -127,7 +131,7 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvPatientName, tvProblem, tvDistance;
+        TextView tvPatientName, tvProblem, tvDistance, tvPrice, tvPaymentMethod;
         Button btnAccept, btnReject;
 
         public ViewHolder(@NonNull View itemView) {
@@ -135,26 +139,33 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             tvPatientName = itemView.findViewById(R.id.tv_patient_name);
             tvProblem     = itemView.findViewById(R.id.tv_problem);
             tvDistance    = itemView.findViewById(R.id.tv_distans);
+            tvPrice       = itemView.findViewById(R.id.tv_price);
+            tvPaymentMethod = itemView.findViewById(R.id.tv_payment_method1);
             btnAccept     = itemView.findViewById(R.id.btn_accept);
             btnReject     = itemView.findViewById(R.id.btn_reject);
         }
     }
 
-    // Appointment model
     public static class Appointment {
-        private final String appointmentId, fullName, problem;
+        private final String appointmentId, fullName, problem, totalPayment, paymentMethod;
         private String distance;
-        public Appointment(String id, String name, String prob, String dist) {
+
+        public Appointment(String id, String name, String prob, String dist, String totalPayment, String paymentMethod) {
             this.appointmentId = id;
-            this.fullName      = name;
-            this.problem       = prob;
-            this.distance      = dist;
+            this.fullName = name;
+            this.problem = prob;
+            this.distance = dist;
+            this.totalPayment = totalPayment;
+            this.paymentMethod = paymentMethod;
         }
-        public String getAppointmentId() { return appointmentId; }
-        public String getFullName()      { return fullName; }
-        public String getProblem()       { return problem; }
-        public String getDistance()      { return distance; }
-        public void setDistance(String d) { this.distance = d; }
+
+        public String getAppointmentId()   { return appointmentId; }
+        public String getFullName()        { return fullName; }
+        public String getProblem()         { return problem; }
+        public String getDistance()        { return distance; }
+        public String getTotalPayment()    { return totalPayment; }
+        public String getPaymentMethod()   { return paymentMethod; }
+        public void setDistance(String d)  { this.distance = d; }
     }
 
     private void updateAppointmentStatus(
@@ -191,11 +202,9 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
                         appointments.remove(position);
                         notifyItemRemoved(position);
                         notifyItemRangeChanged(position, appointments.size());
-
                     } else {
                         String msg = response.optString("message", "Failed to update.");
                         if (msg.toLowerCase().contains("already")) {
-                            // Longer toast for conflict/block message
                             Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
                         } else {
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
@@ -211,5 +220,4 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
 
         queue.add(request);
     }
-
 }

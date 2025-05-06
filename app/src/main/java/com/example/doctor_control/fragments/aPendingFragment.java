@@ -37,8 +37,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 public class aPendingFragment extends Fragment {
     private static final String TAG = "aPendingFragment";
@@ -62,8 +60,7 @@ public class aPendingFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_pending, container, false);
 
         queue = Volley.newRequestQueue(requireContext());
-        fusedClient = LocationServices
-                .getFusedLocationProviderClient(requireContext());
+        fusedClient = LocationServices.getFusedLocationProviderClient(requireContext());
 
         recyclerView = view.findViewById(R.id.rv_pending_appointments);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -83,17 +80,15 @@ public class aPendingFragment extends Fragment {
         super.onResume();
         startAutoRefresh();
 
-        // ensure location permission
         if (ContextCompat.checkSelfPermission(requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                     requireActivity(),
-                    new String[]{ Manifest.permission.ACCESS_FINE_LOCATION },
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     1
             );
         } else {
-            // fetch last known location once
             fusedClient.getLastLocation()
                     .addOnSuccessListener(loc -> {
                         if (loc != null) {
@@ -143,42 +138,34 @@ public class aPendingFragment extends Fragment {
                         if (!success) {
                             appointments.clear();
                             adapter.notifyDataSetChanged();
-                            Toast.makeText(getContext(),
-                                            "No pending appointments.", Toast.LENGTH_SHORT)
-                                    .show();
                             return;
                         }
 
-                        JSONArray arr = response.getJSONArray("appointments");
+                        JSONArray arr = response.getJSONArray("data"); // Updated to 'data'
                         appointments.clear();
 
-                        // collect links for batch lookup
                         List<String> links = new ArrayList<>(arr.length());
-                        SharedPreferences prefs = requireContext()
-                                .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
-                        HashSet<String> completedSet = new HashSet<>(
-                                prefs.getStringSet("completed_reports", new HashSet<>())
-                        );
 
                         for (int i = 0; i < arr.length(); i++) {
                             JSONObject o = arr.getJSONObject(i);
-                            String id     = o.getString("appointment_id");
-                            String name   = o.getString("patient_name");
-                            String reason = o.getString("reason_for_visit");
-                            String link   = o.optString("patient_map_link", "");
+                            String id             = o.optString("appointment_id");
+                            String name           = o.optString("patient_name");
+                            String reason         = o.optString("reason_for_visit");
+                            String link           = o.optString("patient_map_link", "");
+                            String amount         = o.optString("amount", "0.00");
+                            String paymentMethod  = o.optString("payment_method", "Unknown");
 
-                            // placeholder distance
-                            appointments.add(
-                                    new apendingAdapter.Appointment(
-                                            id, name, reason, "Calculating...", link
-                                    )
-                            );
+                            Log.d(TAG, "Appointment #" + (i + 1) + ": ID=" + id + ", Name=" + name +
+                                    ", Amount=" + amount + ", Method=" + paymentMethod);
+
+                            appointments.add(new apendingAdapter.Appointment(
+                                    id, name, reason, "Calculating...", link, amount, paymentMethod
+                            ));
                             links.add(link);
                         }
 
                         adapter.notifyDataSetChanged();
 
-                        // batch distance lookup
                         DistanceCalculator.calculateDistanceBatch(
                                 requireActivity(),
                                 queue,

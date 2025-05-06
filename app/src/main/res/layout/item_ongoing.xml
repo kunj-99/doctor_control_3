@@ -39,12 +39,22 @@
             android:textColor="@color/black"/>
 
         <TextView
-            android:id="@+id/tv_price"
+            android:id="@+id/tv_price2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="₹ 500"
             android:textSize="16sp"
             android:textColor="@color/black"/>
+
+        <TextView
+            android:id="@+id/tvPaymentMethod3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Payment Method: "
+            android:textSize="14sp"
+            android:textColor="@android:color/black"
+            android:layout_marginTop="4dp" />
+
 
         <LinearLayout
             android:layout_width="match_parent"

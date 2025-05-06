@@ -62,6 +62,9 @@ public class aOngoingFragment extends Fragment {
     private final ArrayList<String> distances = new ArrayList<>();
     private final ArrayList<String> mapLinks = new ArrayList<>();
     private final ArrayList<Boolean> hasReport = new ArrayList<>();
+    private final ArrayList<String> amounts = new ArrayList<>();
+    private final ArrayList<String> paymentMethods = new ArrayList<>();
+
 
     private String doctorId;
     private double doctorLat = 0, doctorLon = 0;
@@ -212,12 +215,14 @@ public class aOngoingFragment extends Fragment {
     @SuppressLint("NotifyDataSetChanged")
     private void fetchAppointments() {
         String url = "http://sxm.a58.mytemp.website/Doctors/getOngoingAppointment.php";
+
         queue.add(new StringRequest(
                 Request.Method.POST, url,
                 response -> {
                     try {
                         JSONObject root = new JSONObject(response);
                         if (!root.getBoolean("success")) return;
+
                         JSONArray arr = root.getJSONArray("appointments");
 
                         recyclerView.post(() -> {
@@ -227,6 +232,8 @@ public class aOngoingFragment extends Fragment {
                             distances.clear();
                             mapLinks.clear();
                             hasReport.clear();
+                            amounts.clear(); // ✅ Clear existing values
+                            paymentMethods.clear(); // ✅ Clear existing values
 
                             for (int i = 0; i < arr.length(); i++) {
                                 try {
@@ -237,6 +244,14 @@ public class aOngoingFragment extends Fragment {
                                     mapLinks.add(o.getString("patient_map_link"));
                                     hasReport.add(o.optInt("has_report", 0) == 1);
                                     distances.add("Calculating...");
+
+                                    // ✅ Add amount and method
+                                    amounts.add(o.optString("amount", "0.00"));
+                                    paymentMethods.add(o.optString("payment_method", "Unknown"));
+
+                                    Log.d(TAG, "Appointment: ID=" + o.getString("appointment_id") +
+                                            ", Amount=" + o.optString("amount") +
+                                            ", Method=" + o.optString("payment_method"));
 
                                     if (i == 0) {
                                         requireContext()
@@ -286,6 +301,7 @@ public class aOngoingFragment extends Fragment {
             }
         });
     }
+
 
     private void sendLiveLocation(String apptId, double lat, double lon) {
         StringRequest req = new StringRequest(

@@ -138,9 +138,6 @@ public class aRequestFragment extends Fragment {
                         appointments.clear();
                         if (!success || data == null || data.length() == 0) {
                             adapter.notifyDataSetChanged();
-                            Toast.makeText(getContext(),
-                                    success ? "No requests found." : root.optString("message"),
-                                    Toast.LENGTH_SHORT).show();
                             return;
                         }
 
@@ -148,16 +145,24 @@ public class aRequestFragment extends Fragment {
                         List<String> links = new ArrayList<>();
                         for (int i = 0; i < data.length(); i++) {
                             JSONObject obj = data.getJSONObject(i);
-                            String apptId  = obj.optString("appointment_id", "0");
-                            String name    = obj.optString("patient_name", "N/A");
-                            String problem = obj.optString("reason_for_visit","N/A");
-                            String link    = obj.optString("patient_map_link","");
+                            String apptId        = obj.optString("appointment_id", "0");
+                            String name          = obj.optString("patient_name", "N/A");
+                            String problem       = obj.optString("reason_for_visit", "N/A");
+                            String link          = obj.optString("patient_map_link", "");
+                            String totalPayment  = obj.optString("amount", "0.00");
+                            String paymentMethod = obj.optString("payment_method", "Unknown");
+
+                            // 🔍 Debug log for each appointment record
+                            Log.d(TAG, "Appointment #" + (i + 1) + ": " +
+                                    "ID=" + apptId + ", Name=" + name + ", Problem=" + problem +
+                                    ", Payment=" + totalPayment + ", Method=" + paymentMethod);
 
                             appointments.add(new aRequestAdapeter.Appointment(
-                                    apptId, name, problem, "…"
+                                    apptId, name, problem, "…", totalPayment, paymentMethod
                             ));
                             links.add(link);
                         }
+
 
                         adapter.notifyDataSetChanged();
 
