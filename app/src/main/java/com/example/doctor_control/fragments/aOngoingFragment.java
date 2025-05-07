@@ -65,7 +65,6 @@ public class aOngoingFragment extends Fragment {
     private final ArrayList<String> amounts = new ArrayList<>();
     private final ArrayList<String> paymentMethods = new ArrayList<>();
 
-
     private String doctorId;
     private double doctorLat = 0, doctorLon = 0;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -106,14 +105,21 @@ public class aOngoingFragment extends Fragment {
                 distances,
                 hasReport,
                 mapLinks,
+                amounts,
+                paymentMethods,
                 position -> {
-                    appointmentIds.remove(position);
-                    patientNames.remove(position);
-                    problems.remove(position);
-                    distances.remove(position);
-                    mapLinks.remove(position);
-                    hasReport.remove(position);
-                    adapter.notifyItemRemoved(position);
+                    if (position >= 0 && position < appointmentIds.size()) {
+                        appointmentIds.remove(position);
+                        patientNames.remove(position);
+                        problems.remove(position);
+                        distances.remove(position);
+                        mapLinks.remove(position);
+                        hasReport.remove(position);
+                        amounts.remove(position);
+                        paymentMethods.remove(position);
+                        adapter.notifyItemRemoved(position);
+                        adapter.notifyItemRangeChanged(position, appointmentIds.size());
+                    }
                 },
                 (appointmentId, position) -> {
                     lastReportPosition = position;
@@ -154,7 +160,6 @@ public class aOngoingFragment extends Fragment {
         super.onResume();
         checkAndPromptGPS();
         startAppointmentRefresh();
-        ensureLocationUpdates();
 
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -221,7 +226,7 @@ public class aOngoingFragment extends Fragment {
                 response -> {
                     try {
                         JSONObject root = new JSONObject(response);
-                        if (!root.getBoolean("success")) return;
+                        if (!root.getBoolean("success") || !root.has("appointments")) return;
 
                         JSONArray arr = root.getJSONArray("appointments");
 
@@ -232,40 +237,38 @@ public class aOngoingFragment extends Fragment {
                             distances.clear();
                             mapLinks.clear();
                             hasReport.clear();
-                            amounts.clear(); // ✅ Clear existing values
-                            paymentMethods.clear(); // ✅ Clear existing values
+                            amounts.clear();
+                            paymentMethods.clear();
 
                             for (int i = 0; i < arr.length(); i++) {
                                 try {
                                     JSONObject o = arr.getJSONObject(i);
+
+                                    // ✅ Defensive: Skip completed/cancelled entries even if server misbehaves
+                                    String status = o.optString("status", "Unknown");
+                                    if (!"Confirmed".equalsIgnoreCase(status)) {
+                                        Log.w(TAG, "Skipping appointment " + o.optString("appointment_id") + " (status=" + status + ")");
+                                        continue;
+                                    }
+
                                     appointmentIds.add(o.getString("appointment_id"));
                                     patientNames.add(o.getString("patient_name"));
                                     problems.add(o.getString("reason_for_visit"));
                                     mapLinks.add(o.getString("patient_map_link"));
                                     hasReport.add(o.optInt("has_report", 0) == 1);
                                     distances.add("Calculating...");
-
-                                    // ✅ Add amount and method
                                     amounts.add(o.optString("amount", "0.00"));
                                     paymentMethods.add(o.optString("payment_method", "Unknown"));
 
-                                    Log.d(TAG, "Appointment: ID=" + o.getString("appointment_id") +
-                                            ", Amount=" + o.optString("amount") +
-                                            ", Method=" + o.optString("payment_method"));
-
                                     if (i == 0) {
-                                        requireContext()
-                                                .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
-                                                .edit()
-                                                .putString("ongoing_appointment_id", o.getString("appointment_id"))
+                                        requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
+                                                .edit().putString("ongoing_appointment_id", o.getString("appointment_id"))
                                                 .apply();
-
-                                        LiveLocationManager.getInstance()
-                                                .startLocationUpdates(requireContext().getApplicationContext());
+                                        LiveLocationManager.getInstance().startLocationUpdates(requireContext().getApplicationContext());
                                     }
 
                                 } catch (JSONException e) {
-                                    Log.e(TAG, "JSON parsing error at index " + i, e);
+                                    Log.e(TAG, "JSON error at index " + i, e);
                                 }
                             }
 
@@ -285,13 +288,18 @@ public class aOngoingFragment extends Fragment {
                                         }
                                 );
                             }
+
+                            if (!locationStarted) {
+                                ensureLocationUpdates();
+                            }
+
                         });
 
                     } catch (JSONException e) {
                         Log.e(TAG, "Parse error", e);
                     }
                 },
-                error -> Log.e(TAG, "Fetch error", error)
+                error -> Log.e(TAG, "Volley error", error)
         ) {
             @Override
             protected Map<String, String> getParams() {
@@ -338,7 +346,7 @@ public class aOngoingFragment extends Fragment {
                         try {
                             ((ResolvableApiException) e).startResolutionForResult(requireActivity(), 1011);
                         } catch (Exception ex) {
-                            Log.e(TAG, "GPS dialog error", ex);
+                            Log.e(TAG, "GPS prompt failed", ex);
                         }
                     }
                 });

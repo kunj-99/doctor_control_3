@@ -2,6 +2,7 @@ package com.example.doctor_control.adapter;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
 import android.view.LayoutInflater;
@@ -29,8 +30,6 @@ import java.util.ArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-import android.content.Intent;
-
 public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHolder> {
 
     private final Context context;
@@ -40,6 +39,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     private final ArrayList<String> distanceStrings;
     private final ArrayList<Boolean> hasReport;
     private final ArrayList<String> mapLinks;
+    private final ArrayList<String> amounts;
+    private final ArrayList<String> paymentMethods;
     private final Consumer<Integer> onAppointmentCompleted;
     private final BiConsumer<String, Integer> onAddReportClicked;
 
@@ -50,6 +51,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                            ArrayList<String> distanceStrings,
                            ArrayList<Boolean> hasReport,
                            ArrayList<String> mapLinks,
+                           ArrayList<String> amounts,
+                           ArrayList<String> paymentMethods,
                            Consumer<Integer> onAppointmentCompleted,
                            BiConsumer<String, Integer> onAddReportClicked) {
         this.context = context;
@@ -59,13 +62,15 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         this.distanceStrings = distanceStrings;
         this.hasReport = hasReport;
         this.mapLinks = mapLinks;
+        this.amounts = amounts;
+        this.paymentMethods = paymentMethods;
         this.onAppointmentCompleted = onAppointmentCompleted;
         this.onAddReportClicked = onAddReportClicked;
     }
 
     @NonNull
     @Override
-    public aOngoingAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(context)
                 .inflate(R.layout.item_ongoing, parent, false);
         return new ViewHolder(view);
@@ -73,14 +78,47 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
 
     @SuppressLint("SetTextI18n")
     @Override
-    public void onBindViewHolder(@NonNull aOngoingAdapter.ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        if (appointmentIds.size() == 0) {
+            holder.tvPatientName.setText("No Data Available");
+            holder.tvProblem.setVisibility(View.GONE);
+            holder.tvDistance.setVisibility(View.GONE);
+            holder.tvAmount.setVisibility(View.GONE);
+            holder.tvPaymentMethod.setVisibility(View.GONE);
+            holder.btnComplete.setVisibility(View.GONE);
+            holder.btnTrack.setVisibility(View.GONE);
+            holder.btnView.setVisibility(View.GONE);
+            return;
+        }
+
+        holder.tvPatientName.setVisibility(View.VISIBLE);
+        holder.tvProblem.setVisibility(View.VISIBLE);
+        holder.tvDistance.setVisibility(View.VISIBLE);
+        holder.tvAmount.setVisibility(View.VISIBLE);
+        holder.tvPaymentMethod.setVisibility(View.VISIBLE);
+        holder.btnComplete.setVisibility(View.VISIBLE);
+        holder.btnTrack.setVisibility(View.VISIBLE);
+        holder.btnView.setVisibility(View.VISIBLE);
+
         holder.tvPatientName.setText(patientNames.get(position));
         holder.tvProblem.setText("Problem: " + problems.get(position));
         holder.tvDistance.setText("Distance: " + distanceStrings.get(position));
 
+        String amount = amounts.get(position);
+        String method = paymentMethods.get(position);
+
+        if ("Online".equalsIgnoreCase(method)) {
+            holder.tvAmount.setText("₹ " + amount + " Paid");
+        } else if ("Offline".equalsIgnoreCase(method)) {
+            holder.tvAmount.setText("₹ " + amount + " (Collect in cash)");
+        } else {
+            holder.tvAmount.setText("₹ " + amount);
+        }
+
+        holder.tvPaymentMethod.setText("Payment Method: " + method);
+
         boolean reportSubmitted = hasReport.get(position);
 
-        // Update Complete button
         holder.btnComplete.setEnabled(reportSubmitted);
         holder.btnComplete.setBackgroundColor(reportSubmitted
                 ? ContextCompat.getColor(context, R.color.primaryColor)
@@ -88,7 +126,6 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         holder.btnComplete.setTextColor(ContextCompat.getColor(context,
                 reportSubmitted ? android.R.color.white : R.color.gray));
 
-        // Update Add/View Report button
         if (reportSubmitted) {
             holder.btnView.setEnabled(false);
             holder.btnView.setBackgroundColor(Color.LTGRAY);
@@ -106,7 +143,6 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             });
         }
 
-        // Track Patient Location
         holder.btnTrack.setOnClickListener(v -> {
             String mapLink = mapLinks.get(position);
             if (mapLink != null && !mapLink.isEmpty()) {
@@ -118,7 +154,6 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             }
         });
 
-        // Mark as Complete
         holder.btnComplete.setOnClickListener(v -> {
             if (holder.btnComplete.isEnabled()) {
                 holder.btnComplete.setText("Completing...");
@@ -130,7 +165,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
 
     @Override
     public int getItemCount() {
-        return appointmentIds.size();
+        return appointmentIds.size() > 0 ? appointmentIds.size() : 1;
     }
 
     private void updateAppointmentStatus(String appointmentId, int position, ViewHolder holder) {
@@ -151,7 +186,6 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                     boolean success = response.optBoolean("success", false);
                     if (success) {
                         Toast.makeText(context, "Marked as Completed", Toast.LENGTH_SHORT).show();
-
                         if (onAppointmentCompleted != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                             onAppointmentCompleted.accept(position);
                         }
@@ -174,7 +208,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvPatientName, tvProblem, tvDistance;
+        TextView tvPatientName, tvProblem, tvDistance, tvAmount, tvPaymentMethod;
         Button btnComplete, btnTrack, btnView;
 
         ViewHolder(@NonNull View itemView) {
@@ -182,6 +216,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             tvPatientName = itemView.findViewById(R.id.tv_patient_name);
             tvProblem = itemView.findViewById(R.id.tv_problem);
             tvDistance = itemView.findViewById(R.id.tv_distans);
+            tvAmount = itemView.findViewById(R.id.tv_price2);
+            tvPaymentMethod = itemView.findViewById(R.id.tvPaymentMethod3);
             btnComplete = itemView.findViewById(R.id.btn_complete);
             btnTrack = itemView.findViewById(R.id.btn_cancel);
             btnView = itemView.findViewById(R.id.btn_view);
