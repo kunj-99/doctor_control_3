@@ -188,6 +188,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                         Toast.makeText(context, "Marked as Completed", Toast.LENGTH_SHORT).show();
                         if (onAppointmentCompleted != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                             onAppointmentCompleted.accept(position);
+                            // Remove item after completion
+                            removeAppointment(position);
                         }
                     } else {
                         Toast.makeText(context, "Update failed", Toast.LENGTH_SHORT).show();
@@ -205,6 +207,22 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
 
         RequestQueue queue = Volley.newRequestQueue(context);
         queue.add(request);
+    }
+
+    // Method to remove an appointment from the list
+    private void removeAppointment(int position) {
+        appointmentIds.remove(position);
+        patientNames.remove(position);
+        problems.remove(position);
+        distanceStrings.remove(position);
+        hasReport.remove(position);
+        mapLinks.remove(position);
+        amounts.remove(position);
+        paymentMethods.remove(position);
+
+        // Notify the adapter about the removal
+        notifyItemRemoved(position);
+        notifyItemRangeChanged(position, appointmentIds.size());
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

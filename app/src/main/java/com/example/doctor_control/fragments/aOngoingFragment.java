@@ -109,16 +109,9 @@ public class aOngoingFragment extends Fragment {
                 paymentMethods,
                 position -> {
                     if (position >= 0 && position < appointmentIds.size()) {
-                        appointmentIds.remove(position);
-                        patientNames.remove(position);
-                        problems.remove(position);
-                        distances.remove(position);
-                        mapLinks.remove(position);
-                        hasReport.remove(position);
-                        amounts.remove(position);
-                        paymentMethods.remove(position);
-                        adapter.notifyItemRemoved(position);
-                        adapter.notifyItemRangeChanged(position, appointmentIds.size());
+                        // Mark the appointment as completed
+                        String appointmentId = appointmentIds.get(position);
+                        completeAppointment(appointmentId, position);
                     }
                 },
                 (appointmentId, position) -> {
@@ -153,6 +146,47 @@ public class aOngoingFragment extends Fragment {
         };
 
         return view;
+    }
+
+    // Method to complete an appointment and remove from the RecyclerView
+    private void completeAppointment(String appointmentId, int position) {
+        // Update the database to mark the appointment as completed (e.g., make an API call)
+        String url = "http://sxm.a58.mytemp.website/Doctors/completeAppointment.php";
+
+        queue.add(new StringRequest(
+                Request.Method.POST, url,
+                response -> {
+                    try {
+                        JSONObject root = new JSONObject(response);
+                        if (root.getBoolean("success")) {
+                            // On success, remove the appointment from the list and notify the adapter
+                            appointmentIds.remove(position);
+                            patientNames.remove(position);
+                            problems.remove(position);
+                            distances.remove(position);
+                            mapLinks.remove(position);
+                            hasReport.remove(position);
+                            amounts.remove(position);
+                            paymentMethods.remove(position);
+
+                            adapter.notifyItemRemoved(position);
+                            adapter.notifyItemRangeChanged(position, appointmentIds.size());
+
+                            Toast.makeText(getContext(), "Appointment completed!", Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (JSONException e) {
+                        Log.e(TAG, "Error updating appointment status", e);
+                    }
+                },
+                error -> Log.e(TAG, "Error completing appointment", error)
+        ) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<>();
+                params.put("appointment_id", appointmentId);
+                return params;
+            }
+        });
     }
 
     @Override
@@ -193,28 +227,6 @@ public class aOngoingFragment extends Fragment {
 
     private void stopAppointmentRefresh() {
         if (refresher != null) handler.removeCallbacks(refresher);
-    }
-
-    private void ensureLocationUpdates() {
-        if (locationStarted) return;
-
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                    requireActivity(),
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    1
-            );
-            return;
-        }
-
-        LocationRequest req = LocationRequest.create()
-                .setInterval(5000)
-                .setFastestInterval(2500)
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
-        fusedClient.requestLocationUpdates(req, locationCallback, Looper.getMainLooper());
-        locationStarted = true;
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -308,6 +320,30 @@ public class aOngoingFragment extends Fragment {
                 return p;
             }
         });
+    }
+    private void ensureLocationUpdates() {
+        if (locationStarted) return; // If location updates have already started, no need to start again
+
+        // Check for permissions
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    requireActivity(),
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    1
+            );
+            return;
+        }
+
+        // Create a location request
+        LocationRequest locationRequest = LocationRequest.create()
+                .setInterval(5000)  // Update interval (in milliseconds)
+                .setFastestInterval(2500) // Fastest update interval (in milliseconds)
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);  // Use high accuracy for location
+
+        // Request location updates
+        fusedClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+        locationStarted = true;  // Mark that location updates have started
     }
 
 
