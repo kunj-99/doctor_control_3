@@ -20,6 +20,7 @@ import android.Manifest;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -35,7 +36,8 @@ import com.example.doctor_control.BackgroundService;
 import com.example.doctor_control.R;
 import com.example.doctor_control.tarmsandcondition;
 import com.example.doctor_control.suppor;
-
+import com.example.doctor_control.PaymentHistoryActivity;  // Use the correct package name
+import com.example.doctor_control.PendingPaymentActivity;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -53,7 +55,7 @@ public class home extends Fragment {
     private String doctorId;
 
     ImageView terms, support;
-
+    CardView payment_history,cardPendingPayment;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -73,6 +75,8 @@ public class home extends Fragment {
         doctorPrefs = getActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
         terms = view.findViewById(R.id.terms);  // Make sure the ID is correct
         support = view.findViewById(R.id.support);  // Make sure the ID is correct
+        payment_history = view.findViewById(R.id.card_payment_history);
+        cardPendingPayment = view.findViewById(R.id.card_pending_payment);
 
         terms.setOnClickListener(v -> {
             Intent intent = new Intent(getContext(), tarmsandcondition.class);
@@ -83,6 +87,19 @@ public class home extends Fragment {
             Intent intent = new Intent(getContext(), suppor.class);
             startActivity(intent);
         });
+
+        payment_history.setOnClickListener(v -> {
+            // Inside your Fragment (home.java)
+            Intent intent = new Intent(getActivity(), PaymentHistoryActivity.class);
+            startActivity(intent);
+        });
+
+        cardPendingPayment.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), PendingPaymentActivity.class);
+            startActivity(intent);
+        });
+
+
         // Check for location permission. Make sure to use requireContext() or getContext() instead of 'this'.
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
