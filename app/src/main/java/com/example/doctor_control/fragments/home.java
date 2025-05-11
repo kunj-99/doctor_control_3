@@ -54,7 +54,7 @@ public class home extends Fragment {
     // Doctor ID is stored in "DoctorPrefs"
     private String doctorId;
 
-    ImageView terms, support;
+//    ImageView terms, support;
     CardView payment_history,cardPendingPayment;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -73,20 +73,20 @@ public class home extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         doctorPrefs = getActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
-        terms = view.findViewById(R.id.terms);  // Make sure the ID is correct
-        support = view.findViewById(R.id.support);  // Make sure the ID is correct
+//        terms = view.findViewById(R.id.terms);  // Make sure the ID is correct
+//        support = view.findViewById(R.id.support);  // Make sure the ID is correct
         payment_history = view.findViewById(R.id.card_payment_history);
         cardPendingPayment = view.findViewById(R.id.card_pending_payment);
 
-        terms.setOnClickListener(v -> {
-            Intent intent = new Intent(getContext(), tarmsandcondition.class);
-            startActivity(intent);
-        });
-
-        support.setOnClickListener(v -> {
-            Intent intent = new Intent(getContext(), suppor.class);
-            startActivity(intent);
-        });
+//        terms.setOnClickListener(v -> {
+//            Intent intent = new Intent(getContext(), tarmsandcondition.class);
+//            startActivity(intent);
+//        });
+//
+//        support.setOnClickListener(v -> {
+//            Intent intent = new Intent(getContext(), suppor.class);
+//            startActivity(intent);
+//        });
 
         payment_history.setOnClickListener(v -> {
             // Inside your Fragment (home.java)

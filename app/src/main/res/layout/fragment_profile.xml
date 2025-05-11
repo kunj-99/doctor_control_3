@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="@color/white">
+    android:background="@drawable/bg_gradient">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,53 +14,60 @@
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
-        <!-- Profile Header with Background -->
+        <!-- Enhanced Header with Gradient -->
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="250dp"
-            android:background="@drawable/bg_profile_header_gradient"
-            android:elevation="4dp">
+            android:layout_height="240dp"
+            android:background="@drawable/bg_header_gradient"
+            android:elevation="8dp"
+            android:paddingBottom="60dp">
 
-            <!-- Profile Image with Circular Background -->
+            <!-- Profile Container with Border Animation -->
             <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerInParent="true"
-                android:layout_marginTop="40dp">
+                android:layout_width="140dp"
+                android:layout_height="140dp"
+                android:layout_centerHorizontal="true"
+                android:layout_alignParentBottom="true"
+                android:elevation="12dp"
+                android:background="@drawable/bg_circle_gradient">
 
                 <ImageView
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:src="@drawable/bg_circle_white"
                     android:scaleType="centerCrop"
-                    android:alpha="0.9"/>
+                    android:alpha="0.95"/>
 
                 <ImageView
                     android:id="@+id/profile_image"
-                    android:layout_width="110dp"
-                    android:layout_height="110dp"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
                     android:layout_gravity="center"
-                    android:src="@drawable/pr_ic_profile_placeholder"
                     android:scaleType="centerCrop"
+                    android:src="@drawable/pr_ic_profile_placeholder"
+                    android:background="@drawable/bg_round_stroke"
+                    android:clipToOutline="true"
+                    android:elevation="14dp"
                     android:contentDescription="Doctor Profile"
-                    android:elevation="8dp"
                     android:clickable="true"
                     android:focusable="true"
                     android:onClick="onProfileImageClick"/>
+
             </FrameLayout>
         </RelativeLayout>
 
-        <!-- Profile Content Card -->
+        <!-- Modern Card Design -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="16dp"
-            android:layout_marginRight="16dp"
-            android:layout_marginTop="-40dp"
-            app:cardCornerRadius="16dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginEnd="24dp"
+            android:layout_marginTop="15dp"
+            android:layout_marginBottom="24dp"
+            app:cardCornerRadius="24dp"
             app:cardElevation="8dp"
-
-            app:cardBackgroundColor="@color/white">
+            app:cardBackgroundColor="@android:color/white"
+            android:stateListAnimator="@animator/card_elevation">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -69,174 +76,201 @@
                 android:padding="24dp"
                 android:paddingTop="10dp">
 
-                <!-- Full Name -->
+                <!-- Enhanced Input Fields -->
                 <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxStrokeColor="@color/primaryDark"
+                    app:hintTextColor="@color/textSecondary"
 
-                    app:boxStrokeColor="@color/primaryColor"
-                    app:hintTextColor="@color/primaryColor">
+                    app:startIconTint="@color/primaryColor">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_full_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Full Name"
+                        android:textColor="@color/textPrimary"
                         android:textSize="16sp"
+
                         android:inputType="textPersonName"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Specialization -->
                 <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxStrokeColor="@color/primaryDark"
+                    app:hintTextColor="@color/textSecondary"
 
-                    app:boxStrokeColor="@color/primaryColor"
-                    app:hintTextColor="@color/primaryColor">
+                    app:startIconTint="@color/primaryColor">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_specialization"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Specialization"
+                        android:textColor="@color/textPrimary"
                         android:textSize="16sp"
+
                         android:inputType="text"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Qualification -->
                 <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxStrokeColor="@color/primaryDark"
+                    app:hintTextColor="@color/textSecondary"
 
-                    app:boxStrokeColor="@color/primaryColor"
-                    app:hintTextColor="@color/primaryColor">
+                    app:startIconTint="@color/primaryColor">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_qualification"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Qualification"
+                        android:textColor="@color/textPrimary"
                         android:textSize="16sp"
+
                         android:inputType="text"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Experience (Years) -->
                 <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxStrokeColor="@color/primaryDark"
+                    app:hintTextColor="@color/textSecondary"
 
-                    app:boxStrokeColor="@color/primaryColor"
-                    app:hintTextColor="@color/primaryColor">
+                    app:startIconTint="@color/primaryColor">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_experience_years"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Experience (in years)"
+                        android:textColor="@color/textPrimary"
                         android:textSize="16sp"
+
                         android:inputType="number"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- License Number -->
                 <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxStrokeColor="@color/primaryDark"
+                    app:hintTextColor="@color/textSecondary"
 
-                    app:boxStrokeColor="@color/primaryColor"
-                    app:hintTextColor="@color/primaryColor">
+                    app:startIconTint="@color/primaryColor">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_license_number"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="License Number"
+                        android:textColor="@color/textPrimary"
                         android:textSize="16sp"
+
                         android:inputType="text"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Hospital Affiliation -->
                 <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxStrokeColor="@color/primaryDark"
+                    app:hintTextColor="@color/textSecondary"
 
-                    app:boxStrokeColor="@color/primaryColor"
-                    app:hintTextColor="@color/primaryColor">
+                    app:startIconTint="@color/primaryColor">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_hospital_affiliation"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Hospital Affiliation"
+                        android:textColor="@color/textPrimary"
                         android:textSize="16sp"
+
                         android:inputType="text"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Availability Schedule -->
                 <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    app:boxStrokeColor="@color/primaryDark"
+                    app:hintTextColor="@color/textSecondary"
 
-                    app:boxStrokeColor="@color/primaryColor"
-                    app:hintTextColor="@color/primaryColor">
+                    app:startIconTint="@color/primaryColor">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_availability_schedule"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Availability (e.g. Mon-Fri, 10am-5pm)"
+                        android:textColor="@color/textPrimary"
                         android:textSize="16sp"
+
                         android:inputType="text"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Save Button -->
+        <!-- Gradient Save Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_save_profile"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="52dp"
             android:layout_marginStart="32dp"
             android:layout_marginEnd="32dp"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="32dp"
+            android:layout_marginTop="16dp"
             android:text="Save Profile"
-            android:textAllCaps="false"
+            android:textColor="@android:color/white"
             android:textSize="16sp"
-            app:cornerRadius="8dp"
-            app:backgroundTint="@color/primaryColor"
-            app:rippleColor="@color/white"
-            style="@style/Widget.MaterialComponents.Button"/>
+            android:letterSpacing="0.02"
 
+            app:cornerRadius="12dp"
+            app:backgroundTint="@null"
+
+            app:iconTint="@android:color/white"
+            app:iconPadding="8dp"
+            app:rippleColor="@color/primary"
+            android:background="@drawable/bg_gradient_button"/>
+
+        <!-- Modern Logout Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_logout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="52dp"
             android:layout_marginStart="32dp"
             android:layout_marginEnd="32dp"
-
-            android:layout_marginBottom="32dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="40dp"
             android:text="Logout"
-            android:textAllCaps="false"
+            android:textColor="@color/errorRed"
             android:textSize="16sp"
-            app:cornerRadius="8dp"
-            app:backgroundTint="#F44747"
-            app:rippleColor="@color/white"
-            style="@style/Widget.MaterialComponents.Button"/>
+            android:letterSpacing="0.02"
+
+            app:cornerRadius="12dp"
+            app:backgroundTint="@android:color/transparent"
+            app:strokeColor="@color/errorRed"
+            app:strokeWidth="1dp"
+
+            app:iconTint="@color/errorRed"
+            app:iconPadding="8dp"
+            app:rippleColor="@color/error_red"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
 
     </LinearLayout>
 </ScrollView>
