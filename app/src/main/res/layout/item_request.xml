@@ -20,7 +20,7 @@
             android:text="John Doe"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@color/black"/>
+            android:textColor="@color/navy_blue"/>
 
         <TextView
             android:id="@+id/tv_problem"
@@ -79,7 +79,7 @@
                 android:layout_weight="1"
                 android:text="Reject"
                 android:textColor="@color/white"
-                android:backgroundTint="@color/errorRed"/>
+                android:backgroundTint="@color/error"/>
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

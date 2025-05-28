@@ -85,7 +85,7 @@
                     app:boxStrokeColor="@color/primaryDark"
                     app:hintTextColor="@color/textSecondary"
 
-                    app:startIconTint="@color/primaryColor">
+                    app:startIconTint="@color/navy_blue">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_full_name"
@@ -106,7 +106,7 @@
                     app:boxStrokeColor="@color/primaryDark"
                     app:hintTextColor="@color/textSecondary"
 
-                    app:startIconTint="@color/primaryColor">
+                    app:startIconTint="@color/navy_blue">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_specialization"
@@ -127,7 +127,7 @@
                     app:boxStrokeColor="@color/primaryDark"
                     app:hintTextColor="@color/textSecondary"
 
-                    app:startIconTint="@color/primaryColor">
+                    app:startIconTint="@color/navy_blue">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_qualification"
@@ -148,7 +148,7 @@
                     app:boxStrokeColor="@color/primaryDark"
                     app:hintTextColor="@color/textSecondary"
 
-                    app:startIconTint="@color/primaryColor">
+                    app:startIconTint="@color/navy_blue">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_experience_years"
@@ -169,7 +169,7 @@
                     app:boxStrokeColor="@color/primaryDark"
                     app:hintTextColor="@color/textSecondary"
 
-                    app:startIconTint="@color/primaryColor">
+                    app:startIconTint="@color/navy_blue">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_license_number"
@@ -190,7 +190,7 @@
                     app:boxStrokeColor="@color/primaryDark"
                     app:hintTextColor="@color/textSecondary"
 
-                    app:startIconTint="@color/primaryColor">
+                    app:startIconTint="@color/navy_blue">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_hospital_affiliation"
@@ -211,7 +211,7 @@
                     app:boxStrokeColor="@color/primaryDark"
                     app:hintTextColor="@color/textSecondary"
 
-                    app:startIconTint="@color/primaryColor">
+                    app:startIconTint="@color/navy_blue">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_availability_schedule"
