@@ -28,15 +28,15 @@
                 android:elevation="8dp">
 
                 <ImageView
-                    android:layout_width="100dp"
-                    android:layout_height="100dp"
+                    android:layout_width="130dp"
+                    android:layout_height="130dp"
                     android:src="@drawable/bg_circle_white"
                     android:scaleType="centerCrop"/>
 
                 <ImageView
                     android:id="@+id/profile_image"
-                    android:layout_width="92dp"
-                    android:layout_height="92dp"
+                    android:layout_width="122dp"
+                    android:layout_height="122dp"
                     android:layout_gravity="center"
                     android:contentDescription="@string/profile_image"
                     android:src="@drawable/ic_profile"

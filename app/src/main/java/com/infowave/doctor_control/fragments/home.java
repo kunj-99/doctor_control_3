@@ -95,6 +95,43 @@ public class home extends Fragment {
             startActivity(intent);
         });
 
+        View layoutPatients = view.findViewById(R.id.layout_patients);
+        View layoutYourPatients = view.findViewById(R.id.layout_your_patients);
+        View layoutOngoing = view.findViewById(R.id.layout_ongoing);
+        View layoutDoctorStatus = view.findViewById(R.id.layout_doctor_status);
+
+        layoutPatients.setOnClickListener(v -> {
+            resetGridCardStyles();
+            layoutPatients.setBackgroundColor(getResources().getColor(R.color.navy_blue));
+            ((ImageView) view.findViewById(R.id.img_patient)).setColorFilter(getResources().getColor(R.color.white));
+            ((TextView) view.findViewById(R.id.txt)).setTextColor(getResources().getColor(R.color.white));
+            ((TextView) view.findViewById(R.id.patients_count)).setTextColor(getResources().getColor(R.color.white));
+        });
+
+        layoutYourPatients.setOnClickListener(v -> {
+            resetGridCardStyles();
+            layoutYourPatients.setBackgroundColor(getResources().getColor(R.color.navy_blue));
+            ((ImageView) view.findViewById(R.id.img_patient2)).setColorFilter(getResources().getColor(R.color.white));
+            ((TextView) view.findViewById(R.id.txt2)).setTextColor(getResources().getColor(R.color.white));
+            ((TextView) view.findViewById(R.id.upcoming_appointments_count)).setTextColor(getResources().getColor(R.color.white));
+        });
+
+        layoutOngoing.setOnClickListener(v -> {
+            resetGridCardStyles();
+            layoutOngoing.setBackgroundColor(getResources().getColor(R.color.navy_blue));
+            ((ImageView) view.findViewById(R.id.img_patient3)).setColorFilter(getResources().getColor(R.color.white));
+            ((TextView) view.findViewById(R.id.txt3)).setTextColor(getResources().getColor(R.color.white));
+            ((TextView) view.findViewById(R.id.ongoing_appointments_count)).setTextColor(getResources().getColor(R.color.white));
+        });
+
+        layoutDoctorStatus.setOnClickListener(v -> {
+            resetGridCardStyles();
+            layoutDoctorStatus.setBackgroundColor(getResources().getColor(R.color.navy_blue));
+            ((ImageView) view.findViewById(R.id.status_icon)).setColorFilter(getResources().getColor(R.color.white));
+            ((TextView) view.findViewById(R.id.status_text)).setTextColor(getResources().getColor(R.color.white));
+        });
+
+
 
         // Check for location permission. Make sure to use requireContext() or getContext() instead of 'this'.
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
@@ -152,6 +189,36 @@ public class home extends Fragment {
         // Stop the service when the fragment is destroyed
         Intent serviceIntent = new Intent(getContext(), BackgroundService.class);
         getContext().stopService(serviceIntent);
+    }
+    private void resetGridCardStyles() {
+        if (getView() == null) return;
+
+        // Reset 1st card
+        View layout1 = getView().findViewById(R.id.layout_patients);
+        layout1.setBackgroundColor(getResources().getColor(R.color.white));
+        ((ImageView) getView().findViewById(R.id.img_patient)).setColorFilter(getResources().getColor(R.color.navy_blue));
+        ((TextView) getView().findViewById(R.id.txt)).setTextColor(getResources().getColor(R.color.textSecondary));
+        ((TextView) getView().findViewById(R.id.patients_count)).setTextColor(getResources().getColor(R.color.navy_blue));
+
+        // Reset 2nd card
+        View layout2 = getView().findViewById(R.id.layout_your_patients);
+        layout2.setBackgroundColor(getResources().getColor(R.color.white));
+        ((ImageView) getView().findViewById(R.id.img_patient2)).setColorFilter(getResources().getColor(R.color.navy_blue));
+        ((TextView) getView().findViewById(R.id.txt2)).setTextColor(getResources().getColor(R.color.textSecondary));
+        ((TextView) getView().findViewById(R.id.upcoming_appointments_count)).setTextColor(getResources().getColor(R.color.navy_blue));
+
+        // Reset 3rd card
+        View layout3 = getView().findViewById(R.id.layout_ongoing);
+        layout3.setBackgroundColor(getResources().getColor(R.color.white));
+        ((ImageView) getView().findViewById(R.id.img_patient3)).setColorFilter(getResources().getColor(R.color.navy_blue));
+        ((TextView) getView().findViewById(R.id.txt3)).setTextColor(getResources().getColor(R.color.textSecondary));
+        ((TextView) getView().findViewById(R.id.ongoing_appointments_count)).setTextColor(getResources().getColor(R.color.navy_blue));
+
+        // Reset 4th card
+        View layout4 = getView().findViewById(R.id.layout_doctor_status);
+        layout4.setBackgroundColor(getResources().getColor(R.color.white));
+        ((ImageView) getView().findViewById(R.id.status_icon)).setColorFilter(getResources().getColor(R.color.navy_blue));
+        ((TextView) getView().findViewById(R.id.status_text)).setTextColor(getResources().getColor(R.color.textSecondary));
     }
 
     private void attachStatusToggleListener(@NonNull final Switch statusToggle, final TextView statusText, final ImageView statusIcon) {
