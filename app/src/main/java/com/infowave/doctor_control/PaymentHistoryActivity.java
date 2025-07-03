@@ -2,9 +2,12 @@ package com.infowave.doctor_control;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.view.WindowInsets;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import com.infowave.doctor_control.adapter.PaymentAdapter;
 import java.util.ArrayList;
@@ -18,7 +21,19 @@ public class PaymentHistoryActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment_history);
-
+        View decoreview = getWindow().getDecorView();
+        decoreview.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @NonNull
+            @Override
+            public WindowInsets onApplyWindowInsets(@NonNull View v, @NonNull WindowInsets insets) {
+                int left = insets.getSystemWindowInsetLeft();
+                int top = insets.getSystemWindowInsetTop();
+                int right = insets.getSystemWindowInsetRight();
+                int bottom = insets.getSystemWindowInsetBottom();
+                v.setPadding(left,top,right,bottom);
+                return insets.consumeSystemWindowInsets();
+            }
+        });
         listView = findViewById(R.id.list_payment);
         listView.setDivider(null); // Optional: remove ListView divider lines
 
