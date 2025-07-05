@@ -1,13 +1,13 @@
 package com.infowave.doctor_control;
 
 public class HistoryItem {
-    private String patientName;
-    private String appointmentDate;
-    private String problem;
-    private boolean paymentReceived;
-    private String patientId;
-    private String appointmentId; // New field for appointment ID
-    private String status;        // New field for appointment status
+    private final String patientName;
+    private final String appointmentDate;
+    private final String problem;
+    private final boolean paymentReceived;
+    private final String patientId;
+    private final String appointmentId; // New field for appointment ID
+    private final String status;        // New field for appointment status
 
     public HistoryItem(String patientName, String appointmentDate, String problem, boolean paymentReceived, String patientId, String appointmentId, String status) {
         this.patientName = patientName;

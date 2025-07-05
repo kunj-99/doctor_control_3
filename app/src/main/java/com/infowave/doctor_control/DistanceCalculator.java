@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
-import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
 
@@ -22,7 +21,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class DistanceCalculator {
-    private static final String TAG = "DistanceCalculator";
     private static final String DIST_MATRIX_BASE =
             "https://maps.googleapis.com/maps/api/distancematrix/json";
 
@@ -43,7 +41,6 @@ public class DistanceCalculator {
         if (ActivityCompat.checkSelfPermission(host,
                 android.Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            Log.e(TAG, "[PERMISSION] Location permission not granted");
             callback.onDistanceResult("N/A");
             return;
         }
@@ -53,21 +50,17 @@ public class DistanceCalculator {
                 .getLastLocation()
                 .addOnSuccessListener((Location location) -> {
                     if (location == null) {
-                        Log.e(TAG, "[LOCATION] Last location is null");
                         callback.onDistanceResult("N/A");
                         return;
                     }
                     double originLat = location.getLatitude();
                     double originLon = location.getLongitude();
-                    Log.d(TAG, "[LOCATION] Device lat/lon: " + originLat + "," + originLon);
 
                     String coordStr = "";
                     if (patientMapLink != null && patientMapLink.contains("query=")) {
                         String[] split = patientMapLink.split("query=");
                         if (split.length > 1) coordStr = split[1].split("&")[0];
                     }
-                    Log.d(TAG, "[MAP LINK] Raw link: " + patientMapLink);
-                    Log.d(TAG, "[MAP LINK] Parsed query coords: " + coordStr);
 
                     double destLat, destLon;
                     try {
@@ -75,7 +68,6 @@ public class DistanceCalculator {
                         destLat = Double.parseDouble(parts[0].trim());
                         destLon = Double.parseDouble(parts[1].trim());
                     } catch (Exception ex) {
-                        Log.e(TAG, "[ERROR] Coord parse error", ex);
                         callback.onDistanceResult("N/A");
                         return;
                     }
@@ -86,8 +78,6 @@ public class DistanceCalculator {
                             + "&destinations=" + destLat    + "," + destLon
                             + "&mode=driving"
                             + "&key="          + key;
-
-                    Log.d(TAG, "[REQUEST] DistanceMatrix API URL: " + url);
 
                     JsonObjectRequest req = new JsonObjectRequest(
                             Request.Method.GET, url, null,
@@ -103,26 +93,21 @@ public class DistanceCalculator {
                                         String text = elem
                                                 .getJSONObject("distance")
                                                 .getString("text");
-                                        Log.d(TAG, "[SUCCESS] Distance received: " + text);
                                         callback.onDistanceResult(text);
                                     } else {
-                                        Log.w(TAG, "[RESPONSE] API status not OK");
                                         callback.onDistanceResult("N/A");
                                     }
                                 } catch (JSONException je) {
-                                    Log.e(TAG, "[ERROR] JSON parse error", je);
                                     callback.onDistanceResult("N/A");
                                 }
                             },
                             err -> {
-                                Log.e(TAG, "[ERROR] Volley request failed", err);
                                 callback.onDistanceResult("N/A");
                             }
                     );
                     queue.add(req);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "[ERROR] Failed to get last location", e);
                     callback.onDistanceResult("N/A");
                 });
     }
@@ -147,14 +132,12 @@ public class DistanceCalculator {
         if (ActivityCompat.checkSelfPermission(host,
                 android.Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            // No permission → return N/A for all
             List<String> naList = new ArrayList<>();
             for (int i = 0; i < patientLinks.size(); i++) naList.add("N/A");
             callback.onDistanceResults(naList);
             return;
         }
 
-        // Extract "lat,lon" strings
         List<String> destCoords = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             destCoords = patientLinks.stream().map(link -> {
@@ -194,14 +177,12 @@ public class DistanceCalculator {
                         }
                         callback.onDistanceResults(results);
                     } catch (JSONException je) {
-                        Log.e(TAG, "Batch parse error", je);
                         List<String> naList = new ArrayList<>();
                         for (int i = 0; i < patientLinks.size(); i++) naList.add("N/A");
                         callback.onDistanceResults(naList);
                     }
                 },
                 err -> {
-                    Log.e(TAG, "Batch API error", err);
                     List<String> naList = new ArrayList<>();
                     for (int i = 0; i < patientLinks.size(); i++) naList.add("N/A");
                     callback.onDistanceResults(naList);

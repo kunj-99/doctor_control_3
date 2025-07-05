@@ -31,7 +31,8 @@
         <activity android:name=".tarmsandcondition" />
         <activity android:name=".suppor" />
         <activity android:name=".track_patient_location" android:exported="false" />
-        <service android:name=".BackgroundService" />
+        <service android:name=".BackgroundService"
+            tools:ignore="MissingClass" />
         <activity android:name=".view_patient_report" android:exported="false" />
         <activity android:name=".PatientProfileActivity" />
         <activity android:name=".otp_verification" android:exported="false" />

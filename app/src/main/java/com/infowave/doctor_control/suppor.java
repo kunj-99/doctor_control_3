@@ -4,9 +4,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -21,7 +20,6 @@ import java.net.URL;
 
 public class suppor extends AppCompatActivity {
 
-    private static final String TAG = "suppor";
     // Replace with your actual API URL where contact_us.php is hosted
     private static final String API_URL = "http://sxm.a58.mytemp.website/contact_us.php";
 
@@ -29,8 +27,6 @@ public class suppor extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_suppor);
-
-        // Start fetching data from the API
         new FetchContactDataTask().execute();
     }
 
@@ -45,7 +41,6 @@ public class suppor extends AppCompatActivity {
     }
 
     private class FetchContactDataTask extends AsyncTask<Void, Void, String> {
-
         @Override
         protected String doInBackground(Void... voids) {
             StringBuilder response = new StringBuilder();
@@ -65,11 +60,9 @@ public class suppor extends AppCompatActivity {
                     }
                     in.close();
                     return response.toString();
-                } else {
-                    Log.e(TAG, "HTTP error code: " + responseCode);
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error fetching data", e);
+                // Error handled below in onPostExecute
             }
             return null;
         }
@@ -78,67 +71,50 @@ public class suppor extends AppCompatActivity {
         protected void onPostExecute(String result) {
             if (result != null) {
                 try {
-                    // Parse the JSON response assuming it's an array of contact objects.
                     JSONArray jsonArray = new JSONArray(result);
                     if (jsonArray.length() > 0) {
-                        // For this example, we pick the first contact in the array.
                         JSONObject contact = jsonArray.getJSONObject(0);
                         final String whatsappNumber = contact.getString("Whatsapp_number");
                         final String phoneNumber = contact.getString("phone_number");
                         final String email = contact.getString("email");
-
-                        // Format the phone number with first 3 digits in brackets.
                         final String formattedPhoneNumber = formatPhoneNumber(phoneNumber);
 
-                        // Find the TextViews in the layout.
                         TextView whatsappText = findViewById(R.id.whatsapp_text);
                         TextView phoneText = findViewById(R.id.mobile_text);
                         TextView emailText = findViewById(R.id.email_text);
 
-                        // Set the fetched and formatted data into the TextViews.
                         whatsappText.setText(whatsappNumber);
                         phoneText.setText(formattedPhoneNumber);
                         emailText.setText(email);
 
-                        // Set click listener for email: Opens Gmail's compose window.
-                        emailText.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                Intent emailIntent = new Intent(Intent.ACTION_SENDTO);
-                                emailIntent.setData(Uri.parse("mailto:" + email));
-                                emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Subject Here");
-                                emailIntent.putExtra(Intent.EXTRA_TEXT, "Your email body here");
-                                startActivity(Intent.createChooser(emailIntent, "Send Email"));
-                            }
+                        emailText.setOnClickListener(v -> {
+                            Intent emailIntent = new Intent(Intent.ACTION_SENDTO);
+                            emailIntent.setData(Uri.parse("mailto:" + email));
+                            emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Subject Here");
+                            emailIntent.putExtra(Intent.EXTRA_TEXT, "Your email body here");
+                            startActivity(Intent.createChooser(emailIntent, "Send Email"));
                         });
 
-                        // Set click listener for phone: Opens the dialer with the formatted phone number.
-                        phoneText.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                Intent dialIntent = new Intent(Intent.ACTION_DIAL);
-                                dialIntent.setData(Uri.parse("tel:" + formattedPhoneNumber));
-                                startActivity(dialIntent);
-                            }
+                        phoneText.setOnClickListener(v -> {
+                            Intent dialIntent = new Intent(Intent.ACTION_DIAL);
+                            dialIntent.setData(Uri.parse("tel:" + formattedPhoneNumber));
+                            startActivity(dialIntent);
                         });
 
-                        // Set click listener for WhatsApp: Opens a chat with the provided number.
-                        whatsappText.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                // WhatsApp API URL; ensure the number includes the country code.
-                                String url = "https://api.whatsapp.com/send?phone=" + whatsappNumber;
-                                Intent whatsappIntent = new Intent(Intent.ACTION_VIEW);
-                                whatsappIntent.setData(Uri.parse(url));
-                                startActivity(whatsappIntent);
-                            }
+                        whatsappText.setOnClickListener(v -> {
+                            String url = "https://api.whatsapp.com/send?phone=" + whatsappNumber;
+                            Intent whatsappIntent = new Intent(Intent.ACTION_VIEW);
+                            whatsappIntent.setData(Uri.parse(url));
+                            startActivity(whatsappIntent);
                         });
+                    } else {
+                        Toast.makeText(suppor.this, "Contact information is currently unavailable.", Toast.LENGTH_LONG).show();
                     }
                 } catch (JSONException e) {
-                    Log.e(TAG, "JSON parsing error", e);
+                    Toast.makeText(suppor.this, "Unable to load contact details. Please try again later.", Toast.LENGTH_SHORT).show();
                 }
             } else {
-                Log.e(TAG, "Result is null. Check your API URL or network connection.");
+                Toast.makeText(suppor.this, "Unable to fetch contact info. Please check your internet connection.", Toast.LENGTH_SHORT).show();
             }
         }
     }

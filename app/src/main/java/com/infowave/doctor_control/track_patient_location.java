@@ -13,7 +13,6 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Looper;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -47,9 +46,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
 
     private static final String MAPVIEW_BUNDLE_KEY = "MapViewBundleKey";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
-    private static final String TAG = "TrackPatientLocation";
 
-    // Flag for direct navigation mode.
     private boolean directMode = true;
 
     private MapView mapView;
@@ -58,8 +55,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
     private LatLng currentLocation;
     private LatLng destinationLocation;
     private TextView tvDistance, tvDuration;
-
-    // LocationCallback for continuous location updates.
     private LocationCallback locationCallback;
 
     @Override
@@ -67,14 +62,11 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_track_patient_location);
 
-        // Initialize TextViews.
         tvDistance = findViewById(R.id.tvDistance);
         tvDuration = findViewById(R.id.tvDuration);
 
-        // Initialize FusedLocationProviderClient.
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        // Initialize MapView.
         Bundle mapViewBundle = null;
         if (savedInstanceState != null) {
             mapViewBundle = savedInstanceState.getBundle(MAPVIEW_BUNDLE_KEY);
@@ -83,10 +75,8 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         mapView.onCreate(mapViewBundle);
         mapView.getMapAsync(this);
 
-        // Retrieve the map link from the intent extra.
         String mapLink = getIntent().getStringExtra("map_link");
         if (mapLink != null && !mapLink.isEmpty()) {
-            // Expected format: "https://www.google.com/maps/search/?api=1&query=LAT,LNG"
             Uri uri = Uri.parse(mapLink);
             String query = uri.getQueryParameter("query");
             if (query != null && query.contains(",")) {
@@ -95,7 +85,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                     double lat = Double.parseDouble(parts[0].trim());
                     double lng = Double.parseDouble(parts[1].trim());
                     destinationLocation = new LatLng(lat, lng);
-                    Log.d(TAG, "Destination set to: " + destinationLocation);
                 } catch (NumberFormatException e) {
                     Toast.makeText(this, "Invalid coordinates in map link", Toast.LENGTH_SHORT).show();
                     finish();
@@ -112,12 +101,10 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             return;
         }
 
-        // Optional: Add a button to launch Google Maps navigation.
         Button btnNavigate = findViewById(R.id.btnNavigation);
         if (btnNavigate != null) {
             btnNavigate.setOnClickListener(v -> {
                 if (destinationLocation != null) {
-                    // "mode=d" means driving.
                     String uri = "google.navigation:q=" + destinationLocation.latitude + "," + destinationLocation.longitude + "&mode=d";
                     Intent mapIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
                     mapIntent.setPackage("com.google.android.apps.maps");
@@ -132,37 +119,14 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             });
         }
 
-        // Check for location permission.
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     LOCATION_PERMISSION_REQUEST_CODE);
         } else {
-            // Fetch current location and start tracking the best route.
             fetchCurrentLocation();
         }
-    }
-
-    /**
-     * (Optional) Helper method to retrieve the API key from the manifest.
-     * Not used for Directions URL anymore since we use a PHP proxy.
-     */
-    private String getApiKey() {
-        try {
-            ApplicationInfo ai = getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
-            if (ai.metaData != null) {
-                Object value = ai.metaData.get("com.google.android.geo.API_KEY");
-                if (value instanceof Integer) {
-                    return getString((Integer) value);
-                } else if (value instanceof String) {
-                    return (String) value;
-                }
-            }
-        } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Failed to load API key", e);
-        }
-        return null;
     }
 
     private void fetchCurrentLocation() {
@@ -173,7 +137,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
             if (location != null) {
                 currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                Log.d(TAG, "Current location: " + currentLocation);
                 if (gMap != null) {
                     if (directMode) {
                         startDirectNavigation();
@@ -181,7 +144,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                         updateMap();
                     }
                 }
-                // Start continuous tracking of the best route.
                 findAndTrackBestRoute();
             } else {
                 Toast.makeText(track_patient_location.this, "Unable to fetch current location", Toast.LENGTH_SHORT).show();
@@ -189,12 +151,9 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         });
     }
 
-    /**
-     * Sets up continuous location updates and updates the route accordingly.
-     */
     private void findAndTrackBestRoute() {
         LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setInterval(5000); // Update every 5 seconds.
+        locationRequest.setInterval(5000);
         locationRequest.setFastestInterval(3000);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
@@ -208,7 +167,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                         locationResult.getLastLocation().getLatitude(),
                         locationResult.getLastLocation().getLongitude()
                 );
-                Log.d(TAG, "Updated current location: " + currentLocation);
                 if (gMap != null) {
                     if (directMode) {
                         startDirectNavigation();
@@ -241,9 +199,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         }
     }
 
-    /**
-     * Starts direct navigation by drawing the optimized route without showing the current location marker.
-     */
     private void startDirectNavigation() {
         gMap.clear();
         if (destinationLocation != null) {
@@ -253,13 +208,9 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         }
         gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(destinationLocation, 12));
         String url = getDirectionsUrl(currentLocation, destinationLocation);
-        Log.d(TAG, "Direct Navigation - Directions URL: " + url);
         new FetchRouteTask().execute(url);
     }
 
-    /**
-     * Updates the map in normal mode by showing both markers and drawing the route.
-     */
     private void updateMap() {
         gMap.clear();
 
@@ -281,19 +232,12 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                 gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 12));
             }
             String url = getDirectionsUrl(currentLocation, destinationLocation);
-            Log.d(TAG, "Directions URL: " + url);
             new FetchRouteTask().execute(url);
         }
     }
 
-    /**
-     * Builds the URL for fetching directions.
-     *
-     * This method now calls your PHP proxy rather than the Google Directions API directly.
-     * Replace "http://yourserver.com/directions.php" with your actual server URL.
-     */
     private String getDirectionsUrl(LatLng origin, LatLng dest) {
-        String baseUrl = "http://sxm.a58.mytemp.website/Doctors/directions.php?"; // <-- Replace with your server's URL
+        String baseUrl = "http://sxm.a58.mytemp.website/Doctors/directions.php?";
         String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
         String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
         String mode = "mode=driving";
@@ -307,14 +251,12 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             try {
                 return downloadUrl(url[0]);
             } catch (Exception e) {
-                Log.e(TAG, "Error downloading route data: " + e.toString());
                 return null;
             }
         }
 
         @Override
         protected void onPostExecute(String result) {
-            Log.d(TAG, "Directions JSON response: " + result);
             if (result != null) {
                 try {
                     JSONObject jsonObject = new JSONObject(result);
@@ -331,7 +273,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                         }
                     }
                 } catch (Exception e) {
-                    Log.e(TAG, "Error parsing route info: " + e.toString());
+                    Toast.makeText(track_patient_location.this, "Unable to parse route information", Toast.LENGTH_SHORT).show();
                 }
                 new ParserTask().execute(result);
             } else {
@@ -366,9 +308,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         return data;
     }
 
-    /**
-     * AsyncTask to parse the route JSON data.
-     */
     private class ParserTask extends AsyncTask<String, Void, List<List<LatLng>>> {
         @Override
         protected List<List<LatLng>> doInBackground(String... jsonData) {
@@ -377,7 +316,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                 DirectionsJSONParser parser = new DirectionsJSONParser();
                 return parser.parse(jObject);
             } catch (Exception e) {
-                Log.e(TAG, "Error parsing route data: " + e.toString());
                 return null;
             }
         }
@@ -394,7 +332,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                 points = new ArrayList<>(path);
                 lineOptions.addAll(points);
                 lineOptions.width(10);
-                lineOptions.color(0xFF0000FF); // Blue color.
+                lineOptions.color(0xFF0000FF);
             }
             if (lineOptions != null) {
                 gMap.addPolyline(lineOptions);
@@ -404,9 +342,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         }
     }
 
-    /**
-     * Helper class to parse the JSON response from the Directions API.
-     */
     public class DirectionsJSONParser {
         public List<List<LatLng>> parse(JSONObject jObject) {
             List<List<LatLng>> routes = new ArrayList<>();
@@ -426,14 +361,11 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                     routes.add(path);
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error in parsing directions: " + e.toString());
+                // No logs, show no error
             }
             return routes;
         }
 
-        /**
-         * Decodes an encoded polyline string into a list of LatLngs.
-         */
         private List<LatLng> decodePoly(String encoded) {
             List<LatLng> poly = new ArrayList<>();
             int index = 0, len = encoded.length();
@@ -462,7 +394,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         }
     }
 
-    // MapView lifecycle methods.
     @Override
     protected void onResume() {
         super.onResume();
@@ -507,7 +438,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         mapView.onSaveInstanceState(mapViewBundle);
     }
 
-    // Handle runtime permission request results.
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {

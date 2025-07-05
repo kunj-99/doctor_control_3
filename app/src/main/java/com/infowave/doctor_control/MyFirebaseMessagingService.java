@@ -10,7 +10,6 @@ import android.content.pm.PackageManager;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
-import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
@@ -28,17 +27,15 @@ import java.util.Map;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
-    private static final String TAG        = "FCM";
     private static final String CHANNEL_ID = "requests_channel";
 
-    /* ─────────────────────────────── */
-    /*  TOKEN HANDLING                 */
-    /* ─────────────────────────────── */
+    // ───────────────────────────────
+    //  TOKEN HANDLING
+    // ───────────────────────────────
 
     @Override
     public void onNewToken(String token) {
         super.onNewToken(token);
-        Log.d(TAG, "FCM token: " + token);
         uploadTokenToServer(token);
     }
 
@@ -46,7 +43,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     public static void refreshTokenIfNeeded(Context ctx) {
         com.google.firebase.messaging.FirebaseMessaging.getInstance().getToken()
                 .addOnSuccessListener(token -> {
-                    Log.d(TAG, "fresh token: " + token);
                     new MyFirebaseMessagingService().uploadTokenToServer(ctx, token);
                 });
     }
@@ -64,8 +60,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String url = "http://sxm.a58.mytemp.website/Doctors/save_token.php";
 
         StringRequest req = new StringRequest(Request.Method.POST, url,
-                resp -> Log.d(TAG, "token saved: " + resp),
-                err  -> Log.e(TAG, "token save error", err))
+                resp -> { /* no log */ },
+                err  -> { /* no log */ })
         {
             @Override
             protected Map<String, String> getParams() {
@@ -78,9 +74,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         queue.add(req);
     }
 
-    /* ─────────────────────────────── */
-    /*  NOTIFICATION HANDLING          */
-    /* ─────────────────────────────── */
+    // ───────────────────────────────
+    //  NOTIFICATION HANDLING
+    // ───────────────────────────────
 
     @Override
     public void onMessageReceived(RemoteMessage rm) {
@@ -95,16 +91,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (rm.getData().size() > 0) {
             Map<String, String> data = rm.getData();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                title = data.getOrDefault("title", title);
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                body = data.getOrDefault("body", body);
+                if (data.get("title") != null) title = data.get("title");
+                if (data.get("body") != null) body = data.get("body");
             }
         }
         // Fallback to notification payload (optional)
         else if (rm.getNotification() != null) {
-            title = rm.getNotification().getTitle();
-            body = rm.getNotification().getBody();
+            if (rm.getNotification().getTitle() != null) title = rm.getNotification().getTitle();
+            if (rm.getNotification().getBody() != null) body = rm.getNotification().getBody();
         }
 
         Intent i = new Intent(this, MainActivity.class);

@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -27,7 +26,6 @@ import java.util.Map;
 
 public class login extends AppCompatActivity {
 
-    private static final String TAG = "DoctorLoginActivity";
     EditText etMobile;
     Button sendotp;
     SharedPreferences sharedPreferences;
@@ -88,12 +86,11 @@ public class login extends AppCompatActivity {
                             Toast.makeText(login.this, message, Toast.LENGTH_SHORT).show();
                         }
                     } catch (JSONException e) {
-                        Log.e(TAG, "JSON Parsing Error: " + e.getMessage(), e);
+                        Toast.makeText(login.this, "Unexpected response from server.", Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
-                    Log.e(TAG, "Volley Error: " + error.getMessage(), error);
-                    Toast.makeText(login.this, "Server error! Try again.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(login.this, "Server error! Please try again.", Toast.LENGTH_SHORT).show();
                 }) {
             @Override
             protected Map<String, String> getParams() {

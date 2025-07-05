@@ -59,7 +59,6 @@ public class PatientProfileActivity extends AppCompatActivity {
         String url = PROFILE_URL + patientId;
         RequestQueue requestQueue = Volley.newRequestQueue(this);
 
-        // Show loader before making the API call
         loaderutil.showLoader(this);
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
@@ -67,9 +66,7 @@ public class PatientProfileActivity extends AppCompatActivity {
                 url,
                 null,
                 response -> {
-                    // Hide loader on success
                     loaderutil.hideLoader();
-
                     try {
                         String status = response.getString("status");
                         if (status.equals("success")) {
@@ -85,7 +82,9 @@ public class PatientProfileActivity extends AppCompatActivity {
 
                             String emergencyName = data.optString("emergency_contact_name", "");
                             String emergencyNumber = data.optString("emergency_contact_number", "");
-                            tvEmergencyContact.setText(emergencyName + " - " + emergencyNumber);
+                            tvEmergencyContact.setText(
+                                    (emergencyName.isEmpty() && emergencyNumber.isEmpty())
+                                            ? "N/A" : (emergencyName + " - " + emergencyNumber));
 
                             tvMedicalHistory.setText(data.optString("medical_history", "N/A"));
                             tvAllergies.setText(data.optString("allergies", "N/A"));
@@ -99,21 +98,18 @@ public class PatientProfileActivity extends AppCompatActivity {
                                     .error(R.drawable.pr_ic_profile_placeholder)
                                     .into(profileImage);
                         } else {
-                            Toast.makeText(this, response.optString("message", "Error retrieving profile"), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, response.optString("message", "Could not retrieve profile"), Toast.LENGTH_SHORT).show();
                         }
                     } catch (JSONException e) {
-                        e.printStackTrace();
-                        Toast.makeText(this, "JSON Parsing error", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Unable to load profile details.", Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
-                    // Hide loader on error
                     loaderutil.hideLoader();
-                    Toast.makeText(this, "Network error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Could not load profile. Please check your connection.", Toast.LENGTH_SHORT).show();
                 }
         );
 
         requestQueue.add(jsonObjectRequest);
     }
-
 }

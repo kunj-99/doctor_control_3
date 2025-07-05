@@ -10,7 +10,6 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
@@ -25,7 +24,6 @@ import java.util.Map;
 
 public class LiveLocationManager {
 
-    private static final String TAG = "LiveLocationManager";
     private static final String LIVE_LOCATION_URL = "http://sxm.a58.mytemp.website/update_live_location.php";
     private static final String CHANNEL_ID = "LiveTrackingChannel";
 
@@ -125,7 +123,7 @@ public class LiveLocationManager {
                     return;
                 }
 
-                locationClient.requestLocationUpdates(request, locationCallback, handlerThread.getLooper()); // ✅ FIXED LINE
+                locationClient.requestLocationUpdates(request, locationCallback, handlerThread.getLooper());
             } else {
                 stopSelf();
             }
@@ -154,8 +152,12 @@ public class LiveLocationManager {
 
         private void sendLocationToServer(Context context, String doctorId, String appointmentId, double lat, double lon) {
             StringRequest request = new StringRequest(Request.Method.POST, LIVE_LOCATION_URL,
-                    response -> Log.d(TAG, "[SEND] Response: " + response),
-                    error -> Log.e(TAG, "[SEND] Error: " + error.getMessage())) {
+                    response -> {
+                        // No log or toast
+                    },
+                    error -> {
+                        // No log or toast
+                    }) {
                 @Override
                 protected Map<String, String> getParams() {
                     Map<String, String> params = new HashMap<>();
@@ -171,7 +173,7 @@ public class LiveLocationManager {
         }
 
         private void createNotificationChannel() {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 NotificationChannel channel = new NotificationChannel(
                         CHANNEL_ID, "Live Location Tracking", NotificationManager.IMPORTANCE_LOW);
                 NotificationManager manager = getSystemService(NotificationManager.class);

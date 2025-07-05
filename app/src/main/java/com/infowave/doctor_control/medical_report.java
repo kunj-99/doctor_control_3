@@ -41,10 +41,9 @@ public class medical_report extends AppCompatActivity {
     private android.widget.ImageView ivReportImage;
     private MaterialButton btnUploadImage, btnSaveReport, btnAddMedicine;
     private Uri selectedImageUri;
-    private Bitmap selectedBitmap; // Holds the gallery OR camera image for upload
+    private Bitmap selectedBitmap;
     private int medicineCount = 1;
 
-    // All input fields
     private TextInputEditText etPatientName, etAge, etSex, etWeight, etAddress, etDate,
             etTemperature, etPulse, etSpo2, etBloodPressure, etSignature, etReportType;
     private TextInputEditText etSymptoms, etRespiratorySystem;
@@ -52,7 +51,6 @@ public class medical_report extends AppCompatActivity {
     private RequestQueue requestQueue;
     private String appointmentId;
 
-    // for full-resolution capture
     private Uri cameraImageUri;
 
     @Override
@@ -143,13 +141,11 @@ public class medical_report extends AppCompatActivity {
                         etBloodPressure.setText("");
 
                     } catch (Exception e) {
-                        e.printStackTrace();
                         showError("Error parsing appointment data.");
                     }
                 },
                 error -> {
                     loaderutil.hideLoader();
-                    error.printStackTrace();
                     showError("Failed to fetch appointment details.");
                 });
 
@@ -166,7 +162,6 @@ public class medical_report extends AppCompatActivity {
                 .show();
     }
 
-    // full-resolution camera capture
     private void openCamera() {
         File imageFile = new File(getExternalCacheDir(),
                 "report_" + System.currentTimeMillis() + ".jpg");
@@ -190,12 +185,11 @@ public class medical_report extends AppCompatActivity {
         startActivityForResult(intent, REQUEST_GALLERY);
     }
 
-    // decode full-res image (camera) or gallery image
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
-            loaderutil.showLoader(this);                 // ★ show while decoding
+            loaderutil.showLoader(this);
             if (requestCode == REQUEST_CAMERA) {
                 try {
                     selectedBitmap = MediaStore.Images.Media.getBitmap(
@@ -203,7 +197,6 @@ public class medical_report extends AppCompatActivity {
                     ivReportImage.setImageBitmap(selectedBitmap);
                     ivReportImage.setVisibility(View.VISIBLE);
                 } catch (IOException e) {
-                    e.printStackTrace();
                     showError("Failed to load captured image.");
                 }
             } else if (requestCode == REQUEST_GALLERY &&
@@ -215,11 +208,10 @@ public class medical_report extends AppCompatActivity {
                     ivReportImage.setImageBitmap(selectedBitmap);
                     ivReportImage.setVisibility(View.VISIBLE);
                 } catch (IOException e) {
-                    e.printStackTrace();
                     showError("Failed to load image.");
                 }
             }
-            loaderutil.hideLoader();                      // ★ hide after done
+            loaderutil.hideLoader();
         }
     }
 
@@ -241,13 +233,10 @@ public class medical_report extends AppCompatActivity {
             return;
         }
 
-        // … (all your validation code stays exactly the same) …
-
         String url = "http://sxm.a58.mytemp.website/Doctors/insert_medical_report.php";
         JSONObject postData = new JSONObject();
 
         try {
-            // — building JSON exactly as before —
             postData.put("appointment_id", appointmentId);
             postData.put("patient_name", etPatientName.getText().toString());
             postData.put("age", etAge.getText().toString());
@@ -296,17 +285,16 @@ public class medical_report extends AppCompatActivity {
             postData.put("medicines", medicineArray);
 
         } catch (Exception e) {
-            e.printStackTrace();
             Toast.makeText(this, "Failed to collect form data.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        loaderutil.showLoader(this);                       // ★ show while uploading
+        loaderutil.showLoader(this);
 
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST, url, postData,
                 response -> {
-                    loaderutil.hideLoader();               // ★ hide after response
+                    loaderutil.hideLoader();
                     if (response.optBoolean("success", false)) {
                         Toast.makeText(this, "Report saved successfully.", Toast.LENGTH_SHORT).show();
                         Intent resultIntent = new Intent();
@@ -319,8 +307,7 @@ public class medical_report extends AppCompatActivity {
                     }
                 },
                 error -> {
-                    loaderutil.hideLoader();               // ★ hide on error
-                    error.printStackTrace();
+                    loaderutil.hideLoader();
                     Toast.makeText(this, "Error sending report to server.", Toast.LENGTH_SHORT).show();
                 });
 

@@ -3,7 +3,6 @@ package com.infowave.doctor_control;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -24,11 +23,8 @@ import org.json.JSONObject;
 
 public class view_patient_report extends AppCompatActivity {
 
-    // API endpoint URL (update with your actual server URL)
-    // This endpoint expects an "appointment_id" parameter.
     private static final String GET_REPORT_URL = "http://sxm.a58.mytemp.website/get_medical_report.php?appointment_id=";
 
-    // Appointment ID retrieved from the Intent extra
     private String appointmentId;
     private TextView tvHospitalName, tvHospitalAddress;
     private TextView tvPatientName, tvPatientAddress, tvVisitDate;
@@ -38,28 +34,22 @@ public class view_patient_report extends AppCompatActivity {
     private TextView tvDoctorName;
     private ImageButton btnBack;
     private ImageView ivReportPhoto;
-
     private RequestQueue requestQueue;
-    private static final String TAG = "MedicalReport";
 
     @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Check appointment ID BEFORE inflating the layout
         appointmentId = getIntent().getStringExtra("appointment_id");
-        Log.d(TAG, "Received appointment ID: " + appointmentId);
         if (appointmentId == null || appointmentId.isEmpty()) {
             Toast.makeText(this, "Appointment ID not provided", Toast.LENGTH_SHORT).show();
             redirectToHistoryFragment();
             return;
         }
 
-        // Inflate the layout only if appointmentId is present
         setContentView(R.layout.activity_view_patient_report);
 
-        // Initialize UI elements
         tvHospitalName = findViewById(R.id.tv_hospital_name);
         tvHospitalAddress = findViewById(R.id.tv_hospital_address);
         tvPatientName = findViewById(R.id.tv_patient_name);
@@ -81,30 +71,21 @@ public class view_patient_report extends AppCompatActivity {
 
         btnBack.setOnClickListener(v -> finish());
 
-        // Optionally, set static header texts
         tvHospitalName.setText("VRAJ HOSPITAL");
         tvHospitalAddress.setText("150 Feet Ring Road, Rajkot - 360 004");
 
-        // Initialize Volley RequestQueue
         requestQueue = Volley.newRequestQueue(this);
-
-        // Fetch the medical report data using the appointment ID
         fetchMedicalReport();
     }
 
     private void fetchMedicalReport() {
         String url = GET_REPORT_URL + appointmentId;
-        Log.d(TAG, "Fetching report from URL: " + url);
 
-        // Show loader while fetching report
         loaderutil.showLoader(this);
 
         @SuppressLint("SetTextI18n") JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
                 response -> {
-                    // Hide loader once response is received
                     loaderutil.hideLoader();
-                    Log.d(TAG, "API Response received: " + response.toString());
-
                     try {
                         String status = response.optString("status", "");
                         if (!status.equalsIgnoreCase("success")) {
@@ -146,7 +127,7 @@ public class view_patient_report extends AppCompatActivity {
                         tvInvestigations.setText("Investigations: " + data.optString("investigations", "N/A"));
                         tvDoctorName.setText("Doctor: " + data.optString("doctor_name", "N/A"));
 
-                        // Medications
+                        // Medications table
                         String[] medList = data.optString("medications", "").split("\\n");
                         String[] dosageList = data.optString("dosage", "").split("\\n");
 
@@ -178,21 +159,17 @@ public class view_patient_report extends AppCompatActivity {
                         }
 
                     } catch (Exception e) {
-                        Log.e(TAG, "Exception during parsing: " + e.getMessage(), e);
                         Toast.makeText(view_patient_report.this, "Error parsing report data", Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
-                    // Hide loader on error
                     loaderutil.hideLoader();
-                    Log.e(TAG, "Volley error: " + error.getMessage(), error);
                     Toast.makeText(view_patient_report.this, "Error fetching report", Toast.LENGTH_SHORT).show();
                 }
         );
 
         requestQueue.add(request);
     }
-
 
     private void redirectToHistoryFragment() {
         Intent intent = new Intent(view_patient_report.this, MainActivity.class);

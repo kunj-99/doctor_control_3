@@ -14,7 +14,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ScrollView;
@@ -42,8 +41,6 @@ import java.util.Date;
 import java.util.Locale;
 
 public class patient_bill extends AppCompatActivity {
-
-    private static final String TAG = "PatientBill";
 
     Button downloadBtn;
     ScrollView billLayout;
@@ -96,12 +93,11 @@ public class patient_bill extends AppCompatActivity {
                             Toast.makeText(this, "No bill found.", Toast.LENGTH_SHORT).show();
                         }
                     } catch (Exception e) {
-                        Log.e(TAG, "Error parsing response", e);
+                        Toast.makeText(this, "Failed to load bill details.", Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
                     loaderutil.hideLoader();
-                    Log.e(TAG, "Volley error: ", error);
                     Toast.makeText(this, "Error fetching bill", Toast.LENGTH_SHORT).show();
                 }
         );
@@ -134,7 +130,7 @@ public class patient_bill extends AppCompatActivity {
             setTextSafe(R.id.tv_doctor_earning, "₹ " + bill.optString("doctor_earning", "0"));
 
         } catch (Exception e) {
-            Log.e(TAG, "populateBillUI error: ", e);
+            Toast.makeText(this, "Failed to display bill details.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -162,7 +158,7 @@ public class patient_bill extends AppCompatActivity {
         if (requestCode == 101 && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             generatePDF();
         } else {
-            Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Storage permission is required to download PDF.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -210,7 +206,7 @@ public class patient_bill extends AppCompatActivity {
             outputStream.close();
             pdfDocument.close();
 
-            Toast.makeText(this, "PDF saved: " + fileName, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "PDF saved in Downloads: " + fileName, Toast.LENGTH_LONG).show();
 
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setDataAndType(pdfUri, "application/pdf");
@@ -218,8 +214,7 @@ public class patient_bill extends AppCompatActivity {
             startActivity(intent);
 
         } catch (IOException e) {
-            Log.e(TAG, "PDF creation error: ", e);
-            Toast.makeText(this, "Failed to create PDF", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Failed to create PDF. Please try again.", Toast.LENGTH_SHORT).show();
         } finally {
             downloadBtn.setVisibility(View.VISIBLE);
         }

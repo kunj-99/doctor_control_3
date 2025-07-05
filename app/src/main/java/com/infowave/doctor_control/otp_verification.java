@@ -1,10 +1,11 @@
 package com.infowave.doctor_control;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
+import android.os.CountDownTimer;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -28,14 +29,14 @@ import java.util.Map;
 
 public class otp_verification extends AppCompatActivity {
 
-    private static final String TAG = "OTPVerification";
     private static final String VERIFY_OTP_URL = "http://sxm.a58.mytemp.website/Doctors/verify_otp.php"; // API URL for doctors
 
-    private Button continu;
+    private Button continu, resend;
     private EditText etOtp;
     private String mobileNumber;
     private SharedPreferences sharedPreferences; // For storing doctor data
 
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,100 +44,136 @@ public class otp_verification extends AppCompatActivity {
 
         // Initialize SharedPreferences (using a dedicated name for doctor data)
         sharedPreferences = getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
-        Log.d(TAG, "SharedPreferences 'DoctorPrefs' initialized.");
 
         // Initialize views
         continu = findViewById(R.id.continu);
         etOtp = findViewById(R.id.etLoginInput);
+        resend = findViewById(R.id.resend);
 
         // Get mobile number from intent
         mobileNumber = getIntent().getStringExtra("mobile");
 
         if (mobileNumber == null || mobileNumber.isEmpty()) {
-            Log.e(TAG, "Error: Mobile number is missing in intent!");
+            Toast.makeText(this, "Mobile number not found. Please try again.", Toast.LENGTH_SHORT).show();
             finish();
             return;
-        } else {
-            Log.d(TAG, "Mobile number received: " + mobileNumber);
         }
 
         // Set up the continue button click listener
-        continu.setOnClickListener(new View.OnClickListener() {
+        continu.setOnClickListener(v -> verifyOtp());
+
+        // Setup Resend OTP button functionality
+        resend.setEnabled(false);  // Initially disable the resend button
+        startResendOtpTimer();  // Start the countdown timer
+        resend.setOnClickListener(v -> resendOtp());
+    }
+
+    /**
+     * Starts a 100-second timer that updates the resend button text.
+     * When the timer finishes, the resend button is enabled.
+     */
+    private void startResendOtpTimer() {
+        new CountDownTimer(100 * 1000, 1000) { // 100 seconds with 1-second intervals
+            @SuppressLint("SetTextI18n")
             @Override
-            public void onClick(View v) {
-                verifyOtp();
+            public void onTick(long millisUntilFinished) {
+                resend.setText("Resend OTP in " + millisUntilFinished / 1000 + "s");
             }
-        });
+
+            @Override
+            public void onFinish() {
+                resend.setText("Resend OTP");
+                resend.setEnabled(true);  // Enable the button once the timer finishes
+            }
+        }.start();
+    }
+
+    /**
+     * Resends the OTP via an API call.
+     */
+    private void resendOtp() {
+        // Disable the button immediately and restart timer
+        resend.setEnabled(false);
+        startResendOtpTimer();  // Restart timer
+
+        String URL = "http://sxm.a58.mytemp.website/Doctors/login.php";  // Your API URL to resend OTP
+
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, URL,
+                response -> {
+                    try {
+                        JSONObject jsonObject = new JSONObject(response);
+                        boolean success = jsonObject.getBoolean("success");
+                        String message = jsonObject.getString("message");
+
+                        if (success) {
+                            Toast.makeText(otp_verification.this, "OTP sent! Check your messages.", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(otp_verification.this, message, Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (JSONException e) {
+                        Toast.makeText(otp_verification.this, "Unexpected response from server.", Toast.LENGTH_SHORT).show();
+                    }
+                },
+                error -> {
+                    Toast.makeText(otp_verification.this, "Network error! Try again.", Toast.LENGTH_SHORT).show();
+                }) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<>();
+                params.put("mobile", mobileNumber);  // Pass mobile number for OTP
+                return params;
+            }
+        };
+
+        RequestQueue requestQueue = Volley.newRequestQueue(otp_verification.this);
+        requestQueue.add(stringRequest);
     }
 
     private void verifyOtp() {
         final String enteredOtp = etOtp.getText().toString().trim();
 
         if (enteredOtp.isEmpty()) {
-            Log.w(TAG, "OTP field is empty.");
-            Toast.makeText(otp_verification.this, "Please enter OTP", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please enter the OTP.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Log.d(TAG, "Entered OTP: " + enteredOtp + " | Sending to API for verification");
-
         // Create a Volley POST request
         StringRequest request = new StringRequest(Request.Method.POST, VERIFY_OTP_URL,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        Log.d(TAG, "Server Response: " + response);
-                        try {
-                            JSONObject jsonObject = new JSONObject(response);
-                            boolean success = jsonObject.getBoolean("success");
+                response -> {
+                    try {
+                        JSONObject jsonObject = new JSONObject(response);
+                        boolean success = jsonObject.getBoolean("success");
 
-                            if (success) {
-                                Log.d(TAG, "OTP Verified Successfully!");
-                                Toast.makeText(otp_verification.this, "Login Successful!", Toast.LENGTH_SHORT).show();
+                        if (success) {
+                            Toast.makeText(otp_verification.this, "Login successful!", Toast.LENGTH_SHORT).show();
 
-                                // Extract doctor details from the response
-                                int doctorId = jsonObject.getInt("doctor_id");
-                                String fullName = jsonObject.getString("full_name");
-                                String specialization = jsonObject.getString("specialization");
+                            // Extract doctor details from the response
+                            int doctorId = jsonObject.getInt("doctor_id");
+                            String fullName = jsonObject.getString("full_name");
+                            String specialization = jsonObject.getString("specialization");
 
-                                // Save doctor data in SharedPreferences
-                                SharedPreferences.Editor editor = sharedPreferences.edit();
-                                editor.putInt("doctor_id", doctorId);
-                                editor.putString("full_name", fullName);
-                                editor.putString("specialization", specialization);
-                                editor.putString("mobile", mobileNumber);
-                                editor.apply();
+                            // Save doctor data in SharedPreferences
+                            SharedPreferences.Editor editor = sharedPreferences.edit();
+                            editor.putInt("doctor_id", doctorId);
+                            editor.putString("full_name", fullName);
+                            editor.putString("specialization", specialization);
+                            editor.putString("mobile", mobileNumber);
+                            editor.apply();
 
-                                Log.d(TAG, "Doctor data saved: doctor_id=" + doctorId +
-                                        ", full_name=" + fullName + ", specialization=" + specialization);
-
-                                // Redirect to MainActivity (or your doctor's dashboard)
-                                Intent intent = new Intent(otp_verification.this, MainActivity.class);
-                                startActivity(intent);
-                                finish();
-                            } else {
-                                String message = jsonObject.getString("message");
-                                Log.w(TAG, "OTP Verification Failed: " + message);
-                                Toast.makeText(otp_verification.this, message, Toast.LENGTH_SHORT).show();
-                            }
-                        } catch (JSONException e) {
-                            Log.e(TAG, "JSON Parsing Error: " + e.getMessage(), e);
-                            Toast.makeText(otp_verification.this, "Response error! Please try again.", Toast.LENGTH_SHORT).show();
+                            // Redirect to MainActivity (or your doctor's dashboard)
+                            Intent intent = new Intent(otp_verification.this, MainActivity.class);
+                            startActivity(intent);
+                            finish();
+                        } else {
+                            String message = jsonObject.getString("message");
+                            Toast.makeText(otp_verification.this, message, Toast.LENGTH_SHORT).show();
                         }
+                    } catch (JSONException e) {
+                        Toast.makeText(otp_verification.this, "Invalid response from server. Please try again.", Toast.LENGTH_SHORT).show();
                     }
                 },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        String errorMsg = "Volley Error: " + error.toString();
-                        NetworkResponse networkResponse = error.networkResponse;
-                        if (networkResponse != null) {
-                            errorMsg += ", Status Code: " + networkResponse.statusCode;
-                            Log.e(TAG, "Network Response Data: " + new String(networkResponse.data));
-                        }
-                        Log.e(TAG, errorMsg);
-                        Toast.makeText(otp_verification.this, "Server error! Please try again.", Toast.LENGTH_SHORT).show();
-                    }
+                error -> {
+                    Toast.makeText(otp_verification.this, "Network error! Please try again.", Toast.LENGTH_SHORT).show();
                 }) {
             @Override
             protected Map<String, String> getParams() {
@@ -144,13 +181,11 @@ public class otp_verification extends AppCompatActivity {
                 Map<String, String> params = new HashMap<>();
                 params.put("mobile", mobileNumber);
                 params.put("otp", enteredOtp);
-                Log.d(TAG, "Sending request params: " + params.toString());
                 return params;
             }
         };
 
         RequestQueue requestQueue = Volley.newRequestQueue(this);
-        Log.d(TAG, "Adding request to Volley queue");
         requestQueue.add(request);
     }
 }
