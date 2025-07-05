@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,7 +29,6 @@ import java.util.ArrayList;
 
 public class HistoryFragment extends Fragment {
 
-    private static final String TAG = "HistoryFragment";
     private RecyclerView rvHistory;
     private HistoryAdapter historyAdapter;
 
@@ -44,7 +42,6 @@ public class HistoryFragment extends Fragment {
     private final Runnable refreshRunnable = new Runnable() {
         @Override
         public void run() {
-            Log.d(TAG, "Auto-refresh triggered");
             fetchHistoryData(getDoctorId());
             refreshHandler.postDelayed(this, 2000);
         }
@@ -77,15 +74,13 @@ public class HistoryFragment extends Fragment {
 
     private void fetchHistoryData(String doctorId) {
         String url = BASE_URL + doctorId;
-        Log.d(TAG, "Fetching history data from URL: " + url);
 
-        @SuppressLint("NotifyDataSetChanged") JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(
+        @SuppressLint("NotifyDataSetChanged")
+        JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(
                 Request.Method.GET,
                 url,
                 null,
                 response -> {
-                    Log.d(TAG, "Received response with length: " + response.length());
-
                     ArrayList<HistoryItem> tmpItems = new ArrayList<>();
                     ArrayList<String> tmpIds = new ArrayList<>();
 
@@ -99,7 +94,7 @@ public class HistoryFragment extends Fragment {
                             String symptoms = obj.getString("reason_for_visit");
                             boolean flag = obj.optBoolean("flag", false);
                             String patientId = obj.getString("patient_id");
-                            String status = obj.optString("status", "");  // fetch status
+                            String status = obj.optString("status", "");
 
                             tmpIds.add(apptId);
                             tmpItems.add(new HistoryItem(
@@ -111,8 +106,6 @@ public class HistoryFragment extends Fragment {
                                     apptId,
                                     status
                             ));
-
-                            Log.d(TAG, "Parsed item: " + patientName + " | " + apptId + " | status=" + status);
                         }
 
                         historyItems.clear();
@@ -122,7 +115,6 @@ public class HistoryFragment extends Fragment {
                         appointmentIds.addAll(tmpIds);
 
                         historyAdapter.notifyDataSetChanged();
-                        Log.d(TAG, "Adapter updated. Total items: " + historyItems.size());
 
                         if (historyItems.isEmpty()) {
                             Toast.makeText(getContext(),
@@ -131,14 +123,12 @@ public class HistoryFragment extends Fragment {
                         }
 
                     } catch (JSONException e) {
-                        Log.e(TAG, "JSON parsing error", e);
                         Toast.makeText(getContext(),
                                 "Parse error: " + e.getMessage(),
                                 Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
-                    Log.e(TAG, "Volley error fetching history data", error);
                     Toast.makeText(getContext(),
                             "Error fetching data from server.",
                             Toast.LENGTH_SHORT).show();
@@ -151,14 +141,12 @@ public class HistoryFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        Log.d(TAG, "onResume: Starting auto-refresh");
         refreshHandler.postDelayed(refreshRunnable, 2000);
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        Log.d(TAG, "onPause: Stopping auto-refresh");
         refreshHandler.removeCallbacks(refreshRunnable);
     }
 }

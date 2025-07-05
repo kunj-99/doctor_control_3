@@ -56,9 +56,9 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         holder.tvDistance.setText(appointment.getDistance());
 
         if ("Online".equalsIgnoreCase(appointment.getPaymentMethod())) {
-            holder.tvPrice.setText("₹ " + appointment.getTotalPayment() + " Paid");
+            holder.tvPrice.setText("₹ " + appointment.getTotalPayment() + " paid");
         } else if ("Offline".equalsIgnoreCase(appointment.getPaymentMethod())) {
-            holder.tvPrice.setText("₹ " + appointment.getTotalPayment() + " (Collect in cash)");
+            holder.tvPrice.setText("₹ " + appointment.getTotalPayment() + " (Cash collection)");
         } else {
             holder.tvPrice.setText("₹ " + appointment.getTotalPayment());
         }
@@ -95,7 +95,7 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             builder.setPositiveButton("OK", (dialog, which) -> {
                 String valStr = input.getText().toString().trim();
                 if (valStr.isEmpty()) {
-                    Toast.makeText(context, "Please enter ETA value", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "Please enter an ETA value.", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 int rawEta = Integer.parseInt(valStr);
@@ -136,13 +136,13 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvPatientName = itemView.findViewById(R.id.tv_patient_name);
-            tvProblem     = itemView.findViewById(R.id.tv_problem);
-            tvDistance    = itemView.findViewById(R.id.tv_distans);
-            tvPrice       = itemView.findViewById(R.id.tv_price);
+            tvPatientName   = itemView.findViewById(R.id.tv_patient_name);
+            tvProblem       = itemView.findViewById(R.id.tv_problem);
+            tvDistance      = itemView.findViewById(R.id.tv_distans);
+            tvPrice         = itemView.findViewById(R.id.tv_price);
             tvPaymentMethod = itemView.findViewById(R.id.tv_payment_method1);
-            btnAccept     = itemView.findViewById(R.id.btn_accept);
-            btnReject     = itemView.findViewById(R.id.btn_reject);
+            btnAccept       = itemView.findViewById(R.id.btn_accept);
+            btnReject       = itemView.findViewById(R.id.btn_reject);
         }
     }
 
@@ -184,8 +184,7 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             postData.put("eta", etaValue);
             postData.put("eta_unit", etaUnit);
         } catch (JSONException e) {
-            e.printStackTrace();
-            Toast.makeText(context, "Error preparing data.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Something went wrong. Please try again.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -203,7 +202,7 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
                         notifyItemRemoved(position);
                         notifyItemRangeChanged(position, appointments.size());
                     } else {
-                        String msg = response.optString("message", "Failed to update.");
+                        String msg = response.optString("message", "Failed to update appointment.");
                         if (msg.toLowerCase().contains("already")) {
                             Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
                         } else {
@@ -212,9 +211,8 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
                     }
                 },
                 error -> {
-                    error.printStackTrace();
                     Toast.makeText(context,
-                            "Error updating appointment.", Toast.LENGTH_SHORT).show();
+                            "Unable to update appointment. Please check your network and try again.", Toast.LENGTH_SHORT).show();
                 }
         );
 

@@ -7,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,7 +35,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class aRequestFragment extends Fragment {
-    private static final String TAG = "aRequestFragment";
     private static final int REFRESH_INTERVAL = 5000;
 
     private RecyclerView recyclerView;
@@ -125,7 +123,6 @@ public class aRequestFragment extends Fragment {
     private void fetchDataFromServer() {
         String url = "http://sxm.a58.mytemp.website/Doctors/getRequestappointment.php"
                 + "?doctor_id=" + doctorId;
-        Log.d(TAG, "Fetching data: " + url);
 
         queue.add(new StringRequest(
                 com.android.volley.Request.Method.GET, url,
@@ -152,17 +149,11 @@ public class aRequestFragment extends Fragment {
                             String totalPayment  = obj.optString("amount", "0.00");
                             String paymentMethod = obj.optString("payment_method", "Unknown");
 
-                            // 🔍 Debug log for each appointment record
-                            Log.d(TAG, "Appointment #" + (i + 1) + ": " +
-                                    "ID=" + apptId + ", Name=" + name + ", Problem=" + problem +
-                                    ", Payment=" + totalPayment + ", Method=" + paymentMethod);
-
                             appointments.add(new aRequestAdapeter.Appointment(
                                     apptId, name, problem, "…", totalPayment, paymentMethod
                             ));
                             links.add(link);
                         }
-
 
                         adapter.notifyDataSetChanged();
 
@@ -182,13 +173,11 @@ public class aRequestFragment extends Fragment {
                         );
 
                     } catch (JSONException je) {
-                        Log.e(TAG, "JSON parse error", je);
                         Toast.makeText(getContext(),
                                 "Error parsing data.", Toast.LENGTH_SHORT).show();
                     }
                 },
                 error -> {
-                    Log.e(TAG, "Network error", error);
                     Toast.makeText(getContext(),
                             "Error fetching data.", Toast.LENGTH_SHORT).show();
                 }

@@ -9,7 +9,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -46,7 +45,6 @@ import java.util.Map;
 
 public class aOngoingFragment extends Fragment {
 
-    private static final String TAG = "aOngoingFragment";
     private static final String LIVE_LOCATION_URL = "http://sxm.a58.mytemp.website/update_live_location.php";
     private static final long APPT_REFRESH_MS = 5000;
 
@@ -107,7 +105,6 @@ public class aOngoingFragment extends Fragment {
                 paymentMethods,
                 position -> {
                     if (position >= 0 && position < appointmentIds.size()) {
-                        // Mark the appointment as completed
                         String appointmentId = appointmentIds.get(position);
                         completeAppointment(appointmentId, position);
                     }
@@ -146,9 +143,7 @@ public class aOngoingFragment extends Fragment {
         return view;
     }
 
-    // Method to complete an appointment and remove from the RecyclerView
     private void completeAppointment(String appointmentId, int position) {
-        // Update the database to mark the appointment as completed (e.g., make an API call)
         String url = "http://sxm.a58.mytemp.website/Doctors/completeAppointment.php";
 
         queue.add(new StringRequest(
@@ -157,7 +152,6 @@ public class aOngoingFragment extends Fragment {
                     try {
                         JSONObject root = new JSONObject(response);
                         if (root.getBoolean("success")) {
-                            // On success, remove the appointment from the list and notify the adapter
                             appointmentIds.remove(position);
                             patientNames.remove(position);
                             problems.remove(position);
@@ -173,10 +167,10 @@ public class aOngoingFragment extends Fragment {
                             Toast.makeText(getContext(), "Appointment completed!", Toast.LENGTH_SHORT).show();
                         }
                     } catch (JSONException e) {
-                        Log.e(TAG, "Error updating appointment status", e);
+                        Toast.makeText(getContext(), "Error updating appointment status", Toast.LENGTH_SHORT).show();
                     }
                 },
-                error -> Log.e(TAG, "Error completing appointment", error)
+                error -> Toast.makeText(getContext(), "Error completing appointment", Toast.LENGTH_SHORT).show()
         ) {
             @Override
             protected Map<String, String> getParams() {
@@ -254,10 +248,8 @@ public class aOngoingFragment extends Fragment {
                                 try {
                                     JSONObject o = arr.getJSONObject(i);
 
-                                    // ✅ Defensive: Skip completed/cancelled entries even if server misbehaves
                                     String status = o.optString("status", "Unknown");
                                     if (!"Confirmed".equalsIgnoreCase(status)) {
-                                        Log.w(TAG, "Skipping appointment " + o.optString("appointment_id") + " (status=" + status + ")");
                                         continue;
                                     }
 
@@ -278,7 +270,7 @@ public class aOngoingFragment extends Fragment {
                                     }
 
                                 } catch (JSONException e) {
-                                    Log.e(TAG, "JSON error at index " + i, e);
+                                    // Silently ignore individual parse errors for robustness
                                 }
                             }
 
@@ -306,10 +298,10 @@ public class aOngoingFragment extends Fragment {
                         });
 
                     } catch (JSONException e) {
-                        Log.e(TAG, "Parse error", e);
+                        Toast.makeText(getContext(), "Parse error", Toast.LENGTH_SHORT).show();
                     }
                 },
-                error -> Log.e(TAG, "Volley error", error)
+                error -> Toast.makeText(getContext(), "Network error", Toast.LENGTH_SHORT).show()
         ) {
             @Override
             protected Map<String, String> getParams() {
@@ -319,10 +311,9 @@ public class aOngoingFragment extends Fragment {
             }
         });
     }
-    private void ensureLocationUpdates() {
-        if (locationStarted) return; // If location updates have already started, no need to start again
 
-        // Check for permissions
+    private void ensureLocationUpdates() {
+        if (locationStarted) return;
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
@@ -333,23 +324,20 @@ public class aOngoingFragment extends Fragment {
             return;
         }
 
-        // Create a location request
         LocationRequest locationRequest = LocationRequest.create()
-                .setInterval(5000)  // Update interval (in milliseconds)
-                .setFastestInterval(2500) // Fastest update interval (in milliseconds)
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);  // Use high accuracy for location
+                .setInterval(5000)
+                .setFastestInterval(2500)
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-        // Request location updates
         fusedClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
-        locationStarted = true;  // Mark that location updates have started
+        locationStarted = true;
     }
-
 
     private void sendLiveLocation(String apptId, double lat, double lon) {
         StringRequest req = new StringRequest(
                 Request.Method.POST, LIVE_LOCATION_URL,
-                resp -> Log.d(TAG, "LiveLoc resp: " + resp),
-                err -> Log.e(TAG, "LiveLoc err: " + err.getMessage())
+                resp -> {}, // No user notification required
+                err -> {} // Silently ignore errors
         ) {
             @Override
             protected Map<String, String> getParams() {
@@ -380,7 +368,7 @@ public class aOngoingFragment extends Fragment {
                         try {
                             ((ResolvableApiException) e).startResolutionForResult(requireActivity(), 1011);
                         } catch (Exception ex) {
-                            Log.e(TAG, "GPS prompt failed", ex);
+                            // No log, no user interruption
                         }
                     }
                 });

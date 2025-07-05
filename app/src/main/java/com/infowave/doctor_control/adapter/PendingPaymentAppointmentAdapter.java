@@ -1,5 +1,6 @@
 package com.infowave.doctor_control.adapter;
 
+import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,6 +27,7 @@ public class PendingPaymentAppointmentAdapter extends RecyclerView.Adapter<Pendi
         return new ViewHolder(v);
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         PendingPaymentAppointment appt = appointmentList.get(position);

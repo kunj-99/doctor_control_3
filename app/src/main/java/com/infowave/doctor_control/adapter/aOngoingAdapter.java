@@ -80,7 +80,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         if (appointmentIds.size() == 0) {
-            holder.tvPatientName.setText("No Data Available");
+            holder.tvPatientName.setText("No data available.");
             holder.tvProblem.setVisibility(View.GONE);
             holder.tvDistance.setVisibility(View.GONE);
             holder.tvAmount.setVisibility(View.GONE);
@@ -108,9 +108,9 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         String method = paymentMethods.get(position);
 
         if ("Online".equalsIgnoreCase(method)) {
-            holder.tvAmount.setText("₹ " + amount + " Paid");
+            holder.tvAmount.setText("₹ " + amount + " paid");
         } else if ("Offline".equalsIgnoreCase(method)) {
-            holder.tvAmount.setText("₹ " + amount + " (Collect in cash)");
+            holder.tvAmount.setText("₹ " + amount + " (Cash collection)");
         } else {
             holder.tvAmount.setText("₹ " + amount);
         }
@@ -150,7 +150,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                 intent.putExtra("map_link", mapLink);
                 context.startActivity(intent);
             } else {
-                Toast.makeText(context, "Map link not available", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Location not available for this patient.", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -175,31 +175,28 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             payload.put("appointment_id", appointmentId);
             payload.put("action", "complete");
         } catch (JSONException e) {
-            e.printStackTrace();
-            Toast.makeText(context, "Error creating request.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Sorry, we couldn't process your request.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        JsonObjectRequest request = new JsonObjectRequest(
+        @SuppressLint("SetTextI18n") JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST, url, payload,
                 response -> {
                     boolean success = response.optBoolean("success", false);
                     if (success) {
-                        Toast.makeText(context, "Marked as Completed", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Appointment marked as completed.", Toast.LENGTH_SHORT).show();
                         if (onAppointmentCompleted != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                             onAppointmentCompleted.accept(position);
-                            // Remove item after completion
                             removeAppointment(position);
                         }
                     } else {
-                        Toast.makeText(context, "Update failed", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Unable to complete appointment. Please try again.", Toast.LENGTH_SHORT).show();
                         holder.btnComplete.setEnabled(true);
                         holder.btnComplete.setText("Complete");
                     }
                 },
                 error -> {
-                    error.printStackTrace();
-                    Toast.makeText(context, "Network error", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "A network error occurred. Please check your connection.", Toast.LENGTH_SHORT).show();
                     holder.btnComplete.setEnabled(true);
                     holder.btnComplete.setText("Complete");
                 }

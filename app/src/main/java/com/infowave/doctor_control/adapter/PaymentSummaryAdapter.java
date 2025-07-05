@@ -1,5 +1,6 @@
 package com.infowave.doctor_control.adapter;
 
+import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,6 +46,7 @@ public class PaymentSummaryAdapter extends RecyclerView.Adapter<PaymentSummaryAd
         return new ViewHolder(v);
     }
 
+    @SuppressLint({"SetTextI18n", "DefaultLocale"})
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         PaymentSummary summary = summaryList.get(position);

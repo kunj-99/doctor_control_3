@@ -3,7 +3,6 @@ package com.infowave.doctor_control.adapter;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,7 +27,6 @@ import java.util.ArrayList;
 
 public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHolder> {
 
-    private static final String TAG = "apendingAdapter";
     private final Context context;
     private final ArrayList<Appointment> appointments;
 
@@ -55,9 +53,9 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
 
         // 💰 Show formatted payment
         if ("Online".equalsIgnoreCase(appointment.getPaymentMethod())) {
-            holder.tvAmount.setText("₹ " + appointment.getAmount() + " Paid");
+            holder.tvAmount.setText("₹ " + appointment.getAmount() + " paid");
         } else if ("Offline".equalsIgnoreCase(appointment.getPaymentMethod())) {
-            holder.tvAmount.setText("₹ " + appointment.getAmount() + " (Collect in cash)");
+            holder.tvAmount.setText("₹ " + appointment.getAmount() + " (Cash collection)");
         } else {
             holder.tvAmount.setText("₹ " + appointment.getAmount());
         }
@@ -66,19 +64,17 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
         holder.tvPaymentMethod.setText("Payment Method: " + appointment.getPaymentMethod());
 
         holder.btnCanform.setOnClickListener(v -> {
-            Log.d(TAG, "Confirm clicked for ID: " + appointment.getAppointmentId());
             updateAppointmentStatus(appointment.getAppointmentId(), "Confirmed", position);
         });
 
         holder.btnTrack.setOnClickListener(v -> {
-            Log.d(TAG, "Track clicked for ID: " + appointment.getAppointmentId());
             String mapLink = appointment.getMapLink();
             if (mapLink != null && !mapLink.isEmpty()) {
                 Intent intent = new Intent(context, track_patient_location.class);
                 intent.putExtra("map_link", mapLink);
                 context.startActivity(intent);
             } else {
-                Toast.makeText(context, "Map link not available", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Patient location is not available.", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -137,7 +133,7 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
             payload.put("appointment_id", appointmentId);
             payload.put("status", newStatus);
         } catch (JSONException e) {
-            Toast.makeText(context, "Error preparing request.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Unable to process your request.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -146,9 +142,9 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
                 Request.Method.POST, url, payload,
                 response -> {
                     boolean success = response.optBoolean("success", false);
-                    String msg = response.optString("message", "Update failed.");
+                    String msg = response.optString("message", "Unable to update appointment.");
                     if (success) {
-                        Toast.makeText(context, "Appointment confirmed", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Appointment confirmed successfully.", Toast.LENGTH_SHORT).show();
                         appointments.remove(position);
                         notifyItemRemoved(position);
                         notifyItemRangeChanged(position, appointments.size());
@@ -160,7 +156,7 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
                         }
                     }
                 },
-                error -> Toast.makeText(context, "Network error", Toast.LENGTH_SHORT).show()
+                error -> Toast.makeText(context, "Network error. Please try again.", Toast.LENGTH_SHORT).show()
         );
 
         queue.add(req);

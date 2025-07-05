@@ -8,7 +8,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -37,7 +36,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class aPendingFragment extends Fragment {
-    private static final String TAG = "aPendingFragment";
     private static final int REFRESH_INTERVAL_MS = 5000;
 
     private RecyclerView recyclerView;
@@ -96,7 +94,6 @@ public class aPendingFragment extends Fragment {
                         fetchPendingAppointments();
                     })
                     .addOnFailureListener(e -> {
-                        Log.e(TAG, "Loc error", e);
                         fetchPendingAppointments();
                     });
         }
@@ -139,7 +136,7 @@ public class aPendingFragment extends Fragment {
                             return;
                         }
 
-                        JSONArray arr = response.getJSONArray("data"); // Updated to 'data'
+                        JSONArray arr = response.getJSONArray("data");
                         appointments.clear();
 
                         List<String> links = new ArrayList<>(arr.length());
@@ -152,9 +149,6 @@ public class aPendingFragment extends Fragment {
                             String link           = o.optString("patient_map_link", "");
                             String amount         = o.optString("amount", "0.00");
                             String paymentMethod  = o.optString("payment_method", "Unknown");
-
-                            Log.d(TAG, "Appointment #" + (i + 1) + ": ID=" + id + ", Name=" + name +
-                                    ", Amount=" + amount + ", Method=" + paymentMethod);
 
                             appointments.add(new apendingAdapter.Appointment(
                                     id, name, reason, "Calculating...", link, amount, paymentMethod
@@ -177,11 +171,11 @@ public class aPendingFragment extends Fragment {
                                 }
                         );
                     } catch (JSONException e) {
-                        Log.e(TAG, "JSON parse error", e);
+                        // Silently ignore errors for production smoothness
                     }
                 },
                 error -> {
-                    Log.e(TAG, "Network error", error);
+                    // Silently ignore errors for production smoothness
                 }
         ));
     }
