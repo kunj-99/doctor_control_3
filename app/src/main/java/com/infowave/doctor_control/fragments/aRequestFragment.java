@@ -121,7 +121,7 @@ public class aRequestFragment extends Fragment {
 
     @SuppressLint("NotifyDataSetChanged")
     private void fetchDataFromServer() {
-        String url = "http://sxm.a58.mytemp.website/Doctors/getRequestappointment.php"
+        String url = "https://thedoctorathome.in/Doctors/getRequestappointment.php"
                 + "?doctor_id=" + doctorId;
 
         queue.add(new StringRequest(

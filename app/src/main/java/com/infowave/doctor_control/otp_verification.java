@@ -29,7 +29,7 @@ import java.util.Map;
 
 public class otp_verification extends AppCompatActivity {
 
-    private static final String VERIFY_OTP_URL = "http://sxm.a58.mytemp.website/Doctors/verify_otp.php"; // API URL for doctors
+    private static final String VERIFY_OTP_URL = "https://thedoctorathome.in/Doctors/verify_otp.php"; // API URL for doctors
 
     private Button continu, resend;
     private EditText etOtp;
@@ -96,7 +96,7 @@ public class otp_verification extends AppCompatActivity {
         resend.setEnabled(false);
         startResendOtpTimer();  // Restart timer
 
-        String URL = "http://sxm.a58.mytemp.website/Doctors/login.php";  // Your API URL to resend OTP
+        String URL = "https://thedoctorathome.in/Doctors/login.php";  // Your API URL to resend OTP
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, URL,
                 response -> {

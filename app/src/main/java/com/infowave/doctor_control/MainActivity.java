@@ -1,12 +1,13 @@
 package com.infowave.doctor_control;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.View;
+
 import android.widget.*;
-import android.Manifest;
+
 
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -29,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView toolbarTitle;
     ImageView iconSupport,iconReports;
     private Toolbar toolbar;
+    @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

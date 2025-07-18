@@ -122,7 +122,7 @@ public class aPendingFragment extends Fragment {
 
     @SuppressLint("NotifyDataSetChanged")
     private void fetchPendingAppointments() {
-        String url = "http://sxm.a58.mytemp.website/Doctors/getPendingappointment.php"
+        String url = "https://thedoctorathome.in/Doctors/getPendingappointment.php"
                 + "?doctor_id=" + doctorId;
 
         queue.add(new JsonObjectRequest(

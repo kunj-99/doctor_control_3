@@ -23,7 +23,7 @@ import org.json.JSONObject;
 
 public class view_patient_report extends AppCompatActivity {
 
-    private static final String GET_REPORT_URL = "http://sxm.a58.mytemp.website/get_medical_report.php?appointment_id=";
+    private static final String GET_REPORT_URL = "https://thedoctorathome.in/get_medical_report.php?appointment_id=";
 
     private String appointmentId;
     private TextView tvHospitalName, tvHospitalAddress;

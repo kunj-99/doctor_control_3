@@ -127,7 +127,7 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
     }
 
     private void updateAppointmentStatus(String appointmentId, String newStatus, int position) {
-        String url = "http://sxm.a58.mytemp.website/Doctors/update_appointment_status.php";
+        String url = "https://thedoctorathome.in/Doctors/update_appointment_status.php";
         JSONObject payload = new JSONObject();
         try {
             payload.put("appointment_id", appointmentId);

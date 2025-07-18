@@ -24,7 +24,7 @@ import java.util.Map;
 
 public class LiveLocationManager {
 
-    private static final String LIVE_LOCATION_URL = "http://sxm.a58.mytemp.website/update_live_location.php";
+    private static final String LIVE_LOCATION_URL = "https://thedoctorathome.in/update_live_location.php";
     private static final String CHANNEL_ID = "LiveTrackingChannel";
 
     private static LiveLocationManager instance;

@@ -237,7 +237,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
     }
 
     private String getDirectionsUrl(LatLng origin, LatLng dest) {
-        String baseUrl = "http://sxm.a58.mytemp.website/Doctors/directions.php?";
+        String baseUrl = "https://thedoctorathome.in/Doctors/directions.php?";
         String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
         String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
         String mode = "mode=driving";
