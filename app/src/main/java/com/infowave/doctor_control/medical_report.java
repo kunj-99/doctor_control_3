@@ -10,6 +10,7 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -23,6 +24,7 @@ import com.android.volley.toolbox.Volley;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.infowave.doctor_control.loaderutil;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -48,6 +50,11 @@ public class medical_report extends AppCompatActivity {
             etTemperature, etPulse, etSpo2, etBloodPressure, etSignature, etReportType;
     private TextInputEditText etSymptoms, etRespiratorySystem;
 
+    // NEW: investigation checkbox + notes field
+    private CheckBox cbInvestigation;
+    private TextInputLayout tilInvestigationNotes;
+    private TextInputEditText etInvestigationNotes;
+
     private RequestQueue requestQueue;
     private String appointmentId;
 
@@ -71,17 +78,17 @@ public class medical_report extends AppCompatActivity {
 
     @SuppressLint("WrongViewCast")
     private void initializeViews() {
-        virtualReportForm   = findViewById(R.id.virtual_report_form);
-        directUploadSection = findViewById(R.id.direct_upload_section);
-        medicationsContainer= findViewById(R.id.medications_container);
-        radioGroupUploadType= findViewById(R.id.radioGroupUploadType);
-        ivReportImage       = findViewById(R.id.ivReportImage);
-        btnUploadImage      = findViewById(R.id.btnUploadImage);
-        btnSaveReport       = findViewById(R.id.btnSaveReport);
-        btnAddMedicine      = findViewById(R.id.btnAddMedicine);
+        virtualReportForm    = findViewById(R.id.virtual_report_form);
+        directUploadSection  = findViewById(R.id.direct_upload_section);
+        medicationsContainer = findViewById(R.id.medications_container);
+        radioGroupUploadType = findViewById(R.id.radioGroupUploadType);
+        ivReportImage        = findViewById(R.id.ivReportImage);
+        btnUploadImage       = findViewById(R.id.btnUploadImage);
+        btnSaveReport        = findViewById(R.id.btnSaveReport);
+        btnAddMedicine       = findViewById(R.id.btnAddMedicine);
 
-        etSymptoms          = findViewById(R.id.etSymptoms);
-        etRespiratorySystem = findViewById(R.id.etRespiratorySystem);
+        etSymptoms           = findViewById(R.id.etSymptoms);
+        etRespiratorySystem  = findViewById(R.id.etRespiratorySystem);
 
         etPatientName   = findViewById(R.id.etPatientName);
         etAge           = findViewById(R.id.etAge);
@@ -95,6 +102,21 @@ public class medical_report extends AppCompatActivity {
         etBloodPressure = findViewById(R.id.etBloodPressure);
         etSignature     = findViewById(R.id.etSignature);
         etReportType    = findViewById(R.id.etReportType);
+
+        // NEW: bind investigation views (present in your updated XML)
+        cbInvestigation       = findViewById(R.id.cbInvestigation);
+        tilInvestigationNotes = findViewById(R.id.tilInvestigationNotes);
+        etInvestigationNotes  = findViewById(R.id.etInvestigationNotes);
+
+        // Toggle notes visibility with checkbox
+        if (cbInvestigation != null && tilInvestigationNotes != null) {
+            cbInvestigation.setOnCheckedChangeListener((button, checked) -> {
+                tilInvestigationNotes.setVisibility(checked ? View.VISIBLE : View.GONE);
+                if (!checked && etInvestigationNotes != null) {
+                    etInvestigationNotes.setText(null); // clear when hidden
+                }
+            });
+        }
 
         btnUploadImage.setOnClickListener(v -> showImagePickerDialog());
         btnSaveReport .setOnClickListener(v -> saveReport());
@@ -139,6 +161,10 @@ public class medical_report extends AppCompatActivity {
                         etPulse.setText("");
                         etSpo2.setText("");
                         etBloodPressure.setText("");
+
+                        // Reset investigation UI to default
+                        if (cbInvestigation != null) cbInvestigation.setChecked(false);
+                        if (tilInvestigationNotes != null) tilInvestigationNotes.setVisibility(View.GONE);
 
                     } catch (Exception e) {
                         showError("Error parsing appointment data.");
@@ -253,6 +279,13 @@ public class medical_report extends AppCompatActivity {
             postData.put("respiratory_system", etRespiratorySystem.getText().toString());
             postData.put("doctor_name", etSignature.getText().toString());
             postData.put("doctor_signature", etSignature.getText().toString());
+
+            // NEW: only include investigations text when checkbox is checked
+            String investigations = "";
+            if (cbInvestigation != null && cbInvestigation.isChecked() && etInvestigationNotes != null) {
+                investigations = String.valueOf(etInvestigationNotes.getText()).trim();
+            }
+            postData.put("investigations", investigations);
 
             if (selectedRadioId == R.id.radioDirectUpload) {
                 if (selectedBitmap == null) {

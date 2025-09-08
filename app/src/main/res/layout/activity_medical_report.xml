@@ -306,6 +306,23 @@
                 android:layout_height="wrap_content"
                 android:text="Requires Further Investigation"/>
 
+            <!-- Investigation notes (shown only when checkbox is checked) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilInvestigationNotes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Investigation Notes (e.g., X-Ray, ECG, etc.)"
+                android:layout_marginTop="8dp"
+                android:visibility="gone">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etInvestigationNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minLines="2"
+                    android:inputType="textMultiLine"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
