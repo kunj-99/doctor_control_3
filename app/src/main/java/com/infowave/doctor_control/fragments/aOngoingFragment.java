@@ -45,7 +45,7 @@ import java.util.Map;
 
 public class aOngoingFragment extends Fragment {
 
-    private static final String LIVE_LOCATION_URL = "https://thedoctorathome.in/update_live_location.php";
+    private static final String LIVE_LOCATION_URL = "http://sxm.a58.mytemp.website/update_live_location.php";
     private static final long APPT_REFRESH_MS = 5000;
 
     private RecyclerView recyclerView;
@@ -144,7 +144,7 @@ public class aOngoingFragment extends Fragment {
     }
 
     private void completeAppointment(String appointmentId, int position) {
-        String url = "https://thedoctorathome.in/Doctors/completeAppointment.php";
+        String url = "http://sxm.a58.mytemp.website/Doctors/completeAppointment.php";
 
         queue.add(new StringRequest(
                 Request.Method.POST, url,
@@ -223,7 +223,7 @@ public class aOngoingFragment extends Fragment {
 
     @SuppressLint("NotifyDataSetChanged")
     private void fetchAppointments() {
-        String url = "https://thedoctorathome.in/Doctors/getOngoingAppointment.php";
+        String url = "http://sxm.a58.mytemp.website/Doctors/getOngoingAppointment.php";
 
         queue.add(new StringRequest(
                 Request.Method.POST, url,

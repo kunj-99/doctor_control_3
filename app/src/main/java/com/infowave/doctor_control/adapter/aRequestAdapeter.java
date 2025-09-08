@@ -175,7 +175,7 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             int etaValue,
             String etaUnit
     ) {
-        String url = "https://thedoctorathome.in/Doctors/update_appointment_status.php";
+        String url = "http://sxm.a58.mytemp.website/Doctors/update_appointment_status.php";
 
         JSONObject postData = new JSONObject();
         try {

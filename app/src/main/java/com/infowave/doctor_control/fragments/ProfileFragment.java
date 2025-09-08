@@ -49,8 +49,8 @@ public class ProfileFragment extends Fragment {
 
     private static final int REQUEST_GALLERY = 2;
     private Bitmap selectedBitmap;
-    private static final String FETCH_URL = "https://thedoctorathome.in/Doctors/get_doctor.php";
-    private static final String UPDATE_URL = "https://thedoctorathome.in/Doctors/update_doctor.php";
+    private static final String FETCH_URL = "http://sxm.a58.mytemp.website/Doctors/get_doctor.php";
+    private static final String UPDATE_URL = "http://sxm.a58.mytemp.website/Doctors/update_doctor.php";
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,

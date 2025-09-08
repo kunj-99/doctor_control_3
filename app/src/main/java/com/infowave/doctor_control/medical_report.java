@@ -114,7 +114,7 @@ public class medical_report extends AppCompatActivity {
     }
 
     private void fetchAppointmentDetails(String id) {
-        String url = "https://thedoctorathome.in/Doctors/get_appointment_details.php?appointment_id=" + id;
+        String url = "http://sxm.a58.mytemp.website/Doctors/get_appointment_details.php?appointment_id=" + id;
 
         loaderutil.showLoader(this);
 
@@ -233,7 +233,7 @@ public class medical_report extends AppCompatActivity {
             return;
         }
 
-        String url = "https://thedoctorathome.in/Doctors/insert_medical_report.php";
+        String url = "http://sxm.a58.mytemp.website/Doctors/insert_medical_report.php";
         JSONObject postData = new JSONObject();
 
         try {

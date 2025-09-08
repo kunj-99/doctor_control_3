@@ -169,7 +169,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     }
 
     private void updateAppointmentStatus(String appointmentId, int position, ViewHolder holder) {
-        String url = "https://thedoctorathome.in/Doctors/update_appointment_status.php";
+        String url = "http://sxm.a58.mytemp.website/Doctors/update_appointment_status.php";
         JSONObject payload = new JSONObject();
         try {
             payload.put("appointment_id", appointmentId);

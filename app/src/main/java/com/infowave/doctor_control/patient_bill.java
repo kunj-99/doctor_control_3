@@ -73,7 +73,7 @@ public class patient_bill extends AppCompatActivity {
     }
 
     private void fetchBillDetails(int appointmentId) {
-        String url = "https://thedoctorathome.in/Doctors/fetch_payment_history.php?appointment_id=" + appointmentId;
+        String url = "http://sxm.a58.mytemp.website/Doctors/fetch_payment_history.php?appointment_id=" + appointmentId;
         loaderutil.showLoader(this);
 
         JsonObjectRequest request = new JsonObjectRequest(

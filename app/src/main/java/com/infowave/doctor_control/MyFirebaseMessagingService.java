@@ -57,7 +57,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (doctorId == -1) return; // not logged in yet
 
         RequestQueue queue = Volley.newRequestQueue(ctx);
-        String url = "https://thedoctorathome.in/Doctors/save_token.php";
+        String url = "http://sxm.a58.mytemp.website/Doctors/save_token.php";
 
         StringRequest req = new StringRequest(Request.Method.POST, url,
                 resp -> { /* no log */ },

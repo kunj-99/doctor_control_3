@@ -36,7 +36,7 @@ public class HistoryFragment extends Fragment {
     private final ArrayList<String> appointmentIds = new ArrayList<>();
 
     private RequestQueue requestQueue;
-    private static final String BASE_URL = "https://thedoctorathome.in/Doctors/gethistory.php?doctor_id=";
+    private static final String BASE_URL = "http://sxm.a58.mytemp.website/Doctors/gethistory.php?doctor_id=";
 
     private final Handler refreshHandler = new Handler();
     private final Runnable refreshRunnable = new Runnable() {
