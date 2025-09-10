@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.infowave.doctor_control.ApiConfig;
 import com.infowave.doctor_control.DistanceCalculator;
 import com.infowave.doctor_control.R;
 import com.infowave.doctor_control.adapter.aRequestAdapeter;
@@ -121,8 +122,10 @@ public class aRequestFragment extends Fragment {
 
     @SuppressLint("NotifyDataSetChanged")
     private void fetchDataFromServer() {
-        String url = "http://sxm.a58.mytemp.website/Doctors/getRequestappointment.php"
-                + "?doctor_id=" + doctorId;
+
+
+        String url = ApiConfig.endpoint("Doctors/getRequestappointment.php", "doctor_id", doctorId);
+
 
         queue.add(new StringRequest(
                 com.android.volley.Request.Method.GET, url,
