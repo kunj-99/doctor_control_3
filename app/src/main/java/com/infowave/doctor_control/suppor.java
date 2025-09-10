@@ -21,7 +21,8 @@ import java.net.URL;
 public class suppor extends AppCompatActivity {
 
     // Replace with your actual API URL where contact_us.php is hosted
-    private static final String API_URL = "http://sxm.a58.mytemp.website/contact_us.php";
+    private static final String API_URL = ApiConfig.endpoint("contact_us.php");
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

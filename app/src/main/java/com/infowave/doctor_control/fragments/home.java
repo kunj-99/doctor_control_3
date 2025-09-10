@@ -27,6 +27,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.infowave.doctor_control.ApiConfig;
 import com.infowave.doctor_control.BackgroundService;
 import com.infowave.doctor_control.R;
 import com.infowave.doctor_control.PaymentHistoryActivity;
@@ -164,7 +165,8 @@ public class home extends Fragment {
 
     private void updateDoctorStatus(final boolean isActive, final TextView statusText,
                                     final Switch statusToggle, final ImageView statusIcon) {
-        String urlDoctorStatus = "http://sxm.a58.mytemp.website/Doctors/update_doctor_status.php";
+        String urlDoctorStatus = ApiConfig.endpoint("Doctors/update_doctor_status.php");
+
         final String statusValue = isActive ? "active" : "inactive";
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, urlDoctorStatus,
@@ -212,7 +214,11 @@ public class home extends Fragment {
     }
 
     private void fetchDoctorStatus(final TextView statusText, final Switch statusToggle, final ImageView statusIcon) {
-        String urlFetchStatus = "http://sxm.a58.mytemp.website/Doctors/get_doctor_status.php";
+
+        String urlFetchStatus = ApiConfig.endpoint("Doctors/get_doctor_status.php");
+
+
+
         StringRequest stringRequest = new StringRequest(Request.Method.POST, urlFetchStatus,
                 response -> {
                     try {
@@ -250,7 +256,8 @@ public class home extends Fragment {
     }
 
     private void fetchCompletedCount() {
-        String urlCompletedCount = "http://sxm.a58.mytemp.website/completed_appointment.php";
+        String urlCompletedCount = ApiConfig.endpoint("completed_appointment.php");
+
         StringRequest stringRequest = new StringRequest(Request.Method.GET, urlCompletedCount,
                 response -> {
                     try {
@@ -272,7 +279,8 @@ public class home extends Fragment {
     }
 
     private void fetchYourPatientsCount() {
-        String urlYourPatientsCount = "http://sxm.a58.mytemp.website/Doctors/complete_appointment_count.php";
+        String urlYourPatientsCount = ApiConfig.endpoint("Doctors/complete_appointment_count.php");
+
         StringRequest stringRequest = new StringRequest(Request.Method.POST, urlYourPatientsCount,
                 response -> {
                     try {
@@ -301,7 +309,10 @@ public class home extends Fragment {
     }
 
     private void fetchOngoingAppointmentsCount() {
-        String urlOngoingCount = "http://sxm.a58.mytemp.website/Doctors/ongoing_appointment_count.php";
+
+        String urlOngoingCount = ApiConfig.endpoint("Doctors/ongoing_appointment_count.php");
+
+
         StringRequest stringRequest = new StringRequest(Request.Method.POST, urlOngoingCount,
                 response -> {
                     try {

@@ -22,6 +22,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.infowave.doctor_control.ApiConfig;
 import com.infowave.doctor_control.DistanceCalculator;
 import com.infowave.doctor_control.R;
 import com.infowave.doctor_control.adapter.apendingAdapter;
@@ -122,8 +123,8 @@ public class aPendingFragment extends Fragment {
 
     @SuppressLint("NotifyDataSetChanged")
     private void fetchPendingAppointments() {
-        String url = "http://sxm.a58.mytemp.website/Doctors/getPendingappointment.php"
-                + "?doctor_id=" + doctorId;
+        String url = ApiConfig.endpoint("Doctors/getPendingappointment.php", "doctor_id", doctorId);
+
 
         queue.add(new JsonObjectRequest(
                 Request.Method.GET, url, null,

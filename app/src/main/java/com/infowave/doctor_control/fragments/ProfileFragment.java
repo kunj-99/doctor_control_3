@@ -29,6 +29,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
+import com.infowave.doctor_control.ApiConfig;
 import com.infowave.doctor_control.R;
 import com.infowave.doctor_control.login;
 
@@ -49,8 +50,10 @@ public class ProfileFragment extends Fragment {
 
     private static final int REQUEST_GALLERY = 2;
     private Bitmap selectedBitmap;
-    private static final String FETCH_URL = "http://sxm.a58.mytemp.website/Doctors/get_doctor.php";
-    private static final String UPDATE_URL = "http://sxm.a58.mytemp.website/Doctors/update_doctor.php";
+    private static final String FETCH_URL = ApiConfig.endpoint("Doctors/get_doctor.php");
+
+    private static final String UPDATE_URL = ApiConfig.endpoint("Doctors/update_doctor.php");
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,

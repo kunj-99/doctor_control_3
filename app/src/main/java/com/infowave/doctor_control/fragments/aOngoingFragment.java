@@ -27,6 +27,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.infowave.doctor_control.ApiConfig;
 import com.infowave.doctor_control.DistanceCalculator;
 import com.infowave.doctor_control.LiveLocationManager;
 import com.infowave.doctor_control.R;
@@ -45,7 +46,8 @@ import java.util.Map;
 
 public class aOngoingFragment extends Fragment {
 
-    private static final String LIVE_LOCATION_URL = "http://sxm.a58.mytemp.website/update_live_location.php";
+    private static final String LIVE_LOCATION_URL = ApiConfig.endpoint("update_live_location.php");
+
     private static final long APPT_REFRESH_MS = 5000;
 
     private RecyclerView recyclerView;
@@ -144,7 +146,8 @@ public class aOngoingFragment extends Fragment {
     }
 
     private void completeAppointment(String appointmentId, int position) {
-        String url = "http://sxm.a58.mytemp.website/Doctors/completeAppointment.php";
+        String url = ApiConfig.endpoint("Doctors/completeAppointment.php");
+
 
         queue.add(new StringRequest(
                 Request.Method.POST, url,
@@ -223,7 +226,8 @@ public class aOngoingFragment extends Fragment {
 
     @SuppressLint("NotifyDataSetChanged")
     private void fetchAppointments() {
-        String url = "http://sxm.a58.mytemp.website/Doctors/getOngoingAppointment.php";
+        String url = ApiConfig.endpoint("Doctors/getOngoingAppointment.php");
+
 
         queue.add(new StringRequest(
                 Request.Method.POST, url,

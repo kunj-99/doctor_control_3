@@ -17,6 +17,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.infowave.doctor_control.ApiConfig;
 import com.infowave.doctor_control.R;
 import com.infowave.doctor_control.track_patient_location;
 
@@ -127,7 +128,8 @@ public class apendingAdapter extends RecyclerView.Adapter<apendingAdapter.ViewHo
     }
 
     private void updateAppointmentStatus(String appointmentId, String newStatus, int position) {
-        String url = "http://sxm.a58.mytemp.website/Doctors/update_appointment_status.php";
+        String url = ApiConfig.endpoint("Doctors/update_appointment_status.php");
+
         JSONObject payload = new JSONObject();
         try {
             payload.put("appointment_id", appointmentId);

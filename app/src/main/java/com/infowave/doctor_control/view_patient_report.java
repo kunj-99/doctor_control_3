@@ -44,7 +44,6 @@ import java.util.List;
 
 public class view_patient_report extends AppCompatActivity {
 
-    private static final String GET_REPORT_URL = "http://sxm.a58.mytemp.website/get_medical_report.php?appointment_id=";
 
     private String appointmentId;
     private String reportPhotoUrl = "";
@@ -124,7 +123,8 @@ public class view_patient_report extends AppCompatActivity {
     }
 
     private void fetchMedicalReport() {
-        String url = GET_REPORT_URL + appointmentId;
+
+        String url = ApiConfig.endpoint("get_medical_report.php", "appointment_id", appointmentId);
 
         // >>> Show loader exactly like RefundStatus <<<
         loaderutil.showLoader(this);

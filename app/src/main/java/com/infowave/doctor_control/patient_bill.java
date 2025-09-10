@@ -73,7 +73,8 @@ public class patient_bill extends AppCompatActivity {
     }
 
     private void fetchBillDetails(int appointmentId) {
-        String url = "http://sxm.a58.mytemp.website/Doctors/fetch_payment_history.php?appointment_id=" + appointmentId;
+        String url = ApiConfig.endpoint("Doctors/fetch_payment_history.php", "appointment_id", String.valueOf(appointmentId));
+
         loaderutil.showLoader(this);
 
         JsonObjectRequest request = new JsonObjectRequest(

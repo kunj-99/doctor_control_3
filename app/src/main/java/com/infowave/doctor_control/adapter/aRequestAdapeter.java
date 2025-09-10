@@ -22,6 +22,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.infowave.doctor_control.ApiConfig;
 import com.infowave.doctor_control.R;
 
 import org.json.JSONException;
@@ -175,7 +176,7 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             int etaValue,
             String etaUnit
     ) {
-        String url = "http://sxm.a58.mytemp.website/Doctors/update_appointment_status.php";
+        String url = ApiConfig.endpoint("Doctors/update_appointment_status.php");
 
         JSONObject postData = new JSONObject();
         try {

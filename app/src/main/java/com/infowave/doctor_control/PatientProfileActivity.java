@@ -23,7 +23,7 @@ public class PatientProfileActivity extends AppCompatActivity {
             tvAllergies, tvMedications;
 
     // Base URL for the profile API endpoint
-    private static final String PROFILE_URL = "http://sxm.a58.mytemp.website/get_profile.php?patient_id=";
+    private static final String PROFILE_URL = ApiConfig.endpoint("get_profile.php?patient_id=");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

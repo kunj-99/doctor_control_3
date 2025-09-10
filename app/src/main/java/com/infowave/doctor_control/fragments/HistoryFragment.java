@@ -23,6 +23,7 @@ import com.android.volley.toolbox.Volley;
 import com.infowave.doctor_control.HistoryItem;
 import com.infowave.doctor_control.R;
 import com.infowave.doctor_control.adapter.HistoryAdapter;
+import com.infowave.doctor_control.ApiConfig; // ✅ import ApiConfig
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -39,7 +40,6 @@ public class HistoryFragment extends Fragment {
     private final ArrayList<String> appointmentIds = new ArrayList<>();
 
     private RequestQueue requestQueue;
-    private static final String BASE_URL = "http://sxm.a58.mytemp.website/Doctors/gethistory.php?doctor_id=";
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -53,21 +53,22 @@ public class HistoryFragment extends Fragment {
         rvHistory    = view.findViewById(R.id.rv_history);
         swipeRefresh = view.findViewById(R.id.swipeRefreshHistory);
 
+        // ✅ Setup RecyclerView
         rvHistory.setLayoutManager(new LinearLayoutManager(getContext()));
         historyAdapter = new HistoryAdapter(historyItems, appointmentIds);
         rvHistory.setAdapter(historyAdapter);
 
+        // ✅ Volley request queue
         requestQueue = Volley.newRequestQueue(requireContext());
 
-        // Initial load (no swipe spinner)
+        // ✅ Initial load
         fetchHistoryData(getDoctorId());
 
-        // Pull-to-refresh
+        // ✅ Pull-to-refresh reload
         swipeRefresh.setOnRefreshListener(() -> fetchHistoryData(getDoctorId()));
-        // Optional: customize spinner colors
-        // swipeRefresh.setColorSchemeResources(R.color.navy_blue, R.color.acqua_green, R.color.purple_500);
     }
 
+    // ✅ Fetch doctor_id saved in SharedPreferences
     private String getDoctorId() {
         SharedPreferences prefs = requireContext()
                 .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
@@ -75,14 +76,20 @@ public class HistoryFragment extends Fragment {
         return String.valueOf(id);
     }
 
+    // ✅ Stop swipe spinner when done
     private void stopSwipeSpinner() {
         if (swipeRefresh != null && swipeRefresh.isRefreshing()) {
             swipeRefresh.setRefreshing(false);
         }
     }
 
+    // ✅ Fetch history data for a doctor
     private void fetchHistoryData(String doctorId) {
-        String url = BASE_URL + doctorId;
+        // ❌ OLD:
+        // String url = BASE_URL + doctorId;
+
+        // ✅ NEW: use ApiConfig
+        String url = ApiConfig.endpoint("Doctors/gethistory.php", "doctor_id", doctorId);
 
         @SuppressLint("NotifyDataSetChanged")
         JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(
@@ -117,6 +124,7 @@ public class HistoryFragment extends Fragment {
                             ));
                         }
 
+                        // ✅ Update lists
                         historyItems.clear();
                         historyItems.addAll(tmpItems);
 
@@ -132,7 +140,7 @@ public class HistoryFragment extends Fragment {
                         }
                     } catch (JSONException e) {
                         Toast.makeText(getContext(),
-                                "Sorry, we couldn’t process the history right now.",
+                                "Error processing history data.",
                                 Toast.LENGTH_SHORT).show();
                     } finally {
                         stopSwipeSpinner();
@@ -140,7 +148,7 @@ public class HistoryFragment extends Fragment {
                 },
                 error -> {
                     Toast.makeText(getContext(),
-                            "Unable to fetch history. Please pull down to try again.",
+                            "Unable to fetch history. Pull down to try again.",
                             Toast.LENGTH_SHORT).show();
                     stopSwipeSpinner();
                 }

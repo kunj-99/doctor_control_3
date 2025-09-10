@@ -67,7 +67,8 @@ public class login extends AppCompatActivity {
     }
 
     private void checkDoctorMobile(String mobile) {
-        String URL = "http://sxm.a58.mytemp.website/Doctors/login.php";
+        String URL = ApiConfig.endpoint("Doctors/login.php");
+
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, URL,
                 response -> {
