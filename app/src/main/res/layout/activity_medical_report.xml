@@ -27,14 +27,14 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Virtual Report Upload" />
+                android:text="Virtual Report" />
 
             <RadioButton
                 android:id="@+id/radioDirectUpload"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Direct Image Upload" />
+                android:text="Direct Image" />
         </RadioGroup>
 
         <!-- Virtual Report Form -->
@@ -306,6 +306,23 @@
                 android:layout_height="wrap_content"
                 android:text="Requires Further Investigation"/>
 
+            <!-- Investigation notes (shown only when checkbox is checked) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilInvestigationNotes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Investigation Notes (e.g., X-Ray, ECG, etc.)"
+                android:layout_marginTop="8dp"
+                android:visibility="gone">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etInvestigationNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minLines="2"
+                    android:inputType="textMultiLine"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -344,7 +361,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Upload from Gallery"
-                android:backgroundTint="@color/primaryColor"
+                android:backgroundTint="@color/dark_cyan"
                 android:textColor="@color/white"/>
 
             <ImageView
@@ -363,7 +380,7 @@
             android:layout_height="wrap_content"
             android:text="Save Report"
             android:layout_marginTop="24dp"
-            android:backgroundTint="@color/primaryColor"
+            android:backgroundTint="@color/navy_blue"
             android:textColor="@color/white"/>
     </LinearLayout>
 </ScrollView>

@@ -63,4 +63,12 @@
     <!--    <color name="white">#FFFFFF</color>-->
     <color name="divider">#E0E0E0</color>
 
+
+    <color name="navy_blue">#05668d</color>
+    <color name="cyan">#05668d</color>
+    <color name="dark_cyan">#00a896</color>
+    <color name="teal_green">#02c39a</color>
+    <color name="light_green">#f0f3bd</color>
+    <color name="acqua_green">#00A896</color>
+
 </resources>

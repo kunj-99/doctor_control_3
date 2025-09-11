@@ -20,7 +20,7 @@
             android:text="John Doe"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@color/black"/>
+            android:textColor="@color/navy_blue"/>
 
         <TextView
             android:id="@+id/tv_problem"
@@ -81,7 +81,7 @@
             android:text="track"
             android:textColor="@color/white"
                android:layout_marginEnd="5dp"
-            android:backgroundTint="@color/primaryColor"/>
+            android:backgroundTint="@color/navy_blue"/>
 
             <Button
                 android:id="@+id/btn_view"

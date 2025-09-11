@@ -1,13 +1,14 @@
 plugins {
     alias(libs.plugins.android.application)
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.doctor_control"
+    namespace = "com.infowave.doctor_control"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.doctor_control"
+        applicationId = "com.infowave.doctor_control"
         minSdk = 21
         targetSdk = 35
         versionCode = 1
@@ -38,6 +39,7 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation(libs.play.services.maps)
+    implementation(libs.swiperefreshlayout)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
@@ -54,4 +56,12 @@ dependencies {
 
     implementation ("androidx.cardview:cardview:1.0.0")
     implementation ("pl.droidsonroids.gif:android-gif-drawable:1.2.23")
+
+    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
+
+    // Core analytics (optional but nice for console testing)
+    implementation("com.google.firebase:firebase-analytics")
+
+    // ⚡ Cloud Messaging – REQUIRED for push notifications
+    implementation("com.google.firebase:firebase-messaging")
 }

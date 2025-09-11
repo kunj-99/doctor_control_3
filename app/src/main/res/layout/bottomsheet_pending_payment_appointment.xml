@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:padding="18dp">
+
+    <TextView
+        android:id="@+id/tvSheetTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Pending Payment Appointments"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#2E5AAC"
+        android:gravity="center"
+        android:paddingBottom="12dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvPendingPaymentAppointments"
+        android:layout_width="match_parent"
+        android:layout_height="350dp"/>
+</LinearLayout>

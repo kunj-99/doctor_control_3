@@ -1,40 +1,85 @@
-<?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:background="#F9F9F9">
 
-    <!-- Header Section -->
-    <RelativeLayout
-        android:id="@+id/header"
+    <!-- ATTRACTIVE MODERN HEADER -->
+    <FrameLayout
+        android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/primaryColor"
-        android:paddingTop="60dp"
-        android:paddingLeft="20dp"
-        android:paddingBottom="20dp">
+        android:layout_height="110dp"
+        android:elevation="7dp"
+        android:background="@drawable/bg_header_gradient">
 
-        <TextView
-            android:id="@+id/headerTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Pending Payments"
-            android:textSize="22sp"
-            android:textColor="#FFFFFF"
-            android:textStyle="bold"/>
-    </RelativeLayout>
+        <!-- Rounded white overlay for bottom corners (faux shadow effect) -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="25dp"
+            android:layout_gravity="bottom"
 
-    <!-- ListView for displaying pending payments -->
-    <ListView
-        android:id="@+id/list_pending_payment"
+
+            android:layout_marginTop="85dp"/>
+
+        <!-- Main header content -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp">
+
+            <!-- Optional Back Button -->
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_back"
+                android:contentDescription="Back"
+                android:scaleType="centerInside"
+                android:tint="#FFFFFF"
+                android:layout_marginEnd="10dp"
+                android:visibility="visible"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvHeaderTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pending Doctor Payments"
+                    android:textSize="22sp"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.03"
+                    android:fontFamily="sans-serif-medium"
+                    android:shadowColor="#25000000"
+                    android:shadowDx="1"
+                    android:shadowDy="2"
+                    android:shadowRadius="4"/>
+
+                <TextView
+                    android:id="@+id/tvHeaderSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Settle dues instantly and manage payouts."
+                    android:textSize="14sp"
+                    android:textColor="#D0F5FC"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- RecyclerView below attractive header -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewPaymentSummary"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/header"
-        android:paddingTop="4dp"
-        android:divider="@android:color/transparent"
-        android:dividerHeight="5dp"
-        android:clipToPadding="false"
-        android:paddingBottom="16dp" />
+        android:layout_below="@id/layoutHeader"
+        android:padding="8dp"/>
 </RelativeLayout>
-
-

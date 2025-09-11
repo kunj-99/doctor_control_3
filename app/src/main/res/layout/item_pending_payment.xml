@@ -1,110 +1,180 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
+    android:layout_margin="14dp"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
-    android:paddingHorizontal="12dp"
-    android:paddingTop="12dp">
+    android:elevation="8dp"
+    android:radius="18dp"
+    android:backgroundTint="#FAFAFA">
 
-    <!-- Header: visible only on first item -->
     <LinearLayout
-        android:id="@+id/header_section"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingBottom="8dp"
-        android:visibility="gone">
+        android:orientation="vertical"
+        android:padding="20dp">
 
-        <View
-            android:layout_width="6dp"
-            android:layout_height="24dp"
-            android:background="@color/primaryColor"
-            android:layout_marginEnd="8dp" />
-
-        <TextView
-            android:id="@+id/tv_transaction_header"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Transaction Received"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="@color/black"
-            android:letterSpacing="0.02"
-            android:fontFamily="sans-serif-medium" />
-    </LinearLayout>
-
-    <!-- Card -->
-    <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="4dp"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="6dp"
-        android:foreground="?attr/selectableItemBackground">
-
+        <!-- Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="16dp"
-            android:gravity="center_vertical">
+           >
 
-            <ImageView
-                android:id="@+id/img_patient"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/plaseholder_error"
-                android:background="@drawable/profile_circle"
-                android:padding="2dp" />
+            <TextView
+                android:id="@+id/tvSettlementStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pending"
+                android:textColor="#FF3B30"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:background="@drawable/status_badge"
+                android:paddingLeft="14dp"
+                android:paddingRight="14dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:layout_gravity="start"/>
+            <TextView
+                android:id="@+id/tvCreatedAt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2025-05-11"
+                android:textColor="#888"
+                android:textSize="13sp"
+                android:layout_gravity="end" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:layout_marginVertical="8dp"/>
+
+        <!-- Main info -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
             <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
                 android:layout_weight="1"
+                android:layout_height="wrap_content"
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/tv_patient_name"
+                    android:id="@+id/tvDoctorId"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Patient Name"
-                    android:textColor="@color/black"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:text="Doctor ID: 11"
+                    android:textStyle="bold"
+                    android:textColor="#222"
+                    android:textSize="16sp"/>
 
                 <TextView
-                    android:id="@+id/tv_status"
+                    android:id="@+id/tvTotalEarning"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Transaction pending"
-                    android:textColor="@color/gray"
-                    android:textSize="13sp"
-                    android:layout_marginTop="2dp" />
+                    android:text="Total Earning: ₹1626.20"
+                    android:textColor="#222"
+                    android:textSize="15sp"/>
 
                 <TextView
-                    android:id="@+id/tv_date"
+                    android:id="@+id/tvNotes"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="09 May 2025"
-                    android:textColor="@color/gray"
-                    android:textSize="12sp"
-                    android:layout_marginTop="2dp" />
+                    android:text="Settlement from 2025-05-06 to 2025-05-11"
+                    android:textColor="#606060"
+                    android:textSize="14sp"
+                    android:paddingTop="3dp"/>
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tv_amount"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="₹500"
-                android:textColor="@color/error_red"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
+                android:orientation="vertical"
+                android:gravity="end"
+                android:paddingLeft="12dp">
 
-</LinearLayout>
+                <TextView
+                    android:id="@+id/tvAdminCut"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Admin Cut: ₹325.24"
+                    android:textColor="#FF9800"
+                    android:textStyle="bold"
+                    android:textSize="15sp"/>
+
+                <TextView
+                    android:id="@+id/tvDoctorCut"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Doctor Cut: ₹1300.96"
+                    android:textColor="#00C853"
+                    android:textSize="15sp"/>
+
+                <TextView
+                    android:id="@+id/tvAdjustmentAmount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Adjustment: ₹493.24"
+                    android:textColor="#2979FF"
+                    android:textSize="15sp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:layout_marginVertical="8dp"/>
+
+        <!-- Payment Info Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvGivenToDoctor"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Given To Doctor: ₹0.00"
+                android:textColor="#444"
+                android:textSize="15sp"/>
+
+            <TextView
+                android:id="@+id/tvReceivedFromDoctor"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Received From Doctor: ₹493.24"
+                android:textColor="#444"
+                android:textSize="15sp"/>
+        </LinearLayout>
+
+        <!-- Pay Button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp">
+
+            <Button
+                android:id="@+id/btnPay"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:text="Pay ₹493.24"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:backgroundTint="#FF3B30"
+                android:paddingLeft="24dp"
+                android:paddingRight="24dp"
+                android:layout_gravity="end"
+                android:elevation="2dp"/>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

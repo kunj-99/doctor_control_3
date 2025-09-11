@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:orientation="vertical"
     android:background="@color/white">
 
@@ -481,7 +482,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
                 android:layout_marginTop="20dp"
-                android:backgroundTint="@color/blue"
+                android:backgroundTint="@color/navy_blue"
                 android:text="Download"
                 android:textColor="#FFF"
                 android:textSize="20sp"
