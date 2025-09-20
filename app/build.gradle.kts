@@ -9,9 +9,9 @@ android {
 
     defaultConfig {
         applicationId = "com.infowave.doctor_control"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 35
-        versionCode = 1
+        versionCode = 3
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

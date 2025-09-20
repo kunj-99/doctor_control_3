@@ -5,6 +5,7 @@
 
     <!-- Existing permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -23,7 +24,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Doctor_control"
         android:usesCleartextTraffic="true"
-        tools:targetApi="31">
+        tools:targetApi="35">
 
         <activity android:name=".PendingPaymentActivity" android:exported="false" />
         <activity android:name=".PaymentHistoryActivity" android:exported="false" />
