@@ -48,8 +48,7 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        // This line uploads the FCM token using your existing service method
-        MyFirebaseMessagingService.refreshTokenIfNeeded(this);
+        DoctorFcmTokenHelper.ensureTokenSynced(this);
 
         // Your existing click listeners
         iconSupport.setOnClickListener(v ->

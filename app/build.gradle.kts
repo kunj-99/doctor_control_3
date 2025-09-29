@@ -57,11 +57,10 @@ dependencies {
     implementation ("androidx.cardview:cardview:1.0.0")
     implementation ("pl.droidsonroids.gif:android-gif-drawable:1.2.23")
 
-    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
 
     // Core analytics (optional but nice for console testing)
     implementation("com.google.firebase:firebase-analytics")
-
     // ⚡ Cloud Messaging – REQUIRED for push notifications
     implementation("com.google.firebase:firebase-messaging")
 }
