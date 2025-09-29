@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "390863709121",
-    "project_id": "doctor-control-app",
-    "storage_bucket": "doctor-control-app.firebasestorage.app"
+    "project_number": "542433837393",
+    "project_id": "doctor-control-e50f7",
+    "storage_bucket": "doctor-control-e50f7.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:390863709121:android:8543b08cb5ed3482784540",
+        "mobilesdk_app_id": "1:542433837393:android:1ea360bcf3e6ccae29d370",
         "android_client_info": {
           "package_name": "com.infowave.doctor_control"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyARArOEXZr6WjXAGx1PpPUc44u1BjIg7y8"
+          "current_key": "AIzaSyB61PYBjUAIoPgEH3JH5gFSK8B-HtcwIf0"
         }
       ],
       "services": {
