@@ -11,8 +11,8 @@ android {
         applicationId = "com.infowave.doctor_control"
         minSdk = 23
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

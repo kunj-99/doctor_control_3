@@ -1,62 +1,119 @@
 package com.infowave.doctor_control;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
+/**
+ * BackgroundService:
+ * - Periodically pings your server to mark doctor as active (stubbed).
+ * - Periodically re-checks that LiveLocationManager tracking is running.
+ *   If not, it attempts to start it (only if doctor_id and appointment_id exist).
+ *
+ * Start this service when doctor goes online / accepts an appointment.
+ */
 public class BackgroundService extends Service {
 
     public static final String TAG = BackgroundService.class.getSimpleName();
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        // Maintain the doctor's status here
-        keepDoctorActive();
-        return START_STICKY;
-    }
+    private Handler handler;
+    private Runnable activeTick;
+    private Runnable trackingGuard;
 
-    private void keepDoctorActive() {
-        Log.d(TAG, "Keeping doctor active");
-        // Implementation to keep the doctor active
-        // This could involve periodically updating the server or handling reconnections
-        // Simulate updating the doctor's status on the server every hour
-        // Note: Actual implementation would involve scheduling work with WorkManager or similar
-        new Thread(new Runnable() {
+    // Intervals (ms)
+    private static final long ACTIVE_PING_EVERY = 60L * 60L * 1000L; // 1 hour
+    private static final long TRACK_GUARD_EVERY = 60L * 1000L;       // 1 minute
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        handler = new Handler(getMainLooper());
+
+        // 1) Hourly "doctor is active" ping
+        activeTick = new Runnable() {
             @Override
             public void run() {
                 try {
-                    while (!Thread.interrupted()) {
-                        Thread.sleep(3600000); // Sleep for one hour
-                        updateServerWithActiveStatus();
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt(); // Restore interrupted status
+                    keepDoctorActive();
+                } finally {
+                    handler.postDelayed(this, ACTIVE_PING_EVERY);
                 }
             }
-        }).start();
+        };
+
+        // 2) Guard to ensure tracking is still on (self-heal)
+        trackingGuard = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ensureLocationTrackingAlive();
+                } finally {
+                    handler.postDelayed(this, TRACK_GUARD_EVERY);
+                }
+            }
+        };
+
+        handler.post(activeTick);
+        handler.post(trackingGuard);
+        Log.d(TAG, "BackgroundService created: guards scheduled.");
     }
 
-    private void updateServerWithActiveStatus() {
-        // Here you would have the logic to contact the server and update the status
-        Log.d(TAG, "Updating server with active status");
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        // Keep running
+        return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if (handler != null) {
+            handler.removeCallbacks(activeTick);
+            handler.removeCallbacks(trackingGuard);
+        }
         setDoctorInactive();
-        Log.d(TAG, "Service destroyed and doctor set to inactive.");
-    }
-
-    private void setDoctorInactive() {
-        // Code to set the doctor's status to inactive
-        Log.d(TAG, "Setting doctor status to inactive");
-        // Add actual server call or local state update logic here
+        Log.d(TAG, "BackgroundService destroyed; set doctor inactive.");
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    /** Stub: replace with real server call if needed */
+    private void keepDoctorActive() {
+        Log.d(TAG, "Keeping doctor active (ping server).");
+        // TODO: Implement your real ping → e.g., Volley/Retrofit call.
+    }
+
+    /** Stub: replace with real server call if needed */
+    private void setDoctorInactive() {
+        Log.d(TAG, "Setting doctor inactive (server update).");
+        // TODO: Implement your real inactive call.
+    }
+
+    /** Ensures live tracking remains running if context is valid. */
+    private void ensureLocationTrackingAlive() {
+        Context ctx = getApplicationContext();
+        SharedPreferences prefs = ctx.getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
+        int doctorId = prefs.getInt("doctor_id", -1);
+        String appointmentId = prefs.getString("ongoing_appointment_id", null);
+
+        if (doctorId != -1 && appointmentId != null) {
+            if (!LiveLocationManager.getInstance().isTracking()) {
+                LiveLocationManager.getInstance().startLocationUpdates(ctx);
+                Log.d(TAG, "Tracking guard: restarted LiveLocationManager.");
+            }
+        } else {
+            // If not in an active appointment, ensure tracking is off.
+            if (LiveLocationManager.getInstance().isTracking()) {
+                LiveLocationManager.getInstance().stopLocationUpdates(ctx);
+                Log.d(TAG, "Tracking guard: no active appointment; stopped tracking.");
+            }
+        }
     }
 }
