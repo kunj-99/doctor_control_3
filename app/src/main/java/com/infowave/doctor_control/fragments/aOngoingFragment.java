@@ -114,7 +114,7 @@ public class aOngoingFragment extends Fragment {
                 },
                 (appointmentId, position) -> {
                     lastReportPosition = position;
-                    Intent intent = new Intent(getContext(), AnimalVirtualReportActivity.class);
+                    Intent intent = new Intent(getContext(), medical_report.class);
                     intent.putExtra("appointment_id", appointmentId);
                     reportLauncher.launch(intent);
                 }

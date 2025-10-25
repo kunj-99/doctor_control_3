@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="dashboard_gutter">16dp</dimen>
+    <dimen name="dashboard_half_gutter">8dp</dimen>
+
+</resources>

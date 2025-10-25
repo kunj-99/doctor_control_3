@@ -23,6 +23,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -73,7 +78,38 @@ public class view_patient_report extends AppCompatActivity {
         }
 
         setContentView(R.layout.activity_view_patient_report);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
 
+        WindowInsetsControllerCompat wic =
+                new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+// Black scrims → want white icons
+        wic.setAppearanceLightStatusBars(false);
+        wic.setAppearanceLightNavigationBars(false);
+
+        final View root = findViewById(R.id.root_container_view_report);
+        final View statusScrim = findViewById(R.id.status_bar_scrim);
+        final View navScrim    = findViewById(R.id.navigation_bar_scrim);
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            if (statusScrim != null) {
+                statusScrim.getLayoutParams().height = sys.top;
+                statusScrim.requestLayout();
+                statusScrim.setVisibility(sys.top > 0 ? View.VISIBLE : View.GONE);
+            }
+            if (navScrim != null) {
+                navScrim.getLayoutParams().height = sys.bottom;
+                navScrim.requestLayout();
+                navScrim.setVisibility(sys.bottom > 0 ? View.VISIBLE : View.GONE);
+            }
+
+            // Optional: keep side paddings safe; top/bottom handled by scrims
+            v.setPadding(sys.left, 0, sys.right, 0);
+            return insets;
+        });
         // --- Bind views ---
         tvHospitalName = findViewById(R.id.tv_hospital_name);
         tvHospitalAddress = findViewById(R.id.tv_hospital_address);

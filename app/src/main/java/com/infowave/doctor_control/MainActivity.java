@@ -3,12 +3,11 @@ package com.infowave.doctor_control;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-
-import android.widget.*;
-
-
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -16,48 +15,78 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.infowave.doctor_control.adapter.ViewPagerAdapter;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.infowave.doctor_control.adapter.ViewPagerAdapter;
 
 public class MainActivity extends AppCompatActivity {
 
     private ViewPager2 viewPager;
     private BottomNavigationView bottomNavigationView;
     private TextView toolbarTitle;
-    ImageView iconSupport,iconReports;
+    ImageView iconSupport, iconReports;
     private Toolbar toolbar;
+
     @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Enable edge-to-edge drawing by applying padding from system bars
         setContentView(R.layout.activity_main);
 
+        // ===== Edge-to-edge with scrims =====
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        // Make system bars transparent so our scrims are visible
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        // Keep icons light on black scrims
+        WindowInsetsControllerCompat wic =
+                new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+        wic.setAppearanceLightStatusBars(false);
+        wic.setAppearanceLightNavigationBars(false);
+
+        // Locate scrims
+        final android.view.View statusScrim = findViewById(R.id.status_bar_scrim);
+        final android.view.View navScrim = findViewById(R.id.navigation_bar_scrim);
+
+        // Apply only left/right padding if needed; scrims handle top/bottom
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // Set scrim heights from insets
+            if (statusScrim != null) {
+                statusScrim.getLayoutParams().height = sys.top;
+                statusScrim.setLayoutParams(statusScrim.getLayoutParams());
+                statusScrim.setVisibility(sys.top > 0 ? android.view.View.VISIBLE : android.view.View.GONE);
+            }
+            if (navScrim != null) {
+                navScrim.getLayoutParams().height = sys.bottom;
+                navScrim.setLayoutParams(navScrim.getLayoutParams());
+                navScrim.setVisibility(sys.bottom > 0 ? android.view.View.VISIBLE : android.view.View.GONE);
+            }
+
+            // Keep content width-safe; no top/bottom padding (scrims take those)
+            v.setPadding(sys.left, 0, sys.right, 0);
+            return insets;
+        });
+
+        // ===== Your existing setup =====
         toolbar = findViewById(R.id.toolbar);
         toolbarTitle = findViewById(R.id.toolbar_title);
         iconSupport = findViewById(R.id.icon_support);
         iconReports = findViewById(R.id.icon_reports);
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-
         DoctorFcmTokenHelper.ensureTokenSynced(this);
 
-        // Your existing click listeners
         iconSupport.setOnClickListener(v ->
                 startActivity(new Intent(MainActivity.this, suppor.class)));
 
         iconReports.setOnClickListener(v ->
                 startActivity(new Intent(MainActivity.this, tarmsandcondition.class)));
 
-        // Setup ViewPager and BottomNavigation
         viewPager = findViewById(R.id.view_pager);
         viewPager.setAdapter(new ViewPagerAdapter(this));
 
@@ -85,8 +114,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-            @Override
-            public void onPageSelected(int pos) {
+            @Override public void onPageSelected(int pos) {
                 if (pos == 0) bottomNavigationView.setSelectedItemId(R.id.navigation_home);
                 else if (pos == 1) bottomNavigationView.setSelectedItemId(R.id.navigation_appointment);
                 else if (pos == 2) bottomNavigationView.setSelectedItemId(R.id.navigation_history);
@@ -94,37 +122,28 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Request Notification permission for Android 13+
+        // Android 13+ notification permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this,
-                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
-                        1001);
+                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1001);
             }
         }
     }
 
-    /**
-     * Enables or disables swipe gestures on the main ViewPager2.
-     *
-     * @param enabled Pass true to enable swiping.
-     */
+    /** Enables or disables swipe gestures on the main ViewPager2. */
     public void setMainViewPagerSwipeEnabled(boolean enabled) {
         viewPager.setUserInputEnabled(enabled);
     }
 
-    /**
-     * Navigates to the Home screen (position 0) smoothly.
-     */
+    /** Navigates to the Home screen (position 0) smoothly. */
     public void navigateToHome() {
         viewPager.setCurrentItem(0, true);
         bottomNavigationView.setSelectedItemId(R.id.navigation_home);
     }
 
-    /**
-     * Navigates to the History screen (position 2) smoothly.
-     */
+    /** Navigates to the History screen (position 2) smoothly. */
     public void navigateToHistory() {
         viewPager.setCurrentItem(2, true);
         bottomNavigationView.setSelectedItemId(R.id.navigation_history);

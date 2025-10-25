@@ -16,6 +16,11 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -65,6 +70,42 @@ public class medical_report extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_medical_report);
 
+        // ===== Edge-to-edge with black scrims (status/nav) =====
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        // Make actual system bars transparent so our scrims show
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        // We are painting black behind them, so keep system icons light (white)
+        WindowInsetsControllerCompat wic =
+                new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+        wic.setAppearanceLightStatusBars(false);
+        wic.setAppearanceLightNavigationBars(false);
+
+        final View root = findViewById(R.id.root_container_medical);
+        final View statusScrim = findViewById(R.id.status_bar_scrim);
+        final View navScrim    = findViewById(R.id.navigation_bar_scrim);
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // Set scrim heights from insets
+            if (statusScrim != null) {
+                statusScrim.getLayoutParams().height = sys.top;
+                statusScrim.setLayoutParams(statusScrim.getLayoutParams());
+                statusScrim.setVisibility(sys.top > 0 ? View.VISIBLE : View.GONE);
+            }
+            if (navScrim != null) {
+                navScrim.getLayoutParams().height = sys.bottom;
+                navScrim.setLayoutParams(navScrim.getLayoutParams());
+                navScrim.setVisibility(sys.bottom > 0 ? View.VISIBLE : View.GONE);
+            }
+
+            // Keep left/right safe; top/bottom are handled by scrims & constraints
+            v.setPadding(sys.left, 0, sys.right, 0);
+            return insets;
+        });
+        // ===== End scrim setup =====
+
         initializeViews();
         setupRadioGroup();
 
@@ -103,17 +144,16 @@ public class medical_report extends AppCompatActivity {
         etSignature     = findViewById(R.id.etSignature);
         etReportType    = findViewById(R.id.etReportType);
 
-        // NEW: bind investigation views (present in your updated XML)
+        // Investigation UI
         cbInvestigation       = findViewById(R.id.cbInvestigation);
         tilInvestigationNotes = findViewById(R.id.tilInvestigationNotes);
         etInvestigationNotes  = findViewById(R.id.etInvestigationNotes);
 
-        // Toggle notes visibility with checkbox
         if (cbInvestigation != null && tilInvestigationNotes != null) {
             cbInvestigation.setOnCheckedChangeListener((button, checked) -> {
                 tilInvestigationNotes.setVisibility(checked ? View.VISIBLE : View.GONE);
                 if (!checked && etInvestigationNotes != null) {
-                    etInvestigationNotes.setText(null); // clear when hidden
+                    etInvestigationNotes.setText(null);
                 }
             });
         }
@@ -136,9 +176,7 @@ public class medical_report extends AppCompatActivity {
     }
 
     private void fetchAppointmentDetails(String id) {
-
         String url = ApiConfig.endpoint("Doctors/get_appointment_details.php", "appointment_id", id);
-
         loaderutil.showLoader(this);
 
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
@@ -163,7 +201,6 @@ public class medical_report extends AppCompatActivity {
                         etSpo2.setText("");
                         etBloodPressure.setText("");
 
-                        // Reset investigation UI to default
                         if (cbInvestigation != null) cbInvestigation.setChecked(false);
                         if (tilInvestigationNotes != null) tilInvestigationNotes.setVisibility(View.GONE);
 
@@ -260,9 +297,7 @@ public class medical_report extends AppCompatActivity {
             return;
         }
 
-
         String url = ApiConfig.endpoint("Doctors/insert_medical_report.php");
-
         JSONObject postData = new JSONObject();
 
         try {
@@ -283,7 +318,7 @@ public class medical_report extends AppCompatActivity {
             postData.put("doctor_name", etSignature.getText().toString());
             postData.put("doctor_signature", etSignature.getText().toString());
 
-            // NEW: only include investigations text when checkbox is checked
+            // Include investigation notes only when checked
             String investigations = "";
             if (cbInvestigation != null && cbInvestigation.isChecked() && etInvestigationNotes != null) {
                 investigations = String.valueOf(etInvestigationNotes.getText()).trim();

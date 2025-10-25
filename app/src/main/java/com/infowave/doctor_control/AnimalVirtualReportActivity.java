@@ -4,16 +4,13 @@ import android.Manifest;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.TextUtils;
-import android.util.JsonWriter;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.*;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -21,17 +18,17 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.infowave.doctor_control.R;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-
-import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Locale;
 
 public class AnimalVirtualReportActivity extends AppCompatActivity {
 
@@ -43,6 +40,7 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
     private LinearLayout virtualForm, directUploadSection;
     private ImageView ivReportImage;
     private Button btnCaptureImage, btnUploadImage, btnAddMedicine, btnSave;
+    private LinearLayout medsContainer;
 
     // Virtual form fields
     private TextInputEditText etAnimalName, etSpeciesBreed, etSex, etAge, etWeight,
@@ -53,7 +51,6 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
 
     private CheckBox cbInvestigation;
     private TextInputLayout tilInvestigationNotes;
-    private LinearLayout medsContainer;
 
     // Image capture/pick
     private Uri cameraImageUri = null;
@@ -87,7 +84,7 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
                 if (uri != null) {
                     ivReportImage.setVisibility(View.VISIBLE);
                     ivReportImage.setImageURI(uri);
-                    cameraImageUri = uri; // reuse field for uniformity
+                    cameraImageUri = uri; // reuse field
                 }
             });
 
@@ -95,6 +92,42 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         setContentView(R.layout.activity_animal_virtual_report);
+
+        // ===== Edge-to-edge: transparent system bars + black scrims =====
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+
+        // White icons on black scrims (i.e., NOT light appearance)
+        WindowInsetsControllerCompat wic =
+                new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+        wic.setAppearanceLightStatusBars(false);
+        wic.setAppearanceLightNavigationBars(false);
+
+        final View root = findViewById(R.id.root_container_animal);
+        final View statusScrim = findViewById(R.id.status_bar_scrim);
+        final View navScrim    = findViewById(R.id.navigation_bar_scrim);
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // Set scrim heights from current insets
+            if (statusScrim != null) {
+                statusScrim.getLayoutParams().height = sys.top;
+                statusScrim.setLayoutParams(statusScrim.getLayoutParams());
+                statusScrim.setVisibility(sys.top > 0 ? View.VISIBLE : View.GONE);
+            }
+            if (navScrim != null) {
+                navScrim.getLayoutParams().height = sys.bottom;
+                navScrim.setLayoutParams(navScrim.getLayoutParams());
+                navScrim.setVisibility(sys.bottom > 0 ? View.VISIBLE : View.GONE);
+            }
+
+            // Apply safe paddings on left/right only; top/bottom handled by scrims
+            v.setPadding(sys.left, 0, sys.right, 0);
+            return insets;
+        });
+        // ===== End of scrim setup =====
 
         bindViews();
         wireToggles();
@@ -160,8 +193,6 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
                 directUploadSection.setVisibility(View.VISIBLE);
             }
         });
-
-        // Default selection = Virtual Report
         radioVirtualReport.setChecked(true);
     }
 
@@ -186,7 +217,7 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
                 if (!validateVirtualReport()) return;
                 try {
                     JSONObject payload = buildVirtualReportJson();
-                    Log.d(TAG, "Virtual Report JSON: " + payload.toString());
+                    Log.d(TAG, "Virtual Report JSON: " + payload);
                     toast("Virtual report validated ✓");
                     // TODO: POST 'payload' to your API
                 } catch (Exception e) {
@@ -203,15 +234,13 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         });
     }
 
-    // ========== Validation ==========
+    // ===== Validation (unchanged from your logic style) =====
     private boolean validateVirtualReport() {
-        // Required: Animal Name, Species/Breed, Date, Reasons/Chief complaint
         if (isEmpty(etAnimalName)) return err(etAnimalName, "Required");
         if (isEmpty(etSpeciesBreed)) return err(etSpeciesBreed, "Required");
         if (isEmpty(etDate)) return err(etDate, "Required");
         if (isEmpty(etReasons)) return err(etReasons, "Required");
 
-        // Numeric ranges (if provided)
         if (!isEmpty(etPainScore)) {
             int ps = parseInt(etPainScore.getText().toString(), -1);
             if (ps < 0 || ps > 10) return err(etPainScore, "Pain score must be 0–10");
@@ -224,19 +253,13 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
             int rr = parseInt(etRespiratoryRateBpm.getText().toString(), -1);
             if (rr <= 0) return err(etRespiratoryRateBpm, "Enter a valid rate");
         }
-        if (!isEmpty(etCrtSec)) {
-            double crt = parseDouble(etCrtSec.getText().toString(), -1);
-            if (crt < 0 || crt > 10) return err(etCrtSec, "Enter CRT in seconds (0–10)");
-        }
 
-        // If Investigation checked → notes required
         if (cbInvestigation.isChecked() && isEmpty(etInvestigationNotes)) {
             etInvestigationNotes.requestFocus();
             toast("Please add investigation notes");
             return false;
         }
 
-        // Medications rows: if name filled, dosage required (and vice versa)
         for (int i = 0; i < medsContainer.getChildCount(); i++) {
             View row = medsContainer.getChildAt(i);
             TextInputEditText etName = row.findViewById(R.id.etMedicine);
@@ -266,11 +289,6 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         try { return Integer.parseInt(s.trim()); } catch (Exception e) { return def; }
     }
 
-    private double parseDouble(String s, double def) {
-        try { return Double.parseDouble(s.trim()); } catch (Exception e) { return def; }
-    }
-
-    // ========== Build JSON ==========
     private JSONObject buildVirtualReportJson() throws Exception {
         JSONObject root = new JSONObject();
 
@@ -308,7 +326,6 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         root.put("signature", s(etSignature));
         root.put("report_type", s(etReportType));
 
-        // Medications
         JSONArray meds = new JSONArray();
         for (int i = 0; i < medsContainer.getChildCount(); i++) {
             View row = medsContainer.getChildAt(i);
@@ -319,7 +336,7 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
             if (!name.isEmpty() && !dose.isEmpty()) {
                 JSONObject m = new JSONObject();
                 m.put("medicine_name", name);
-                m.put("dosage", dose); // e.g., "5 mg/kg bid"
+                m.put("dosage", dose);
                 meds.put(m);
             }
         }
@@ -331,7 +348,6 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
     private String s(TextInputEditText et) { return et == null ? "" : val(et); }
     private String val(TextInputEditText et) { return String.valueOf(et.getText()).trim(); }
 
-    // ========== Dynamic Row ==========
     private void addMedicineRow(String prefillName, String prefillDose) {
         View row = getLayoutInflater().inflate(R.layout._row_medicine_animal, medsContainer, false);
         TextInputEditText etName = row.findViewById(R.id.etMedicine);
@@ -345,7 +361,6 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         medsContainer.addView(row);
     }
 
-    // ========== Media helpers ==========
     private void ensureCameraThenOpen() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -357,13 +372,13 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
 
     private void ensureGalleryThenOpen() {
         if (Build.VERSION.SDK_INT >= 33) {
-            String[] perms = new String[] { Manifest.permission.READ_MEDIA_IMAGES };
+            String[] perms = new String[]{ Manifest.permission.READ_MEDIA_IMAGES };
             if (ContextCompat.checkSelfPermission(this, perms[0]) != PackageManager.PERMISSION_GRANTED) {
                 requestGalleryPermissions.launch(perms);
                 return;
             }
         } else {
-            String[] perms = new String[] { Manifest.permission.READ_EXTERNAL_STORAGE };
+            String[] perms = new String[]{ Manifest.permission.READ_EXTERNAL_STORAGE };
             if (ContextCompat.checkSelfPermission(this, perms[0]) != PackageManager.PERMISSION_GRANTED) {
                 requestGalleryPermissions.launch(perms);
                 return;

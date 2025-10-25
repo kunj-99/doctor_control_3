@@ -1,10 +1,18 @@
 package com.infowave.doctor_control;
 
+import android.graphics.Color;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
@@ -29,7 +37,38 @@ public class PatientProfileActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_patient_profile);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
 
+// Because scrims are black, we want WHITE system icons (no "light" appearance)
+        WindowInsetsControllerCompat controller =
+                new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(false);
+        controller.setAppearanceLightNavigationBars(false);
+
+        final View root = findViewById(R.id.root_container_patient_profile);
+        final View topScrim = findViewById(R.id.status_bar_scrim);
+        final View bottomScrim = findViewById(R.id.navigation_bar_scrim);
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            if (topScrim != null) {
+                topScrim.getLayoutParams().height = sys.top;
+                topScrim.requestLayout();
+                topScrim.setVisibility(sys.top > 0 ? View.VISIBLE : View.GONE);
+            }
+            if (bottomScrim != null) {
+                bottomScrim.getLayoutParams().height = sys.bottom;
+                bottomScrim.requestLayout();
+                bottomScrim.setVisibility(sys.bottom > 0 ? View.VISIBLE : View.GONE);
+            }
+
+            // Optional: keep left/right safe for cutouts/gestures; top/bottom handled by scrims
+            v.setPadding(sys.left, 0, sys.right, 0);
+            return insets;
+        });
         initializeViews();
         loadPatientData();
     }
