@@ -27,6 +27,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.infowave.doctor_control.AnimalVirtualReportActivity;
 import com.infowave.doctor_control.ApiConfig;
 import com.infowave.doctor_control.DistanceCalculator;
 import com.infowave.doctor_control.LiveLocationManager;
@@ -113,7 +114,7 @@ public class aOngoingFragment extends Fragment {
                 },
                 (appointmentId, position) -> {
                     lastReportPosition = position;
-                    Intent intent = new Intent(getContext(), medical_report.class);
+                    Intent intent = new Intent(getContext(), AnimalVirtualReportActivity.class);
                     intent.putExtra("appointment_id", appointmentId);
                     reportLauncher.launch(intent);
                 }
