@@ -9,12 +9,13 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.*;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -22,14 +23,23 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
-import com.android.volley.toolbox.*;
-import com.infowave.doctor_control.*;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.infowave.doctor_control.ApiConfig;
+import com.infowave.doctor_control.BackgroundService;
+import com.infowave.doctor_control.DistanceCalculator;
+import com.infowave.doctor_control.LiveLocationManager;
+import com.infowave.doctor_control.R;
 import com.infowave.doctor_control.adapter.aOngoingAdapter;
 import com.infowave.doctor_control.medical_report;
 
-import org.json.*;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class aOngoingFragment extends Fragment {
 
@@ -47,6 +57,7 @@ public class aOngoingFragment extends Fragment {
     private final ArrayList<Boolean> hasReport     = new ArrayList<>();
     private final ArrayList<String> amounts        = new ArrayList<>();
     private final ArrayList<String> paymentMethods = new ArrayList<>();
+    private final ArrayList<Boolean> vetCases      = new ArrayList<>(); // NEW
 
     private String doctorId;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -54,14 +65,13 @@ public class aOngoingFragment extends Fragment {
 
     private ActivityResultLauncher<Intent> reportLauncher;
 
-    // ---- Single permission launcher (one-by-one)
     private ActivityResultLauncher<String> singlePermLauncher;
 
-    // Request chain guards (हर स्टेप एक ही बार पूछें)
     private boolean askedFineOnce = false;
     private boolean askedNotifOnce = false;
     private boolean askedBgOnce = false;
 
+    @SuppressLint("NotifyDataSetChanged")
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_ongoing, container, false);
@@ -72,18 +82,14 @@ public class aOngoingFragment extends Fragment {
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == Activity.RESULT_OK) {
-                        // Periodic refresh चलता ही है; फिर भी UI sync के लिए
                         adapter.notifyDataSetChanged();
                     }
                 });
 
-        // एक-एक करके परमिशन माँगने वाला launcher
         singlePermLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(),
-                granted -> {
-                    // हर बार अगला स्टेप ट्रिगर करें
-                    requestFineThenNotifThenBackgroundIfNeeded();
-                });
+                granted -> requestFineThenNotifThenBackgroundIfNeeded()
+        );
 
         recyclerView = view.findViewById(R.id.rv_ongoing_appointments);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -129,7 +135,6 @@ public class aOngoingFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // दो-स्टेप/तीन-स्टेप परमिशन सीक्वेंस
         requestFineThenNotifThenBackgroundIfNeeded();
         startAppointmentRefresh();
     }
@@ -138,7 +143,6 @@ public class aOngoingFragment extends Fragment {
     public void onPause() {
         super.onPause();
         stopAppointmentRefresh();
-        // Foreground service अपनी जगह चलती रहती है
     }
 
     private void startAppointmentRefresh() {
@@ -195,7 +199,9 @@ public class aOngoingFragment extends Fragment {
                                 amounts.add(o.optString("amount", "0.00"));
                                 paymentMethods.add(o.optString("payment_method", "Unknown"));
 
-                                // पहली confirmed appointment को ongoing मानें
+                                boolean isVet = o.optInt("is_vet_case", 0) == 1; // NEW
+                                vetCases.add(isVet);                               // NEW
+
                                 if (appointmentIds.size() == 1) {
                                     requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                                             .edit()
@@ -204,12 +210,12 @@ public class aOngoingFragment extends Fragment {
                                 }
                             }
 
+                            // ✅ PASS the vet flags to adapter
+                            adapter.setVetCases(vetCases);
                             adapter.notifyDataSetChanged();
 
-                            // appointments के आधार पर services ensure/stop
                             ensureServicesBasedOnAppointments();
 
-                            // Distance calculation (async)
                             for (int i = 0; i < mapLinks.size(); i++) {
                                 final int idx = i;
                                 DistanceCalculator.calculateDistance(
@@ -233,7 +239,6 @@ public class aOngoingFragment extends Fragment {
                 },
                 error -> {
                     Toast.makeText(getContext(), "Network error", Toast.LENGTH_SHORT).show();
-                    // पिछला डेटा रहने दें; फोर्स स्टॉप नहीं
                 }
         ) {
             @Override
@@ -245,13 +250,13 @@ public class aOngoingFragment extends Fragment {
         });
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private void applyEmptyAppointments() {
         recyclerView.post(() -> {
             clearAllLists();
+            adapter.setVetCases(vetCases); // ✅ keep adapter in sync
             adapter.notifyDataSetChanged();
-            // No ongoing → services बंद
             stopTrackingServices();
-            // saved ongoing id भी हटाएँ
             requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                     .edit().remove("ongoing_appointment_id").apply();
         });
@@ -266,6 +271,7 @@ public class aOngoingFragment extends Fragment {
         hasReport.clear();
         amounts.clear();
         paymentMethods.clear();
+        vetCases.clear(); // NEW
     }
 
     private void completeAppointment(String appointmentId, int position) {
@@ -278,7 +284,6 @@ public class aOngoingFragment extends Fragment {
                         JSONObject root = new JSONObject(response);
                         if (root.optBoolean("success", false)) {
 
-                            // सूचियों से हटाएँ
                             appointmentIds.remove(position);
                             patientNames.remove(position);
                             problems.remove(position);
@@ -287,7 +292,9 @@ public class aOngoingFragment extends Fragment {
                             hasReport.remove(position);
                             amounts.remove(position);
                             paymentMethods.remove(position);
+                            if (position < vetCases.size()) vetCases.remove(position); // keep lists aligned
 
+                            adapter.setVetCases(vetCases); // reflect removal
                             adapter.notifyItemRemoved(position);
                             adapter.notifyItemRangeChanged(position, appointmentIds.size());
 
@@ -321,10 +328,9 @@ public class aOngoingFragment extends Fragment {
         });
     }
 
-    /* ===================== Permissions & Services (Sequenced Flow) ===================== */
+    /* ===================== Permissions & Services ===================== */
 
     private void requestFineThenNotifThenBackgroundIfNeeded() {
-        // Step 1: FINE
         if (!askedFineOnce) {
             askedFineOnce = true;
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
@@ -334,7 +340,6 @@ public class aOngoingFragment extends Fragment {
             }
         }
 
-        // Step 2: POST_NOTIFICATIONS (Android 13+)
         if (!askedNotifOnce && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             askedNotifOnce = true;
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
@@ -344,7 +349,6 @@ public class aOngoingFragment extends Fragment {
             }
         }
 
-        // Step 3: BACKGROUND (Android 10+ — अलग स्क्रीन)
         if (!askedBgOnce && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             askedBgOnce = true;
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION)
@@ -354,7 +358,6 @@ public class aOngoingFragment extends Fragment {
             }
         }
 
-        // सब मिल गया → services ensure करें
         ensureServicesBasedOnAppointments();
     }
 
@@ -381,7 +384,6 @@ public class aOngoingFragment extends Fragment {
         Context ctx = requireContext().getApplicationContext();
 
         if (!appointmentIds.isEmpty()) {
-            // ongoing id ऊपर set हो चुकी है
             LiveLocationManager.getInstance().startLocationUpdates(ctx);
             ctx.startService(new Intent(ctx, BackgroundService.class));
         } else {

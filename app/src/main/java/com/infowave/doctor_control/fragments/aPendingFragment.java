@@ -42,6 +42,7 @@ public class aPendingFragment extends Fragment {
     private RecyclerView recyclerView;
     private apendingAdapter adapter;
     private final ArrayList<apendingAdapter.Appointment> appointments = new ArrayList<>();
+
     private String doctorId;
 
     private double doctorLat, doctorLon;

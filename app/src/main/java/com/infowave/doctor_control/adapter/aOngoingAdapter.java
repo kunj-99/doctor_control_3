@@ -23,6 +23,8 @@ import com.android.volley.toolbox.Volley;
 import com.infowave.doctor_control.ApiConfig;
 import com.infowave.doctor_control.R;
 import com.infowave.doctor_control.track_patient_location;
+// ❗ Placeholder vet activity (you will implement this)
+import com.infowave.doctor_control.AnimalVirtualReportActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -44,6 +46,9 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     private final ArrayList<String> paymentMethods;
     private final Consumer<Integer> onAppointmentCompleted;
     private final BiConsumer<String, Integer> onAddReportClicked;
+
+    // holds is_vet_case flags in same order as items
+    private ArrayList<Boolean> vetCases = new ArrayList<>();
 
     public aOngoingAdapter(Context context,
                            ArrayList<String> appointmentIds,
@@ -67,6 +72,11 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         this.paymentMethods = paymentMethods;
         this.onAppointmentCompleted = onAppointmentCompleted;
         this.onAddReportClicked = onAddReportClicked;
+    }
+
+    // called by Fragment after parsing JSON
+    public void setVetCases(ArrayList<Boolean> list) {
+        this.vetCases = (list != null) ? list : new ArrayList<>();
     }
 
     @NonNull
@@ -127,6 +137,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         holder.btnComplete.setTextColor(ContextCompat.getColor(context,
                 reportSubmitted ? android.R.color.white : R.color.gray));
 
+        // Add Report / View logic
         if (reportSubmitted) {
             holder.btnView.setEnabled(false);
             holder.btnView.setBackgroundColor(Color.LTGRAY);
@@ -138,8 +149,19 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             holder.btnView.setText("Add Report");
 
             holder.btnView.setOnClickListener(v -> {
-                if (onAddReportClicked != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    onAddReportClicked.accept(appointmentIds.get(position), position);
+                boolean isVet = (position < vetCases.size()) && Boolean.TRUE.equals(vetCases.get(position));
+                if (isVet) {
+                    // ===== VET FLOW =====
+                    // Placeholder activity. You will implement AnimalVirtualReportActivity.
+                    // Same extras as human flow: pass "appointment_id"
+                    Intent intent = new Intent(context, AnimalVirtualReportActivity.class);
+                    intent.putExtra("appointment_id", appointmentIds.get(position));
+                    context.startActivity(intent);
+                } else {
+                    // ===== HUMAN FLOW =====
+                    if (onAddReportClicked != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        onAddReportClicked.accept(appointmentIds.get(position), position);
+                    }
                 }
             });
         }
@@ -182,7 +204,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             return;
         }
 
-        @SuppressLint("SetTextI18n") JsonObjectRequest request = new JsonObjectRequest(
+        @SuppressLint("SetTextI18n")
+        JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST, url, payload,
                 response -> {
                     boolean success = response.optBoolean("success", false);
@@ -209,7 +232,6 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         queue.add(request);
     }
 
-    // Method to remove an appointment from the list
     private void removeAppointment(int position) {
         appointmentIds.remove(position);
         patientNames.remove(position);
@@ -219,8 +241,8 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         mapLinks.remove(position);
         amounts.remove(position);
         paymentMethods.remove(position);
+        if (position < vetCases.size()) vetCases.remove(position);
 
-        // Notify the adapter about the removal
         notifyItemRemoved(position);
         notifyItemRangeChanged(position, appointmentIds.size());
     }
