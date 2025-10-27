@@ -54,11 +54,13 @@ public class aOngoingFragment extends Fragment {
 
     private ActivityResultLauncher<Intent> reportLauncher;
 
-    // ---- Permission launcher for all required runtime permissions
-    private ActivityResultLauncher<String[]> permLauncher;
+    // ---- Single permission launcher (one-by-one)
+    private ActivityResultLauncher<String> singlePermLauncher;
 
-    // Track whether we've already requested permissions this session
-    private boolean permissionsAskedOnce = false;
+    // Request chain guards (हर स्टेप एक ही बार पूछें)
+    private boolean askedFineOnce = false;
+    private boolean askedNotifOnce = false;
+    private boolean askedBgOnce = false;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -70,25 +72,17 @@ public class aOngoingFragment extends Fragment {
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == Activity.RESULT_OK) {
-                        // If needed, refresh UI, we already refresh periodically
+                        // Periodic refresh चलता ही है; फिर भी UI sync के लिए
                         adapter.notifyDataSetChanged();
                     }
                 });
 
-        // Request multiple permissions in one go
-        permLauncher = registerForActivityResult(
-                new ActivityResultContracts.RequestMultiplePermissions(),
-                result -> {
-                    // If FINE granted, and (if required) BACKGROUND granted on Android 10+
-                    if (hasAllCriticalPermissions()) {
-                        // If we already have an ongoing appointment, ensure services are running
-                        ensureServicesBasedOnAppointments();
-                    } else {
-                        Toast.makeText(requireContext(),
-                                "Location permissions not granted. Live tracking disabled.",
-                                Toast.LENGTH_LONG).show();
-                        stopTrackingServices();
-                    }
+        // एक-एक करके परमिशन माँगने वाला launcher
+        singlePermLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    // हर बार अगला स्टेप ट्रिगर करें
+                    requestFineThenNotifThenBackgroundIfNeeded();
                 });
 
         recyclerView = view.findViewById(R.id.rv_ongoing_appointments);
@@ -135,7 +129,8 @@ public class aOngoingFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        requestAllPermissionsIfNeeded();   // ask once on resume
+        // दो-स्टेप/तीन-स्टेप परमिशन सीक्वेंस
+        requestFineThenNotifThenBackgroundIfNeeded();
         startAppointmentRefresh();
     }
 
@@ -143,7 +138,7 @@ public class aOngoingFragment extends Fragment {
     public void onPause() {
         super.onPause();
         stopAppointmentRefresh();
-        // NOTE: Foreground service keeps running; no need to stop here.
+        // Foreground service अपनी जगह चलती रहती है
     }
 
     private void startAppointmentRefresh() {
@@ -178,7 +173,6 @@ public class aOngoingFragment extends Fragment {
 
                         JSONArray arr = root.getJSONArray("appointments");
 
-                        // Update UI lists on main thread
                         recyclerView.post(() -> {
                             clearAllLists();
 
@@ -201,7 +195,7 @@ public class aOngoingFragment extends Fragment {
                                 amounts.add(o.optString("amount", "0.00"));
                                 paymentMethods.add(o.optString("payment_method", "Unknown"));
 
-                                // First confirmed appointment → mark as ongoing for tracking
+                                // पहली confirmed appointment को ongoing मानें
                                 if (appointmentIds.size() == 1) {
                                     requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                                             .edit()
@@ -212,7 +206,7 @@ public class aOngoingFragment extends Fragment {
 
                             adapter.notifyDataSetChanged();
 
-                            // Start/stop services based on list
+                            // appointments के आधार पर services ensure/stop
                             ensureServicesBasedOnAppointments();
 
                             // Distance calculation (async)
@@ -239,7 +233,7 @@ public class aOngoingFragment extends Fragment {
                 },
                 error -> {
                     Toast.makeText(getContext(), "Network error", Toast.LENGTH_SHORT).show();
-                    // keep previous list; do not force stop
+                    // पिछला डेटा रहने दें; फोर्स स्टॉप नहीं
                 }
         ) {
             @Override
@@ -255,9 +249,9 @@ public class aOngoingFragment extends Fragment {
         recyclerView.post(() -> {
             clearAllLists();
             adapter.notifyDataSetChanged();
-            // No ongoing appointments → stop services
+            // No ongoing → services बंद
             stopTrackingServices();
-            // Also clear the saved ongoing id
+            // saved ongoing id भी हटाएँ
             requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                     .edit().remove("ongoing_appointment_id").apply();
         });
@@ -284,7 +278,7 @@ public class aOngoingFragment extends Fragment {
                         JSONObject root = new JSONObject(response);
                         if (root.optBoolean("success", false)) {
 
-                            // Remove from lists
+                            // सूचियों से हटाएँ
                             appointmentIds.remove(position);
                             patientNames.remove(position);
                             problems.remove(position);
@@ -299,13 +293,11 @@ public class aOngoingFragment extends Fragment {
 
                             Toast.makeText(getContext(), "Appointment completed!", Toast.LENGTH_SHORT).show();
 
-                            // If now list empty → stop tracking
                             if (appointmentIds.isEmpty()) {
                                 requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                                         .edit().remove("ongoing_appointment_id").apply();
                                 stopTrackingServices();
                             } else {
-                                // Next appointment becomes ongoing
                                 String nextAppt = appointmentIds.get(0);
                                 requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                                         .edit().putString("ongoing_appointment_id", nextAppt).apply();
@@ -329,36 +321,41 @@ public class aOngoingFragment extends Fragment {
         });
     }
 
-    /* ===================== Permissions & Services ===================== */
+    /* ===================== Permissions & Services (Sequenced Flow) ===================== */
 
-    private void requestAllPermissionsIfNeeded() {
-        if (permissionsAskedOnce) return;
-        permissionsAskedOnce = true;
-
-        ArrayList<String> perms = new ArrayList<>();
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+    private void requestFineThenNotifThenBackgroundIfNeeded() {
+        // Step 1: FINE
+        if (!askedFineOnce) {
+            askedFineOnce = true;
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED) {
-                perms.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+                singlePermLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+                return;
             }
         }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+
+        // Step 2: POST_NOTIFICATIONS (Android 13+)
+        if (!askedNotifOnce && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            askedNotifOnce = true;
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
-                perms.add(Manifest.permission.POST_NOTIFICATIONS);
+                singlePermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+                return;
             }
         }
 
-        if (!perms.isEmpty()) {
-            permLauncher.launch(perms.toArray(new String[0]));
-        } else {
-            // Already granted
-            ensureServicesBasedOnAppointments();
+        // Step 3: BACKGROUND (Android 10+ — अलग स्क्रीन)
+        if (!askedBgOnce && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            askedBgOnce = true;
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                singlePermLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+                return;
+            }
         }
+
+        // सब मिल गया → services ensure करें
+        ensureServicesBasedOnAppointments();
     }
 
     private boolean hasAllCriticalPermissions() {
@@ -384,8 +381,7 @@ public class aOngoingFragment extends Fragment {
         Context ctx = requireContext().getApplicationContext();
 
         if (!appointmentIds.isEmpty()) {
-            // Ensure ongoing_appointment_id exists (already set in fetch)
-            // Start foreground tracking + guard
+            // ongoing id ऊपर set हो चुकी है
             LiveLocationManager.getInstance().startLocationUpdates(ctx);
             ctx.startService(new Intent(ctx, BackgroundService.class));
         } else {

@@ -17,10 +17,12 @@ import android.net.NetworkCapabilities;
 import android.net.Uri;
 
 import android.os.Build;
+import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.content.pm.ServiceInfo;
 import android.os.PowerManager;
+import android.content.pm.ServiceInfo;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
@@ -40,10 +42,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Foreground service से continuous GPS भेजता है (Android नियमों के अनुसार).
- * - Notification non-dismissable (swipe से नहीं हटेगा)
- * - App swipe/kill पर onTaskRemoved से auto-restart
- * - Boot/Update के बाद auto-restart (inner BootRestartReceiver)
+ * Foreground service से continuous GPS भेजता है (Android नियमों के अनुसार)
+ * - Non-dismissable notification + STOP action
+ * - App swipe/kill पर auto-restart (जब तक STOP न दबाएँ)
+ * - Boot/Update पर auto-restart (ongoing appointment हो और STOP न दबाया हो)
  * - Slow/No net पर offline queue + auto-flush
  */
 public class LiveLocationManager {
@@ -51,6 +53,11 @@ public class LiveLocationManager {
     private static final String LIVE_LOCATION_URL = ApiConfig.endpoint("update_live_location.php");
     private static final String CHANNEL_ID = "LiveTrackingChannel";
     private static final int NOTIF_ID = 101;
+
+    /** STOP action constants */
+    private static final String ACTION_STOP = "com.infowave.doctor_control.ACTION_STOP_LIVE_TRACK";
+    private static final String PREFS = "DoctorPrefs";
+    private static final String KEY_USER_STOPPED = "ll_user_stopped"; // true = user ने STOP दबाया
 
     private static LiveLocationManager instance;
     private boolean isStarted = false;
@@ -62,26 +69,31 @@ public class LiveLocationManager {
         return instance;
     }
 
-    /** Appointment accept/online होते ही call करें */
+    /** Doctor ने appointment accept/online किया → call करें */
     public void startLocationUpdates(Context context) {
         if (isStarted) return;
 
-        SharedPreferences prefs = context.getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         int doctorId = prefs.getInt("doctor_id", -1);
         String appointmentId = prefs.getString("ongoing_appointment_id", null);
         if (doctorId == -1 || appointmentId == null) return;
 
+        // पहले यूज़र ने STOP दबाया था तो reset
+        prefs.edit().putBoolean(KEY_USER_STOPPED, false).apply();
+
         isStarted = true;
         Intent intent = new Intent(context, LocationForegroundService.class);
         ContextCompat.startForegroundService(context, intent);
+        Log.d("LL", "startLocationUpdates() → service requested");
     }
 
-    /** Appointment complete/cancel होते ही call करें */
+    /** Appointment complete/cancel → call करें */
     public void stopLocationUpdates(Context context) {
         if (!isStarted) return;
         Intent intent = new Intent(context, LocationForegroundService.class);
         context.stopService(intent);
         isStarted = false;
+        Log.d("LL", "stopLocationUpdates() → service stopped");
     }
 
     public boolean isTracking() { return isStarted; }
@@ -109,8 +121,7 @@ public class LiveLocationManager {
 
             // Foreground with location type (Android 10+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
-                startForeground(NOTIF_ID, n, type);
+                startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
             } else {
                 startForeground(NOTIF_ID, n);
             }
@@ -119,17 +130,22 @@ public class LiveLocationManager {
             BatteryOptHelper.requestIgnoreBatteryOptimizationsIfNeeded(this);
 
             // Validate tracking state
-            SharedPreferences prefs = getSharedPreferences("DoctorPrefs", MODE_PRIVATE);
+            SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
             int doctorId = prefs.getInt("doctor_id", -1);
             String appointmentId = prefs.getString("ongoing_appointment_id", null);
-            if (doctorId == -1 || appointmentId == null) { stopSelf(); return; }
+            boolean userStopped = prefs.getBoolean(KEY_USER_STOPPED, false);
+            if (doctorId == -1 || appointmentId == null || userStopped) {
+                Log.w("LL", "onCreate(): invalid state → stopSelf()");
+                stopSelf();
+                return;
+            }
 
             locationClient = LocationServices.getFusedLocationProviderClient(this);
 
             LocationRequest request = LocationRequest.create()
-                    .setInterval(30_000)           // 30s
-                    .setFastestInterval(25_000)    // 25s
-                    .setSmallestDisplacement(10f)  // 10m
+                    .setInterval(3_000)           // 30s
+                    .setFastestInterval(3_000)    // 25s
+                    .setSmallestDisplacement(1f)  // 10m
                     .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
             locationCallback = new LocationCallback() {
@@ -149,17 +165,18 @@ public class LiveLocationManager {
             boolean hasFine = ContextCompat.checkSelfPermission(
                     this, android.Manifest.permission.ACCESS_FINE_LOCATION
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED;
-            if (!hasFine) { stopSelf(); return; }
+            if (!hasFine) { Log.e("LL", "No FINE permission."); stopSelf(); return; }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 boolean hasFgLoc = ContextCompat.checkSelfPermission(
                         this, "android.permission.FOREGROUND_SERVICE_LOCATION"
                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED;
-                if (!hasFgLoc) { stopSelf(); return; }
+                if (!hasFgLoc) { Log.e("LL", "No FOREGROUND_SERVICE_LOCATION."); stopSelf(); return; }
             }
 
             // Start updates
             locationClient.requestLocationUpdates(request, locationCallback, handlerThread.getLooper());
+            Log.d("LL", "requestLocationUpdates() started");
 
             // Network callback: ऑनलाइन होते ही queue flush
             connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -170,23 +187,42 @@ public class LiveLocationManager {
                         flushQueuedUpdates();
                     }
                 };
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    connectivityManager.registerDefaultNetworkCallback(netCallback);
-                }
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        connectivityManager.registerDefaultNetworkCallback(netCallback);
+                    }
+                } catch (Exception ignored) {}
             }
         }
 
         @Override
         public int onStartCommand(Intent intent, int flags, int startId) {
+            if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+                // STOP बटन से आया—User intent को मानें: आगे auto-restart नहीं होगा
+                SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+                prefs.edit().putBoolean(KEY_USER_STOPPED, true).apply();
+                Log.w("LL", "STOP action received → stopping foreground");
+                stopForeground(true);
+                stopSelf();
+                return START_NOT_STICKY;
+            }
             return START_STICKY;
         }
 
         @Override
         public void onTaskRemoved(Intent rootIntent) {
-            // Recents से हटाने पर restart
-            Intent restart = new Intent(getApplicationContext(), LocationForegroundService.class);
-            restart.setPackage(getPackageName());
-            ContextCompat.startForegroundService(getApplicationContext(), restart);
+            // Recents से हटाने पर restart तभी करें जब यूज़र ने STOP न दबाया हो
+            SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+            boolean userStopped = prefs.getBoolean(KEY_USER_STOPPED, false);
+            int doctorId = prefs.getInt("doctor_id", -1);
+            String appointmentId = prefs.getString("ongoing_appointment_id", null);
+
+            if (!userStopped && doctorId != -1 && appointmentId != null) {
+                Intent restart = new Intent(getApplicationContext(), LocationForegroundService.class);
+                restart.setPackage(getPackageName());
+                ContextCompat.startForegroundService(getApplicationContext(), restart);
+                Log.d("LL", "onTaskRemoved(): service restarted");
+            }
             super.onTaskRemoved(rootIntent);
         }
 
@@ -199,6 +235,7 @@ public class LiveLocationManager {
             if (connectivityManager != null && netCallback != null) {
                 try { connectivityManager.unregisterNetworkCallback(netCallback); } catch (Exception ignored) {}
             }
+            Log.d("LL", "onDestroy()");
             super.onDestroy();
         }
 
@@ -231,12 +268,17 @@ public class LiveLocationManager {
             StringRequest req = new StringRequest(
                     Request.Method.POST,
                     LIVE_LOCATION_URL,
-                    response -> { /* success: do nothing */ },
+                    response -> {
+                        if (attempt % 5 == 0) {
+                            Log.d("LL", "OK(" + attempt + "): " + response);
+                        }
+                    },
                     error -> {
+                        Log.e("LL", "ERR(" + attempt + "): " + error);
                         // Exponential backoff: 0.5s, 1s, 2s, 4s ... up to ~32s
                         if (attempt < 6) {
                             long delay = (long) (500 * Math.pow(2, attempt));
-                            new android.os.Handler(getMainLooper()).postDelayed(
+                            new Handler(getMainLooper()).postDelayed(
                                     () -> sendLocationToServer(ctx, doctorId, appointmentId, lat, lon, attempt + 1),
                                     delay
                             );
@@ -259,7 +301,7 @@ public class LiveLocationManager {
             // Reasonable retry policy for transient server errors
             req.setRetryPolicy(new DefaultRetryPolicy(
                     10_000, // timeout
-                    0,      // volley-level retries (we do our own)
+                    0,      // volley-level retries (हम अपना backoff कर रहे हैं)
                     1.0f
             ));
             Volley.newRequestQueue(ctx.getApplicationContext()).add(req);
@@ -277,7 +319,7 @@ public class LiveLocationManager {
                 o.put("ts", System.currentTimeMillis());
                 arr.put(o);
 
-                // Keep queue bounded (e.g., last 200 entries)
+                // Keep queue bounded (last 200 entries)
                 if (arr.length() > 200) {
                     JSONArray trimmed = new JSONArray();
                     for (int i = arr.length() - 200; i < arr.length(); i++) {
@@ -306,6 +348,7 @@ public class LiveLocationManager {
                     sendLocationToServer(getApplicationContext(), d, a, lt, ln, 0);
                 }
                 sp.edit().putString(Q_KEY, "[]").apply();
+                Log.d("LL", "flushQueuedUpdates(): " + arr.length() + " sent");
             } catch (JSONException ignored) {}
         }
 
@@ -325,18 +368,27 @@ public class LiveLocationManager {
         }
 
         private Notification buildNotification(String content) {
+            // Main activity open intent
             Intent open = new Intent(this, MainActivity.class);
             open.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            PendingIntent pi = PendingIntent.getActivity(
+            PendingIntent piOpen = PendingIntent.getActivity(
                     this, 0, open,
                     PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
             );
 
+            // STOP action intent → इसी service को ACTION_STOP के साथ
+            Intent stop = new Intent(this, LocationForegroundService.class).setAction(ACTION_STOP);
+            PendingIntent piStop = PendingIntent.getService(
+                    this, 1, stop,
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+            );
+
             NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL_ID)
-                    .setSmallIcon(R.drawable.location)
+                    .setSmallIcon(R.drawable.location)            // drawable होना चाहिए (24dp)
                     .setContentTitle("Doctor At Home — Live Tracking")
                     .setContentText(content)
-                    .setContentIntent(pi)
+                    .setContentIntent(piOpen)
+                    .addAction(new NotificationCompat.Action(0, "STOP", piStop)) // STOP button
                     .setPriority(NotificationCompat.PRIORITY_LOW)
                     .setCategory(NotificationCompat.CATEGORY_SERVICE)
                     .setOngoing(true)       // non-dismissable
@@ -373,12 +425,16 @@ public class LiveLocationManager {
     public static class BootRestartReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            SharedPreferences prefs = context.getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
+            SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            boolean userStopped = prefs.getBoolean(KEY_USER_STOPPED, false);
             int doctorId = prefs.getInt("doctor_id", -1);
             String appointmentId = prefs.getString("ongoing_appointment_id", null);
-            if (doctorId != -1 && appointmentId != null) {
+            if (!userStopped && doctorId != -1 && appointmentId != null) {
                 Intent svc = new Intent(context, LiveLocationManager.LocationForegroundService.class);
                 ContextCompat.startForegroundService(context, svc);
+                Log.d("LL", "BootRestartReceiver → service started");
+            } else {
+                Log.d("LL", "BootRestartReceiver → not starting (userStopped or no appt)");
             }
         }
     }

@@ -8,12 +8,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
-/**
- * BackgroundService:
- * - Hourly "active" ping stub (implement API if needed).
- * - Every 60s guard to ensure LiveLocationManager is running during an active appointment.
- * - Start this service when doctor goes online / accepts an appointment.
- */
 public class BackgroundService extends Service {
 
     public static final String TAG = "BackgroundService";
@@ -64,27 +58,20 @@ public class BackgroundService extends Service {
             handler.removeCallbacks(activeTick);
             handler.removeCallbacks(trackingGuard);
         }
-        setDoctorInactive();
-        Log.d(TAG, "Destroyed → removed callbacks; marked doctor inactive.");
+        // ❌ पहले हम यहाँ "setDoctorInactive()" करते थे — हटाएँ।
+        Log.d(TAG, "Destroyed → removed callbacks (not marking inactive here).");
     }
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
 
-    /* ===== Stubs to integrate server status if you want ===== */
-
+    /* ===== Server status (optional) ===== */
     private void keepDoctorActive() {
         Log.d(TAG, "Active ping → implement API if needed.");
         // TODO: Volley/Retrofit call to mark doctor active on server
     }
 
-    private void setDoctorInactive() {
-        Log.d(TAG, "Inactive ping → implement API if needed.");
-        // TODO: Volley/Retrofit call to mark doctor inactive on server
-    }
-
     /* ===== Guard logic ===== */
-
     private void ensureLocationTrackingAlive() {
         Context ctx = getApplicationContext();
         SharedPreferences prefs = ctx.getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);

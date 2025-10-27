@@ -17,11 +17,18 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /> <!-- Android 10+ -->
+    <!-- Top-level (manifest में) -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+
 
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Media / camera (your existing usage) -->
+    <!-- Boot पर auto restart के लिए -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Media / camera (existing) -->
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- For API < 33 -->
     <uses-permission
@@ -87,16 +94,25 @@
             android:name=".LiveLocationManager$LocationForegroundService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location"
-            />
-
-
+            android:foregroundServiceType="location" />
 
         <!-- Guard/background service: periodically ensures tracking stays alive -->
         <service
             android:name=".BackgroundService"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- BOOT/Update पर auto-restart के लिए receiver (inner class) -->
+        <receiver
+            android:name=".LiveLocationManager$BootRestartReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
 
         <!-- Google Maps API key -->
         <meta-data
@@ -123,6 +139,10 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+
+
+
 
         <!-- Default FCM notification channel -->
         <meta-data
