@@ -3,25 +3,33 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.infowave.doctor_control">
 
-    <!-- Existing permissions -->
+    <!-- Features -->
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
 
+    <!-- Core permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/> <!-- Android 10+ -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/> <!-- Android 13+ -->
-    <!-- AndroidManifest.xml (inside <manifest>) -->
+    <!-- Location & foreground service (continuous tracking) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /> <!-- Android 10+ -->
+
+    <!-- Notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Media / camera (your existing usage) -->
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- For API < 33 -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <!-- For API 33+ -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -34,39 +42,69 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="35">
 
-        <activity android:name=".AnimalVirtualReportActivity" android:exported="false" />
-        <activity android:name=".PendingPaymentActivity" android:exported="false" />
-        <activity android:name=".PaymentHistoryActivity" android:exported="false" />
-        <activity android:name=".patient_bill" android:exported="false" />
+        <!-- Activities (as provided) -->
+        <activity
+            android:name=".AnimalVirtualReportActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PendingPaymentActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PaymentHistoryActivity"
+            android:exported="false" />
+        <activity
+            android:name=".patient_bill"
+            android:exported="false" />
         <activity android:name=".tarmsandcondition" />
         <activity android:name=".suppor" />
-        <activity android:name=".track_patient_location" android:exported="false" />
-        <service android:name=".BackgroundService"
-            tools:ignore="MissingClass" />
-        <activity android:name=".view_patient_report" android:exported="false" />
+        <activity
+            android:name=".track_patient_location"
+            android:exported="false" />
+        <activity
+            android:name=".view_patient_report"
+            android:exported="false" />
         <activity android:name=".PatientProfileActivity" />
-        <activity android:name=".otp_verification" android:exported="false" />
-        <activity android:name=".login" android:exported="true">
+        <activity
+            android:name=".otp_verification"
+            android:exported="false" />
+
+        <activity
+            android:name=".login"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".MainActivity" android:exported="true" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true" />
         <activity android:name=".medical_report" />
 
+        <!-- Foreground location service: keeps sending location in background -->
         <service
             android:name=".LiveLocationManager$LocationForegroundService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location"
-            tools:ignore="ForegroundServicePermission" />
+            />
 
+
+
+        <!-- Guard/background service: periodically ensures tracking stays alive -->
+        <service
+            android:name=".BackgroundService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- Google Maps API key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key"
             tools:replace="android:value" />
 
+        <!-- FileProvider (camera/image sharing) -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -86,7 +124,7 @@
             </intent-filter>
         </service>
 
-        <!-- DEFAULT NOTIFICATION CHANNEL for FCM -->
+        <!-- Default FCM notification channel -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="requests_channel" />
