@@ -18,20 +18,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Your original ScrollView content, constrained between top/bottom scrims -->
     <ScrollView
         android:id="@+id/scroll_content_animal"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="@color/white"
+        android:background="@android:color/white"
         android:fillViewport="true"
         android:padding="16dp"
+        android:clipToPadding="false"
         app:layout_constraintTop_toBottomOf="@id/status_bar_scrim"
         app:layout_constraintBottom_toTopOf="@id/navigation_bar_scrim"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- ======= BEGIN: your original layout (unchanged IDs) ======= -->
         <LinearLayout
             android:id="@+id/rootAnimal"
             android:layout_width="match_parent"
@@ -62,6 +61,68 @@
                     android:text="Direct Image" />
             </RadioGroup>
 
+            <!-- Direct Upload Section -->
+            <LinearLayout
+                android:id="@+id/direct_upload_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="16dp">
+
+                <ImageView
+                    android:id="@+id/ivReportImage"
+                    android:layout_width="200dp"
+                    android:layout_height="200dp"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="16dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="Selected image preview"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:weightSum="2"
+                    android:gravity="center_horizontal">
+
+                    <Button
+                        android:id="@+id/btnCaptureImage"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Capture from Camera"
+                        android:backgroundTint="?attr/colorPrimary"
+                        android:textColor="@android:color/white"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginRight="8dp"
+                        android:layout_marginStart="0dp" />
+
+                    <Button
+                        android:id="@+id/btnUploadImage"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Upload from Gallery"
+                        android:backgroundTint="?attr/colorPrimary"
+                        android:textColor="@android:color/white"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginLeft="8dp"
+                        android:layout_marginEnd="0dp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnUploadDirect"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Upload Selected Image"
+                    android:layout_marginTop="24dp"
+                    android:backgroundTint="?attr/colorPrimary"
+                    android:textColor="@android:color/white" />
+            </LinearLayout>
+
             <!-- Virtual Report Form -->
             <LinearLayout
                 android:id="@+id/virtual_report_form"
@@ -70,15 +131,14 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- Animal Details -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Animal Details"
-                    android:textColor="@color/black"
+                    android:textColor="@android:color/black"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="16dp"/>
+                    android:layout_marginTop="16dp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
@@ -87,7 +147,7 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etAnimalName"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"/>
+                        android:layout_height="wrap_content" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <LinearLayout
@@ -103,7 +163,7 @@
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etSpeciesBreed"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"/>
+                            android:layout_height="wrap_content" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -114,7 +174,7 @@
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etSex"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"/>
+                            android:layout_height="wrap_content" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -132,7 +192,7 @@
                             android:id="@+id/etAge"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"/>
+                            android:inputType="numberDecimal" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -144,7 +204,7 @@
                             android:id="@+id/etWeight"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"/>
+                            android:inputType="numberDecimal" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -157,7 +217,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textMultiLine"
-                        android:minLines="3"/>
+                        android:minLines="3" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -168,18 +228,17 @@
                         android:id="@+id/etDate"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="date"/>
+                        android:inputType="date" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Vital Signs -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Vital Signs"
-                    android:textColor="@color/black"
+                    android:textColor="@android:color/black"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="16dp"/>
+                    android:layout_marginTop="16dp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -195,7 +254,7 @@
                             android:id="@+id/etTemperature"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"/>
+                            android:inputType="numberDecimal" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -207,7 +266,7 @@
                             android:id="@+id/etPulse"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number"/>
+                            android:inputType="number" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -225,7 +284,7 @@
                             android:id="@+id/etSpo2"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number"/>
+                            android:inputType="number" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -237,11 +296,10 @@
                             android:id="@+id/etBloodPressure"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text"/>
+                            android:inputType="text" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Animal-specific clinical fields -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -256,7 +314,7 @@
                             android:id="@+id/etRespiratoryRateBpm"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number"/>
+                            android:inputType="number" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -268,7 +326,7 @@
                             android:id="@+id/etPainScore"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number"/>
+                            android:inputType="number" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -280,7 +338,7 @@
                         android:id="@+id/etHydrationStatus"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="text"/>
+                        android:inputType="text" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <LinearLayout
@@ -297,7 +355,7 @@
                             android:id="@+id/etMucousMembranes"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text"/>
+                            android:inputType="text" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -309,7 +367,7 @@
                             android:id="@+id/etCrtSec"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"/>
+                            android:inputType="numberDecimal" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -322,7 +380,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textMultiLine"
-                        android:minLines="2"/>
+                        android:minLines="2" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -334,20 +392,18 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textMultiLine"
-                        android:minLines="2"/>
+                        android:minLines="2" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Additional Observations -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Additional Observations"
-                    android:textColor="@color/black"
+                    android:textColor="@android:color/black"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="16dp"/>
+                    android:layout_marginTop="16dp" />
 
-                <!-- Symptoms -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -357,10 +413,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:minLines="3"
-                        android:inputType="textMultiLine"/>
+                        android:inputType="textMultiLine" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Respiratory System -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -369,10 +424,9 @@
                         android:id="@+id/etRespiratorySystem"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="text"/>
+                        android:inputType="text" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Reasons -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -382,15 +436,14 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:minLines="2"
-                        android:inputType="textMultiLine"/>
+                        android:inputType="textMultiLine" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Prescribed Medications -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Prescribed Medications"
-                    android:textColor="@color/black"
+                    android:textColor="@android:color/black"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginTop="16dp" />
@@ -401,7 +454,6 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <!-- Initial medicine row -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -442,21 +494,20 @@
                     android:layout_gravity="end"
                     android:layout_marginTop="8dp" />
 
-                <!-- Investigation -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Investigation Suggested"
-                    android:textColor="@color/black"
+                    android:textColor="@android:color/black"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="16dp"/>
+                    android:layout_marginTop="16dp" />
 
                 <CheckBox
                     android:id="@+id/cbInvestigation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Requires Further Investigation"/>
+                    android:text="Requires Further Investigation" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilInvestigationNotes"
@@ -471,10 +522,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:minLines="2"
-                        android:inputType="textMultiLine"/>
+                        android:inputType="textMultiLine" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Footer fields -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -483,7 +533,7 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etSignature"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"/>
+                        android:layout_height="wrap_content" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -494,72 +544,21 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etReportType"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"/>
+                        android:layout_height="wrap_content" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-            </LinearLayout>
-
-            <!-- Direct Upload Section -->
-            <LinearLayout
-                android:id="@+id/direct_upload_section"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone"
-                android:layout_marginTop="16dp">
-
-                <LinearLayout
+                <!-- Save Report button ONLY for virtual report -->
+                <Button
+                    android:id="@+id/btnSaveReport"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:weightSum="2">
-
-                    <Button
-                        android:id="@+id/btnCaptureImage"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Capture from Camera"
-                        android:backgroundTint="@color/dark_cyan"
-                        android:textColor="@color/white"/>
-
-                    <View
-                        android:layout_width="8dp"
-                        android:layout_height="wrap_content"/>
-
-                    <Button
-                        android:id="@+id/btnUploadImage"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Upload from Gallery"
-                        android:backgroundTint="@color/dark_cyan"
-                        android:textColor="@color/white"/>
-                </LinearLayout>
-
-                <ImageView
-                    android:id="@+id/ivReportImage"
-                    android:layout_width="200dp"
-                    android:layout_height="200dp"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="16dp"
-                    android:adjustViewBounds="true"
-                    android:scaleType="centerCrop"
-                    android:visibility="gone"/>
+                    android:text="Save Report"
+                    android:layout_marginTop="24dp"
+                    android:backgroundTint="?attr/colorPrimary"
+                    android:textColor="@android:color/white" />
             </LinearLayout>
 
-            <!-- Common Save Button -->
-            <Button
-                android:id="@+id/btnSaveReport"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Save Report"
-                android:layout_marginTop="24dp"
-                android:backgroundTint="@color/navy_blue"
-                android:textColor="@color/white"/>
         </LinearLayout>
-        <!-- ======= END: your original layout ======= -->
-
     </ScrollView>
 
     <!-- BOTTOM black scrim; height set at runtime from system bar insets -->

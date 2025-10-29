@@ -214,10 +214,7 @@ public class home extends Fragment {
     }
 
     private void fetchDoctorStatus(final TextView statusText, final Switch statusToggle, final ImageView statusIcon) {
-
         String urlFetchStatus = ApiConfig.endpoint("Doctors/get_doctor_status.php");
-
-
 
         StringRequest stringRequest = new StringRequest(Request.Method.POST, urlFetchStatus,
                 response -> {
@@ -226,18 +223,35 @@ public class home extends Fragment {
                         boolean success = jsonObject.getBoolean("success");
                         if (success) {
                             String status = jsonObject.getString("status");
-                            if ("active".equalsIgnoreCase(status)) {
+                            if ("Active".equalsIgnoreCase(status)) {
                                 statusText.setText("Active");
                                 statusToggle.setChecked(true);
+                                statusToggle.setEnabled(true);
                                 statusIcon.setImageResource(R.drawable.ic_active_status);
-                            } else {
+                            } else if ("Inactive".equalsIgnoreCase(status)) {
                                 statusText.setText("Inactive");
                                 statusToggle.setChecked(false);
+                                statusToggle.setEnabled(true);
+                                statusIcon.setImageResource(R.drawable.ic_inactive_status);
+                            } else if ("Ongoing Appointment".equalsIgnoreCase(status)) {
+                                statusText.setText("Ongoing Appointment");
+                                statusToggle.setChecked(true);
+                                statusToggle.setEnabled(false); // Can't toggle ongoing manually
+                                statusIcon.setImageResource(R.drawable.ic_inactive_status); // You must have this drawable
+                            } else {
+                                // Fallback
+                                statusText.setText(status);
+                                statusToggle.setChecked(false);
+                                statusToggle.setEnabled(true);
                                 statusIcon.setImageResource(R.drawable.ic_inactive_status);
                             }
                         }
                     } catch (JSONException e) {
-                        // no action; will use default UI state
+                        // Fallback UI
+                        statusText.setText("Inactive");
+                        statusToggle.setChecked(false);
+                        statusToggle.setEnabled(true);
+                        statusIcon.setImageResource(R.drawable.ic_inactive_status);
                     } finally {
                         attachStatusToggleListener(statusToggle, statusText, statusIcon);
                     }
