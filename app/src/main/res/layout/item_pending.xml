@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_margin="8dp"
     app:cardCornerRadius="12dp"
     app:cardElevation="2dp">
@@ -20,7 +20,42 @@
             android:text="John Doe"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@color/navy_blue"/>
+            android:textColor="@color/black"/>
+        <!-- 🐾 Animal Category (Initially Gone, unique id) -->
+        <TextView
+            android:id="@+id/tvAnimalName2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Animal Category: "
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginTop="6dp"
+            android:visibility="gone" />
+
+        <!-- 🐕 Animal Breed (Initially Gone, unique id) -->
+        <TextView
+            android:id="@+id/tvAnimalBreed2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Breed: "
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginTop="2dp"
+            android:visibility="gone" />
+
+        <!-- 💉 Vaccination Name (Initially Gone, unique id) -->
+        <TextView
+            android:id="@+id/tvVaccinationName2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Vaccination: "
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginTop="2dp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tv_problem"
@@ -29,6 +64,7 @@
             android:text="Problem: Fever and Headache"
             android:textSize="16sp"
             android:textColor="@color/black"/>
+
         <TextView
             android:id="@+id/tv_distans"
             android:layout_width="match_parent"
@@ -51,8 +87,9 @@
             android:layout_height="wrap_content"
             android:text="Payment Method: "
             android:textSize="14sp"
-            android:textColor="@android:color/black"
+            android:textColor="@color/black"
             android:layout_marginTop="4dp" />
+
 
 
         <LinearLayout
@@ -76,7 +113,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="track "
+                android:text="Track"
                 android:textColor="@color/white"
                 android:backgroundTint="@color/backgroundGradientStart"/>
         </LinearLayout>

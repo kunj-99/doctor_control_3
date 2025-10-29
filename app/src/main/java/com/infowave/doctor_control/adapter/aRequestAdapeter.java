@@ -52,10 +52,12 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         final Appointment appointment = appointments.get(position);
+
         holder.tvPatientName.setText(appointment.getFullName());
         holder.tvProblem.setText("Problem: " + appointment.getProblem());
         holder.tvDistance.setText(appointment.getDistance());
 
+        // Price + payment method label (kept same logic as before)
         if ("Online".equalsIgnoreCase(appointment.getPaymentMethod())) {
             holder.tvPrice.setText("₹ " + appointment.getTotalPayment() + " paid");
         } else if ("Offline".equalsIgnoreCase(appointment.getPaymentMethod())) {
@@ -63,9 +65,43 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         } else {
             holder.tvPrice.setText("₹ " + appointment.getTotalPayment());
         }
-
         holder.tvPaymentMethod.setText("Payment Method: " + appointment.getPaymentMethod());
 
+        // Hide optional vet fields by default
+        if (holder.tvAnimalCategory != null)   holder.tvAnimalCategory.setVisibility(View.GONE);
+        if (holder.tvAnimalBreed != null)      holder.tvAnimalBreed.setVisibility(View.GONE);
+        if (holder.tvVaccinationName != null)  holder.tvVaccinationName.setVisibility(View.GONE);
+
+        // Show Animal Category if present
+        if (holder.tvAnimalCategory != null) {
+            String acn = appointment.getAnimalCategoryName();
+            if (!isMissing(acn)) {
+                holder.tvAnimalCategory.setText("Animal Category: " + acn.trim());
+                holder.tvAnimalCategory.setVisibility(View.VISIBLE);
+            }
+        }
+
+        // Show Animal Breed if present
+        if (holder.tvAnimalBreed != null) {
+            String breed = appointment.getAnimalBreed();
+            if (!isMissing(breed)) {
+                holder.tvAnimalBreed.setText("Breed: " + breed.trim());
+                holder.tvAnimalBreed.setVisibility(View.VISIBLE);
+            }
+        }
+
+        // Show Vaccination only when truly present (hide for null/"null"/"N/A"/empty/whitespace)
+        if (holder.tvVaccinationName != null) {
+            String vxn = appointment.getVaccinationName();
+            if (!isMissing(vxn)) {
+                holder.tvVaccinationName.setText("Vaccination: " + vxn.trim());
+                holder.tvVaccinationName.setVisibility(View.VISIBLE);
+            } else {
+                holder.tvVaccinationName.setVisibility(View.GONE);
+            }
+        }
+
+        // Accept -> enter ETA then move to Pending
         holder.btnAccept.setOnClickListener(v -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
             builder.setTitle("Enter ETA");
@@ -115,6 +151,7 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             builder.show();
         });
 
+        // Reject
         holder.btnReject.setOnClickListener(v ->
                 updateAppointmentStatus(
                         appointment.getAppointmentId(),
@@ -133,6 +170,7 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvPatientName, tvProblem, tvDistance, tvPrice, tvPaymentMethod;
+        TextView tvAnimalCategory, tvAnimalBreed, tvVaccinationName;
         Button btnAccept, btnReject;
 
         public ViewHolder(@NonNull View itemView) {
@@ -144,29 +182,51 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             tvPaymentMethod = itemView.findViewById(R.id.tv_payment_method1);
             btnAccept       = itemView.findViewById(R.id.btn_accept);
             btnReject       = itemView.findViewById(R.id.btn_reject);
+
+            // IDs must match your XML
+            tvAnimalCategory  = itemView.findViewById(R.id.tv_animal_name);
+            tvAnimalBreed     = itemView.findViewById(R.id.tv_animal_breed);
+            tvVaccinationName = itemView.findViewById(R.id.tv_vaccination_name);
         }
     }
 
     public static class Appointment {
         private final String appointmentId, fullName, problem, totalPayment, paymentMethod;
         private String distance;
+        private final String animalCategoryName;
+        private final String animalBreed;
+        private final String vaccinationName;
 
-        public Appointment(String id, String name, String prob, String dist, String totalPayment, String paymentMethod) {
+        public Appointment(String id,
+                           String name,
+                           String prob,
+                           String dist,
+                           String totalPayment,
+                           String paymentMethod,
+                           String animalCategoryName,
+                           String animalBreed,
+                           String vaccinationName) {
             this.appointmentId = id;
             this.fullName = name;
             this.problem = prob;
             this.distance = dist;
             this.totalPayment = totalPayment;
             this.paymentMethod = paymentMethod;
+            this.animalCategoryName = animalCategoryName;
+            this.animalBreed = animalBreed;
+            this.vaccinationName = vaccinationName;
         }
 
-        public String getAppointmentId()   { return appointmentId; }
-        public String getFullName()        { return fullName; }
-        public String getProblem()         { return problem; }
-        public String getDistance()        { return distance; }
-        public String getTotalPayment()    { return totalPayment; }
-        public String getPaymentMethod()   { return paymentMethod; }
-        public void setDistance(String d)  { this.distance = d; }
+        public String getAppointmentId()       { return appointmentId; }
+        public String getFullName()            { return fullName; }
+        public String getProblem()             { return problem; }
+        public String getDistance()            { return distance; }
+        public String getTotalPayment()        { return totalPayment; }
+        public String getPaymentMethod()       { return paymentMethod; }
+        public void setDistance(String d)      { this.distance = d; }
+        public String getAnimalCategoryName()  { return animalCategoryName; }
+        public String getAnimalBreed()         { return animalBreed; }
+        public String getVaccinationName()     { return vaccinationName; }
     }
 
     private void updateAppointmentStatus(
@@ -211,12 +271,20 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
                         }
                     }
                 },
-                error -> {
-                    Toast.makeText(context,
-                            "Unable to update appointment. Please check your network and try again.", Toast.LENGTH_SHORT).show();
-                }
+                error -> Toast.makeText(context,
+                        "Unable to update appointment. Please check your network and try again.",
+                        Toast.LENGTH_SHORT).show()
         );
 
         queue.add(request);
+    }
+
+    // Treat null/empty/"null"/"N/A"/"undefined" etc. as missing
+    private static boolean isMissing(String s) {
+        if (s == null) return true;
+        String t = s.trim();
+        if (t.isEmpty()) return true;
+        String v = t.toLowerCase();
+        return v.equals("null") || v.equals("none") || v.equals("n/a") || v.equals("na") || v.equals("undefined");
     }
 }

@@ -57,14 +57,18 @@ public class aOngoingFragment extends Fragment {
     private final ArrayList<Boolean> hasReport     = new ArrayList<>();
     private final ArrayList<String> amounts        = new ArrayList<>();
     private final ArrayList<String> paymentMethods = new ArrayList<>();
-    private final ArrayList<Boolean> vetCases      = new ArrayList<>(); // NEW
+
+    // 🟢 NEW: Vet flags and data
+    private final ArrayList<Boolean> vetCases           = new ArrayList<>();
+    private final ArrayList<String> animalCategoryNames = new ArrayList<>();
+    private final ArrayList<String> animalBreeds        = new ArrayList<>();
+    private final ArrayList<String> vaccinationNames    = new ArrayList<>();
 
     private String doctorId;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable refresher;
 
     private ActivityResultLauncher<Intent> reportLauncher;
-
     private ActivityResultLauncher<String> singlePermLauncher;
 
     private boolean askedFineOnce = false;
@@ -199,9 +203,16 @@ public class aOngoingFragment extends Fragment {
                                 amounts.add(o.optString("amount", "0.00"));
                                 paymentMethods.add(o.optString("payment_method", "Unknown"));
 
-                                boolean isVet = o.optInt("is_vet_case", 0) == 1; // NEW
-                                vetCases.add(isVet);                               // NEW
+                                // 🟢 Vet flag
+                                boolean isVet = o.optInt("is_vet_case", 0) == 1;
+                                vetCases.add(isVet);
 
+                                // 🟢 Vet extras (always read; adapter will hide when empty)
+                                animalCategoryNames.add(clean(o.optString("animal_category_name", "")));
+                                animalBreeds.add(clean(o.optString("animal_breed", "")));
+                                vaccinationNames.add(clean(o.optString("vaccination_name", "")));
+
+                                // Save first ongoing id for services
                                 if (appointmentIds.size() == 1) {
                                     requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                                             .edit()
@@ -210,8 +221,9 @@ public class aOngoingFragment extends Fragment {
                                 }
                             }
 
-                            // ✅ PASS the vet flags to adapter
+                            // ✅ Push vet info to adapter
                             adapter.setVetCases(vetCases);
+                            adapter.setVetData(animalCategoryNames, animalBreeds, vaccinationNames);
                             adapter.notifyDataSetChanged();
 
                             ensureServicesBasedOnAppointments();
@@ -254,7 +266,8 @@ public class aOngoingFragment extends Fragment {
     private void applyEmptyAppointments() {
         recyclerView.post(() -> {
             clearAllLists();
-            adapter.setVetCases(vetCases); // ✅ keep adapter in sync
+            adapter.setVetCases(vetCases);
+            adapter.setVetData(animalCategoryNames, animalBreeds, vaccinationNames);
             adapter.notifyDataSetChanged();
             stopTrackingServices();
             requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
@@ -271,7 +284,11 @@ public class aOngoingFragment extends Fragment {
         hasReport.clear();
         amounts.clear();
         paymentMethods.clear();
-        vetCases.clear(); // NEW
+
+        vetCases.clear();
+        animalCategoryNames.clear();
+        animalBreeds.clear();
+        vaccinationNames.clear();
     }
 
     private void completeAppointment(String appointmentId, int position) {
@@ -292,9 +309,14 @@ public class aOngoingFragment extends Fragment {
                             hasReport.remove(position);
                             amounts.remove(position);
                             paymentMethods.remove(position);
-                            if (position < vetCases.size()) vetCases.remove(position); // keep lists aligned
 
-                            adapter.setVetCases(vetCases); // reflect removal
+                            if (position < vetCases.size())            vetCases.remove(position);
+                            if (position < animalCategoryNames.size()) animalCategoryNames.remove(position);
+                            if (position < animalBreeds.size())        animalBreeds.remove(position);
+                            if (position < vaccinationNames.size())    vaccinationNames.remove(position);
+
+                            adapter.setVetCases(vetCases);
+                            adapter.setVetData(animalCategoryNames, animalBreeds, vaccinationNames);
                             adapter.notifyItemRemoved(position);
                             adapter.notifyItemRangeChanged(position, appointmentIds.size());
 
@@ -396,5 +418,16 @@ public class aOngoingFragment extends Fragment {
         Context ctx = requireContext().getApplicationContext();
         LiveLocationManager.getInstance().stopLocationUpdates(ctx);
         ctx.stopService(new Intent(ctx, BackgroundService.class));
+    }
+
+    // Normalize backend oddities like "null", "N/A", "undefined", or whitespace to empty string
+    private static String clean(String s) {
+        if (s == null) return "";
+        String t = s.trim();
+        if (t.isEmpty()) return "";
+        String v = t.toLowerCase();
+        if (v.equals("null") || v.equals("none") || v.equals("n/a") || v.equals("na") || v.equals("undefined"))
+            return "";
+        return t;
     }
 }

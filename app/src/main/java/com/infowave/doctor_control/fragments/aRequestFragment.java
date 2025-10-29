@@ -123,9 +123,7 @@ public class aRequestFragment extends Fragment {
     @SuppressLint("NotifyDataSetChanged")
     private void fetchDataFromServer() {
 
-
         String url = ApiConfig.endpoint("Doctors/getRequestappointment.php", "doctor_id", doctorId);
-
 
         queue.add(new StringRequest(
                 com.android.volley.Request.Method.GET, url,
@@ -152,8 +150,21 @@ public class aRequestFragment extends Fragment {
                             String totalPayment  = obj.optString("amount", "0.00");
                             String paymentMethod = obj.optString("payment_method", "Unknown");
 
+                            // 🟢 NEW FIELDS
+                            String animalCategoryName = obj.optString("animal_category_name", "");
+                            String vaccinationName    = obj.optString("vaccination_name", "");
+                            String animal_breed  = obj.optString("animal_breed");
+
                             appointments.add(new aRequestAdapeter.Appointment(
-                                    apptId, name, problem, "…", totalPayment, paymentMethod
+                                    apptId,
+                                    name,
+                                    problem,
+                                    "…",
+                                    totalPayment,
+                                    paymentMethod,
+                                    animalCategoryName,
+                                    animal_breed,
+                                    vaccinationName
                             ));
                             links.add(link);
                         }

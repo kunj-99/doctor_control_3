@@ -20,7 +20,45 @@
             android:text="John Doe"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@color/navy_blue"/>
+            android:textColor="@color/navy_blue" />
+
+        <!-- 🐾 Animal Category (Initially Gone) -->
+        <TextView
+            android:id="@+id/tv_animal_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Animal Category:"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:visibility="gone"
+            android:layout_marginTop="6dp" />
+
+        <!-- 🐕 Animal Breed (Initially Gone) -->
+        <TextView
+            android:id="@+id/tv_animal_breed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Breed:"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:visibility="gone"
+            android:layout_marginTop="4dp" />
+
+
+        <!-- 💉 Vaccination Name (Initially Gone) -->
+        <TextView
+            android:id="@+id/tv_vaccination_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Vaccination:"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:visibility="gone"
+            android:layout_marginTop="2dp" />
+
 
         <TextView
             android:id="@+id/tv_problem"
@@ -28,7 +66,7 @@
             android:layout_height="wrap_content"
             android:text="Problem: Fever and Headache"
             android:textSize="16sp"
-            android:textColor="@color/black"/>
+            android:textColor="@color/black" />
 
         <TextView
             android:id="@+id/tv_distans"
@@ -36,7 +74,7 @@
             android:layout_height="wrap_content"
             android:text="23 km"
             android:textSize="16sp"
-            android:textColor="@color/black"/>
+            android:textColor="@color/black" />
 
         <TextView
             android:id="@+id/tv_price"
@@ -44,17 +82,19 @@
             android:layout_height="wrap_content"
             android:text="₹ 50"
             android:textSize="16sp"
-            android:textColor="@color/black"/>
+            android:textColor="@color/black" />
 
-        <!-- ✅ Newly added TextView for payment method -->
+        <!-- ✅ Payment Method -->
         <TextView
             android:id="@+id/tv_payment_method1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Payment Method: "
-            android:textSize="14sp"
-            android:textColor="@android:color/black"
+            android:text="Payment Method:"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
             android:layout_marginTop="4dp" />
+
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -70,7 +110,7 @@
                 android:text="Accept"
                 android:textColor="@color/white"
                 android:layout_marginEnd="10dp"
-                android:backgroundTint="#4CAF50"/>
+                android:backgroundTint="#4CAF50" />
 
             <Button
                 android:id="@+id/btn_reject"
@@ -79,7 +119,7 @@
                 android:layout_weight="1"
                 android:text="Reject"
                 android:textColor="@color/white"
-                android:backgroundTint="@color/error"/>
+                android:backgroundTint="@color/error" />
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

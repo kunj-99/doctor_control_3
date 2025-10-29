@@ -23,7 +23,7 @@ import com.android.volley.toolbox.Volley;
 import com.infowave.doctor_control.ApiConfig;
 import com.infowave.doctor_control.R;
 import com.infowave.doctor_control.track_patient_location;
-// ❗ Placeholder vet activity (you will implement this)
+// ❗ Placeholder vet activity (implement this in your project)
 import com.infowave.doctor_control.AnimalVirtualReportActivity;
 
 import org.json.JSONException;
@@ -47,8 +47,13 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     private final Consumer<Integer> onAppointmentCompleted;
     private final BiConsumer<String, Integer> onAddReportClicked;
 
-    // holds is_vet_case flags in same order as items
+    // is_vet_case flags (same order as items)
     private ArrayList<Boolean> vetCases = new ArrayList<>();
+
+    // NEW: Vet data arrays (same order as items)
+    private ArrayList<String> animalCategoryNames = new ArrayList<>();
+    private ArrayList<String> animalBreeds        = new ArrayList<>();
+    private ArrayList<String> vaccinationNames    = new ArrayList<>();
 
     public aOngoingAdapter(Context context,
                            ArrayList<String> appointmentIds,
@@ -74,14 +79,23 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         this.onAddReportClicked = onAddReportClicked;
     }
 
-    // called by Fragment after parsing JSON
+    // Called by Fragment after parsing JSON
     public void setVetCases(ArrayList<Boolean> list) {
         this.vetCases = (list != null) ? list : new ArrayList<>();
     }
 
+    // NEW: Called by Fragment to provide vet text fields
+    public void setVetData(ArrayList<String> animalCategoryNames,
+                           ArrayList<String> animalBreeds,
+                           ArrayList<String> vaccinationNames) {
+        this.animalCategoryNames = (animalCategoryNames != null) ? animalCategoryNames : new ArrayList<>();
+        this.animalBreeds        = (animalBreeds != null)        ? animalBreeds        : new ArrayList<>();
+        this.vaccinationNames    = (vaccinationNames != null)    ? vaccinationNames    : new ArrayList<>();
+    }
+
     @NonNull
     @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public aOngoingAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(context)
                 .inflate(R.layout.item_ongoing, parent, false);
         return new ViewHolder(view);
@@ -89,7 +103,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
 
     @SuppressLint("SetTextI18n")
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull aOngoingAdapter.ViewHolder holder, int position) {
         if (appointmentIds.size() == 0) {
             holder.tvPatientName.setText("No data available.");
             holder.tvProblem.setVisibility(View.GONE);
@@ -99,6 +113,11 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             holder.btnComplete.setVisibility(View.GONE);
             holder.btnTrack.setVisibility(View.GONE);
             holder.btnView.setVisibility(View.GONE);
+
+            // Hide vet fields too
+            if (holder.tvAnimalCategory != null)  holder.tvAnimalCategory.setVisibility(View.GONE);
+            if (holder.tvAnimalBreed != null)     holder.tvAnimalBreed.setVisibility(View.GONE);
+            if (holder.tvVaccinationName != null) holder.tvVaccinationName.setVisibility(View.GONE);
             return;
         }
 
@@ -137,6 +156,37 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         holder.btnComplete.setTextColor(ContextCompat.getColor(context,
                 reportSubmitted ? android.R.color.white : R.color.gray));
 
+        // ===== Vet fields binding (hide when missing) =====
+        if (holder.tvAnimalCategory != null) holder.tvAnimalCategory.setVisibility(View.GONE);
+        if (holder.tvAnimalBreed != null)    holder.tvAnimalBreed.setVisibility(View.GONE);
+        if (holder.tvVaccinationName != null)holder.tvVaccinationName.setVisibility(View.GONE);
+
+        // Show only when values are present (adapter lists may be shorter if fragment didn't set them)
+        if (holder.tvAnimalCategory != null && position < animalCategoryNames.size()) {
+            String ac = clean(animalCategoryNames.get(position));
+            if (!ac.isEmpty()) {
+                holder.tvAnimalCategory.setText("Animal Category: " + ac);
+                holder.tvAnimalCategory.setVisibility(View.VISIBLE);
+            }
+        }
+        if (holder.tvAnimalBreed != null && position < animalBreeds.size()) {
+            String br = clean(animalBreeds.get(position));
+            if (!br.isEmpty()) {
+                holder.tvAnimalBreed.setText("Breed: " + br);
+                holder.tvAnimalBreed.setVisibility(View.VISIBLE);
+            }
+        }
+        if (holder.tvVaccinationName != null && position < vaccinationNames.size()) {
+            String vx = clean(vaccinationNames.get(position));
+            if (!vx.isEmpty()) {
+                holder.tvVaccinationName.setText("Vaccination: " + vx);
+                holder.tvVaccinationName.setVisibility(View.VISIBLE);
+            } else {
+                holder.tvVaccinationName.setVisibility(View.GONE);
+            }
+        }
+        // ==================================================
+
         // Add Report / View logic
         if (reportSubmitted) {
             holder.btnView.setEnabled(false);
@@ -146,14 +196,12 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             holder.btnView.setEnabled(true);
             holder.btnView.setBackgroundColor(ContextCompat.getColor(context, R.color.primaryColor));
             holder.btnView.setTextColor(Color.WHITE);
-            holder.btnView.setText("Add Report");
+            holder.btnView.setText("Add report");
 
             holder.btnView.setOnClickListener(v -> {
                 boolean isVet = (position < vetCases.size()) && Boolean.TRUE.equals(vetCases.get(position));
                 if (isVet) {
                     // ===== VET FLOW =====
-                    // Placeholder activity. You will implement AnimalVirtualReportActivity.
-                    // Same extras as human flow: pass "appointment_id"
                     Intent intent = new Intent(context, AnimalVirtualReportActivity.class);
                     intent.putExtra("appointment_id", appointmentIds.get(position));
                     context.startActivity(intent);
@@ -192,7 +240,6 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     }
 
     private void updateAppointmentStatus(String appointmentId, int position, ViewHolder holder) {
-
         String url = ApiConfig.endpoint("Doctors/update_appointment_status.php");
 
         JSONObject payload = new JSONObject();
@@ -243,12 +290,18 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         paymentMethods.remove(position);
         if (position < vetCases.size()) vetCases.remove(position);
 
+        // Keep vet data arrays aligned
+        if (position < animalCategoryNames.size()) animalCategoryNames.remove(position);
+        if (position < animalBreeds.size())        animalBreeds.remove(position);
+        if (position < vaccinationNames.size())    vaccinationNames.remove(position);
+
         notifyItemRemoved(position);
         notifyItemRangeChanged(position, appointmentIds.size());
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvPatientName, tvProblem, tvDistance, tvAmount, tvPaymentMethod;
+        TextView tvAnimalCategory, tvAnimalBreed, tvVaccinationName; // NEW: vet views
         Button btnComplete, btnTrack, btnView;
 
         ViewHolder(@NonNull View itemView) {
@@ -261,6 +314,22 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             btnComplete = itemView.findViewById(R.id.btn_complete);
             btnTrack = itemView.findViewById(R.id.btn_cancel);
             btnView = itemView.findViewById(R.id.btn_view);
+
+            // IDs from item_ongoing.xml (third card layout)
+            tvAnimalCategory   = itemView.findViewById(R.id.tvAnimalName3);
+            tvAnimalBreed      = itemView.findViewById(R.id.tvAnimalBreed3);
+            tvVaccinationName  = itemView.findViewById(R.id.tvVaccinationName3);
         }
+    }
+
+    // Treat null/empty/"null"/"n/a"/"undefined" etc. as missing
+    private static String clean(String s) {
+        if (s == null) return "";
+        String t = s.trim();
+        if (t.isEmpty()) return "";
+        String v = t.toLowerCase();
+        if (v.equals("null") || v.equals("none") || v.equals("n/a") || v.equals("na") || v.equals("undefined"))
+            return "";
+        return t;
     }
 }

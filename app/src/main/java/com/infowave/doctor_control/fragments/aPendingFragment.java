@@ -95,9 +95,7 @@ public class aPendingFragment extends Fragment {
                         }
                         fetchPendingAppointments();
                     })
-                    .addOnFailureListener(e -> {
-                        fetchPendingAppointments();
-                    });
+                    .addOnFailureListener(e -> fetchPendingAppointments());
         }
     }
 
@@ -126,7 +124,6 @@ public class aPendingFragment extends Fragment {
     private void fetchPendingAppointments() {
         String url = ApiConfig.endpoint("Doctors/getPendingappointment.php", "doctor_id", doctorId);
 
-
         queue.add(new JsonObjectRequest(
                 Request.Method.GET, url, null,
                 response -> {
@@ -145,15 +142,30 @@ public class aPendingFragment extends Fragment {
 
                         for (int i = 0; i < arr.length(); i++) {
                             JSONObject o = arr.getJSONObject(i);
-                            String id             = o.optString("appointment_id");
-                            String name           = o.optString("patient_name");
-                            String reason         = o.optString("reason_for_visit");
-                            String link           = o.optString("patient_map_link", "");
-                            String amount         = o.optString("amount", "0.00");
-                            String paymentMethod  = o.optString("payment_method", "Unknown");
+
+                            String id            = o.optString("appointment_id");
+                            String name          = o.optString("patient_name");
+                            String reason        = o.optString("reason_for_visit");
+                            String link          = o.optString("patient_map_link", "");
+                            String amount        = o.optString("amount", "0.00");
+                            String paymentMethod = o.optString("payment_method", "Unknown");
+
+                            // 🟢 NEW: fetch the three vet fields
+                            String animalCategoryName = clean(o.optString("animal_category_name", ""));
+                            String animalBreed        = clean(o.optString("animal_breed", ""));
+                            String vaccinationName    = clean(o.optString("vaccination_name", ""));
 
                             appointments.add(new apendingAdapter.Appointment(
-                                    id, name, reason, "Calculating...", link, amount, paymentMethod
+                                    id,
+                                    name,
+                                    reason,
+                                    "Calculating...",
+                                    link,
+                                    amount,
+                                    paymentMethod,
+                                    animalCategoryName, // NEW
+                                    animalBreed,        // NEW
+                                    vaccinationName     // NEW
                             ));
                             links.add(link);
                         }
@@ -173,12 +185,23 @@ public class aPendingFragment extends Fragment {
                                 }
                         );
                     } catch (JSONException e) {
-                        // Silently ignore errors for production smoothness
+                        // ignore silently to keep UI smooth
                     }
                 },
                 error -> {
-                    // Silently ignore errors for production smoothness
+                    // ignore silently to keep UI smooth
                 }
         ));
+    }
+
+    // Normalize backend oddities like "null", "N/A", "undefined", or whitespace to empty string
+    private static String clean(String s) {
+        if (s == null) return "";
+        String t = s.trim();
+        if (t.isEmpty()) return "";
+        String v = t.toLowerCase();
+        if (v.equals("null") || v.equals("none") || v.equals("n/a") || v.equals("na") || v.equals("undefined"))
+            return "";
+        return t;
     }
 }
