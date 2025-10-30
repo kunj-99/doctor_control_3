@@ -50,10 +50,12 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
     // is_vet_case flags (same order as items)
     private ArrayList<Boolean> vetCases = new ArrayList<>();
 
-    // NEW: Vet data arrays (same order as items)
+    // Vet data arrays (same order as items)
     private ArrayList<String> animalCategoryNames = new ArrayList<>();
     private ArrayList<String> animalBreeds        = new ArrayList<>();
     private ArrayList<String> vaccinationNames    = new ArrayList<>();
+    // NEW: vaccination IDs (same order as items)
+    private ArrayList<String> vaccinationIds      = new ArrayList<>();
 
     public aOngoingAdapter(Context context,
                            ArrayList<String> appointmentIds,
@@ -84,13 +86,18 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         this.vetCases = (list != null) ? list : new ArrayList<>();
     }
 
-    // NEW: Called by Fragment to provide vet text fields
+    // Provide vet text fields
     public void setVetData(ArrayList<String> animalCategoryNames,
                            ArrayList<String> animalBreeds,
                            ArrayList<String> vaccinationNames) {
         this.animalCategoryNames = (animalCategoryNames != null) ? animalCategoryNames : new ArrayList<>();
         this.animalBreeds        = (animalBreeds != null)        ? animalBreeds        : new ArrayList<>();
         this.vaccinationNames    = (vaccinationNames != null)    ? vaccinationNames    : new ArrayList<>();
+    }
+
+    // NEW: Provide vaccination IDs
+    public void setVaccinationIds(ArrayList<String> vaccinationIds) {
+        this.vaccinationIds = (vaccinationIds != null) ? vaccinationIds : new ArrayList<>();
     }
 
     @NonNull
@@ -204,6 +211,13 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                     // ===== VET FLOW =====
                     Intent intent = new Intent(context, AnimalVirtualReportActivity.class);
                     intent.putExtra("appointment_id", appointmentIds.get(position));
+
+                    // NEW: pass vaccination name & id if available (safe bounds + clean)
+                    String vxName = (position < vaccinationNames.size()) ? clean(vaccinationNames.get(position)) : "";
+                    String vxId   = (position < vaccinationIds.size())   ? clean(vaccinationIds.get(position))   : "";
+                    if (!vxName.isEmpty()) intent.putExtra("vaccination_name", vxName);
+                    if (!vxId.isEmpty())   intent.putExtra("vaccination_id",   vxId);
+
                     context.startActivity(intent);
                 } else {
                     // ===== HUMAN FLOW =====
@@ -294,6 +308,7 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
         if (position < animalCategoryNames.size()) animalCategoryNames.remove(position);
         if (position < animalBreeds.size())        animalBreeds.remove(position);
         if (position < vaccinationNames.size())    vaccinationNames.remove(position);
+        if (position < vaccinationIds.size())      vaccinationIds.remove(position);
 
         notifyItemRemoved(position);
         notifyItemRangeChanged(position, appointmentIds.size());

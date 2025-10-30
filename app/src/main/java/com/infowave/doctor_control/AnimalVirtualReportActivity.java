@@ -53,13 +53,25 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
             etRespiratoryRateBpm, etPainScore, etHydrationStatus, etMucousMembranes,
             etCrtSec, etBehaviorGait, etSkinCoat, etSymptoms, etRespiratorySystem,
             etReasons, etInvestigationNotes, etSignature, etReportType;
+
+    // Vaccination UI (must exist in XML as per your last layout)
+    private TextInputLayout tilVaccinationName;     // R.id.tilVaccinationName
+    private TextInputEditText etVaccinationName;    // R.id.etVaccinationName
+    private View tvVaccinationNotesLabel;           // R.id.tvVaccinationNotesLabel (TextView label)
+    private TextInputLayout tilVaccineNotes;        // R.id.tilVaccineNotes
+    private TextInputEditText etVaccineNotes;       // R.id.etVaccineNotes
+
     private CheckBox cbInvestigation;
-    private TextInputLayout tilInvestigationNotes;
 
     private Uri selectedImageUri;
     private Bitmap selectedBitmap;
     private RequestQueue requestQueue;
     private String appointmentId;
+
+    // Vaccination intent flags/data
+    private boolean hasVaccinationFromIntent = false;
+    private String vaccinationIdFromIntent = null;
+    private String vaccinationNameFromIntent = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,7 +108,27 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         initializeViews();
         setupRadioGroup();
 
-        appointmentId = getIntent() != null ? getIntent().getStringExtra("appointment_id") : null;
+        // ---- Read vaccination extras from Intent ----
+        Intent it = getIntent();
+        appointmentId = (it != null) ? it.getStringExtra("appointment_id") : null;
+        if (it != null) {
+            vaccinationNameFromIntent = trimOrNull(it.getStringExtra("vaccination_name"));
+            vaccinationIdFromIntent   = trimOrNull(it.getStringExtra("vaccination_id"));
+        }
+        hasVaccinationFromIntent = !isEmpty(vaccinationNameFromIntent) || !isEmpty(vaccinationIdFromIntent);
+
+        // Apply visibility & prefill rules as requested
+        if (hasVaccinationFromIntent) {
+            // Show both Name + Notes UI
+            setVaccinationVisibility(true);
+            // Prefill name from intent; clear notes so doctor can write
+            if (etVaccinationName != null) etVaccinationName.setText(nvl(vaccinationNameFromIntent));
+            if (etVaccineNotes != null) etVaccineNotes.setText("");
+        } else {
+            // Hide both if not present in Intent
+            setVaccinationVisibility(false);
+        }
+
         requestQueue = Volley.newRequestQueue(this);
 
         if (!TextUtils.isEmpty(appointmentId)) {
@@ -106,59 +138,78 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
 
     private void initializeViews() {
         radioGroupUploadType = findViewById(R.id.radioGroupUploadType);
-        radioVirtualReport = findViewById(R.id.radioVirtualReport);
-        radioDirectUpload = findViewById(R.id.radioDirectUpload);
-        virtualForm = findViewById(R.id.virtual_report_form);
-        directUploadSection = findViewById(R.id.direct_upload_section);
-        ivReportImage = findViewById(R.id.ivReportImage);
-        btnUploadImage = findViewById(R.id.btnUploadImage);
-        btnCaptureImage = findViewById(R.id.btnCaptureImage);
-        btnSave = findViewById(R.id.btnSaveReport);
-        btnAddMedicine = findViewById(R.id.btnAddMedicine);
-        btnUploadDirect = findViewById(R.id.btnUploadDirect);
-        medsContainer = findViewById(R.id.medications_container);
+        radioVirtualReport   = findViewById(R.id.radioVirtualReport);
+        radioDirectUpload    = findViewById(R.id.radioDirectUpload);
+        virtualForm          = findViewById(R.id.virtual_report_form);
+        directUploadSection  = findViewById(R.id.direct_upload_section);
+        ivReportImage        = findViewById(R.id.ivReportImage);
+        btnUploadImage       = findViewById(R.id.btnUploadImage);
+        btnCaptureImage      = findViewById(R.id.btnCaptureImage);
+        btnSave              = findViewById(R.id.btnSaveReport);
+        btnAddMedicine       = findViewById(R.id.btnAddMedicine);
+        btnUploadDirect      = findViewById(R.id.btnUploadDirect);
+        medsContainer        = findViewById(R.id.medications_container);
 
-        etAnimalName = findViewById(R.id.etAnimalName);
-        etSpeciesBreed = findViewById(R.id.etSpeciesBreed);
-        etSex = findViewById(R.id.etSex);
-        etAge = findViewById(R.id.etAge);
-        etWeight = findViewById(R.id.etWeight);
-        etAddress = findViewById(R.id.etAddress);
-        etDate = findViewById(R.id.etDate);
-        etTemperature = findViewById(R.id.etTemperature);
-        etPulse = findViewById(R.id.etPulse);
-        etSpo2 = findViewById(R.id.etSpo2);
-        etBloodPressure = findViewById(R.id.etBloodPressure);
+        etAnimalName         = findViewById(R.id.etAnimalName);
+        etSpeciesBreed       = findViewById(R.id.etSpeciesBreed);
+        etSex                = findViewById(R.id.etSex);
+        etAge                = findViewById(R.id.etAge);
+        etWeight             = findViewById(R.id.etWeight);
+        etAddress            = findViewById(R.id.etAddress);
+        etDate               = findViewById(R.id.etDate);
+        etTemperature        = findViewById(R.id.etTemperature);
+        etPulse              = findViewById(R.id.etPulse);
+        etSpo2               = findViewById(R.id.etSpo2);
+        etBloodPressure      = findViewById(R.id.etBloodPressure);
         etRespiratoryRateBpm = findViewById(R.id.etRespiratoryRateBpm);
-        etPainScore = findViewById(R.id.etPainScore);
-        etHydrationStatus = findViewById(R.id.etHydrationStatus);
-        etMucousMembranes = findViewById(R.id.etMucousMembranes);
-        etCrtSec = findViewById(R.id.etCrtSec);
-        etBehaviorGait = findViewById(R.id.etBehaviorGait);
-        etSkinCoat = findViewById(R.id.etSkinCoat);
-        etSymptoms = findViewById(R.id.etSymptoms);
-        etRespiratorySystem = findViewById(R.id.etRespiratorySystem);
-        etReasons = findViewById(R.id.etReasons);
-        cbInvestigation = findViewById(R.id.cbInvestigation);
-        tilInvestigationNotes = findViewById(R.id.tilInvestigationNotes);
+        etPainScore          = findViewById(R.id.etPainScore);
+        etHydrationStatus    = findViewById(R.id.etHydrationStatus);
+        etMucousMembranes    = findViewById(R.id.etMucousMembranes);
+        etCrtSec             = findViewById(R.id.etCrtSec);
+        etBehaviorGait       = findViewById(R.id.etBehaviorGait);
+        etSkinCoat           = findViewById(R.id.etSkinCoat);
+        etSymptoms           = findViewById(R.id.etSymptoms);
+        etRespiratorySystem  = findViewById(R.id.etRespiratorySystem);
+        etReasons            = findViewById(R.id.etReasons);
+        cbInvestigation      = findViewById(R.id.cbInvestigation);
         etInvestigationNotes = findViewById(R.id.etInvestigationNotes);
-        etSignature = findViewById(R.id.etSignature);
-        etReportType = findViewById(R.id.etReportType);
+        etSignature          = findViewById(R.id.etSignature);
+        etReportType         = findViewById(R.id.etReportType);
 
-        // --- Corrected: Each button now does exactly one thing ---
+        // Vaccination UI (present in XML)
+        tilVaccinationName      = findViewById(R.id.tilVaccinationName);
+        etVaccinationName       = findViewById(R.id.etVaccinationName);
+        tvVaccinationNotesLabel = findViewById(R.id.tvVaccinationNotesLabel);
+        tilVaccineNotes         = findViewById(R.id.tilVaccineNotes);
+        etVaccineNotes          = findViewById(R.id.etVaccineNotes);
+
+        // Buttons
         btnUploadImage.setOnClickListener(v -> openGallery());
         btnCaptureImage.setOnClickListener(v -> openCamera());
-        ivReportImage.setOnClickListener(v -> openGallery()); // optional: remove if not needed
+        ivReportImage.setOnClickListener(v -> openGallery()); // optional
         btnUploadDirect.setOnClickListener(v -> uploadDirectImage());
         btnSave.setOnClickListener(v -> saveReport());
         btnAddMedicine.setOnClickListener(v -> addMedicineRow(null, null));
+
+        // Investigation toggle
+        final TextInputLayout tilInvestigationNotes = findViewById(R.id.tilInvestigationNotes);
         if (cbInvestigation != null && tilInvestigationNotes != null) {
             cbInvestigation.setOnCheckedChangeListener((button, checked) -> {
                 tilInvestigationNotes.setVisibility(checked ? View.VISIBLE : View.GONE);
-                if (!checked && etInvestigationNotes != null) {
-                    etInvestigationNotes.setText(null);
-                }
+                if (!checked && etInvestigationNotes != null) etInvestigationNotes.setText(null);
             });
+        }
+    }
+
+    private void setVaccinationVisibility(boolean visible) {
+        int vis = visible ? View.VISIBLE : View.GONE;
+        if (tilVaccinationName != null)      tilVaccinationName.setVisibility(vis);
+        if (tvVaccinationNotesLabel != null) tvVaccinationNotesLabel.setVisibility(vis);
+        if (tilVaccineNotes != null)         tilVaccineNotes.setVisibility(vis);
+
+        if (!visible) {
+            if (etVaccinationName != null) etVaccinationName.setText(null);
+            if (etVaccineNotes != null)    etVaccineNotes.setText(null);
         }
     }
 
@@ -183,9 +234,6 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         radioVirtualReport.setChecked(true);
     }
 
-    // --- POPUP REMOVED, each button does only its own job ---
-    // private void showImagePickerDialog() {...}  <-- REMOVE/NOT USED
-
     private void openCamera() {
         ContentValues cv = new ContentValues();
         cv.put(MediaStore.Images.Media.DISPLAY_NAME, "animal_report_" + System.currentTimeMillis() + ".jpg");
@@ -205,6 +253,7 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
@@ -233,60 +282,82 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
             Toast.makeText(this, "Please select an upload type.", Toast.LENGTH_SHORT).show();
             return;
         }
+
         String url = ApiConfig.endpoint("Doctors/insert_vet_report.php");
         JSONObject postData = new JSONObject();
 
         try {
-            postData.put("appointment_id", appointmentId);
-            postData.put("animal_name", etAnimalName.getText().toString());
-            postData.put("species_breed", etSpeciesBreed.getText().toString());
-            postData.put("sex", etSex.getText().toString());
-            postData.put("age_years", etAge.getText().toString());
-            postData.put("weight_kg", etWeight.getText().toString());
-            postData.put("owner_address", etAddress.getText().toString());
-            postData.put("date", etDate.getText().toString());
-            postData.put("report_type", etReportType.getText().toString());
-            postData.put("signature", etSignature.getText().toString());
+            // Identity & meta
+            postData.put("appointment_id", nvl(appointmentId));
+            postData.put("animal_name", text(etAnimalName));
+            postData.put("species_breed", text(etSpeciesBreed));
+            postData.put("sex", text(etSex));
+            postData.put("age_years", text(etAge));
+            postData.put("weight_kg", text(etWeight));
+            postData.put("owner_address", text(etAddress));
 
-            JSONObject vitals = new JSONObject();
-            vitals.put("temperature_c", etTemperature.getText().toString());
-            vitals.put("pulse_bpm", etPulse.getText().toString());
-            vitals.put("spo2_pct", etSpo2.getText().toString());
-            vitals.put("bp_mmhg", etBloodPressure.getText().toString());
-            vitals.put("respiratory_rate_bpm", etRespiratoryRateBpm.getText().toString());
-            vitals.put("pain_score_0_10", etPainScore.getText().toString());
-            vitals.put("hydration_status", etHydrationStatus.getText().toString());
-            vitals.put("mucous_membranes", etMucousMembranes.getText().toString());
-            vitals.put("crt_sec", etCrtSec.getText().toString());
-            postData.put("vitals", vitals);
+            postData.put("report_date", text(etDate));
+            postData.put("report_title", "Animal Virtual Report");
+            postData.put("report_type", text(etReportType));
+            postData.put("doctor_signature", text(etSignature));
 
-            postData.put("behavior_gait", etBehaviorGait.getText().toString());
-            postData.put("skin_coat", etSkinCoat.getText().toString());
-            postData.put("symptoms", etSymptoms.getText().toString());
-            postData.put("respiratory_system", etRespiratorySystem.getText().toString());
-            postData.put("reasons", etReasons.getText().toString());
+            // Vitals
+            postData.put("temperature_c", text(etTemperature));
+            postData.put("pulse_bpm", text(etPulse));
+            postData.put("spo2_pct", text(etSpo2));
+            postData.put("bp_mmhg", text(etBloodPressure));
+            postData.put("respiratory_rate_bpm", text(etRespiratoryRateBpm));
+            postData.put("pain_score_0_10", text(etPainScore));
+            postData.put("hydration_status", text(etHydrationStatus));
+            postData.put("mucous_membranes", text(etMucousMembranes));
+            postData.put("crt_sec", text(etCrtSec));
 
-            JSONObject inv = new JSONObject();
-            inv.put("requires_investigation", cbInvestigation != null && cbInvestigation.isChecked());
-            inv.put("investigation_notes", etInvestigationNotes.getText().toString());
-            postData.put("investigation", inv);
+            // Systems/notes
+            postData.put("behavior_gait", text(etBehaviorGait));
+            postData.put("skin_coat", text(etSkinCoat));
+            postData.put("symptoms", text(etSymptoms));
+            postData.put("respiratory_system", text(etRespiratorySystem));
+            postData.put("reasons", text(etReasons));
 
-            JSONArray meds = new JSONArray();
+            // Investigation
+            boolean requiresInv = cbInvestigation != null && cbInvestigation.isChecked();
+            postData.put("requires_investigation", requiresInv ? 1 : 0);
+            postData.put("investigation_notes", text(etInvestigationNotes));
+
+            // Medications (two JSON arrays as strings)
+            JSONArray medsNames = new JSONArray();
+            JSONArray medsDoses = new JSONArray();
             for (int i = 0; i < medsContainer.getChildCount(); i++) {
                 View row = medsContainer.getChildAt(i);
                 TextInputEditText nameEt = row.findViewById(R.id.etMedicine);
                 TextInputEditText doseEt = row.findViewById(R.id.etDosage);
-                String mName = nameEt != null && nameEt.getText() != null ? nameEt.getText().toString().trim() : "";
-                String mDose = doseEt != null && doseEt.getText() != null ? doseEt.getText().toString().trim() : "";
-                if (!TextUtils.isEmpty(mName) || !TextUtils.isEmpty(mDose)) {
-                    JSONObject item = new JSONObject();
-                    item.put("medicine_name", mName);
-                    item.put("dosage", mDose);
-                    meds.put(item);
-                }
+                String mName = (nameEt != null && nameEt.getText() != null) ? nameEt.getText().toString().trim() : "";
+                String mDose = (doseEt != null && doseEt.getText() != null) ? doseEt.getText().toString().trim() : "";
+                if (!TextUtils.isEmpty(mName)) medsNames.put(mName);
+                if (!TextUtils.isEmpty(mDose)) medsDoses.put(mDose);
             }
-            postData.put("medications", meds);
+            postData.put("medications_json", medsNames.toString());
+            postData.put("dosage_json", medsDoses.toString());
 
+            // Vaccination: send ONLY if it was present in Intent (shown to user)
+            if (hasVaccinationFromIntent) {
+                // ID from intent (optional)
+                if (!isEmpty(vaccinationIdFromIntent)) {
+                    postData.put("vaccination_id", vaccinationIdFromIntent);
+                } else {
+                    postData.put("vaccination_id", JSONObject.NULL);
+                }
+                // Name: prefer edited value in UI; fallback to intent
+                String vxNameFinal = (etVaccinationName != null) ? text(etVaccinationName) : nvl(vaccinationNameFromIntent);
+                postData.put("vaccination_name", vxNameFinal);
+
+                // Notes typed by doctor
+                String vxNotes = (etVaccineNotes != null) ? text(etVaccineNotes) : "";
+                postData.put("vaccination_notes", vxNotes);
+            }
+            // If not present, we omit vaccination_* keys → backend ignores.
+
+            // Attachment
             if (selectedRadioId == R.id.radioDirectUpload) {
                 if (selectedBitmap == null) {
                     Toast.makeText(this, "Please select or capture an image.", Toast.LENGTH_SHORT).show();
@@ -296,6 +367,8 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
             } else {
                 postData.put("attachment_url", "");
             }
+
+            postData.put("is_followup", 0);
 
         } catch (Exception e) {
             Toast.makeText(this, "Failed to collect form data.", Toast.LENGTH_SHORT).show();
@@ -320,8 +393,27 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
                     loaderutil.hideLoader();
                     Toast.makeText(this, "Error sending report to server.", Toast.LENGTH_SHORT).show();
                 });
-
         requestQueue.add(request);
+    }
+
+    // ------------- helpers -------------
+
+    private static String text(TextInputEditText et) {
+        return (et != null && et.getText() != null) ? et.getText().toString().trim() : "";
+    }
+
+    private static boolean isEmpty(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private static String nvl(String s) {
+        return s == null ? "" : s;
+    }
+
+    private static String trimOrNull(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
     }
 
     private String getStringImage(Bitmap bmp) {

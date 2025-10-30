@@ -231,6 +231,45 @@
                         android:inputType="date" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- ================= Vaccination (FIXED IDs) ================= -->
+                <TextView
+                    android:id="@+id/tvVaccinationNotesLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Vaccination"
+                    android:textColor="@android:color/black"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp" />
+
+                <!-- Vaccination Name -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilVaccinationName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Vaccination Name">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etVaccinationName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Vaccination Notes -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilVaccineNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Vaccination Notes / Reactions">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etVaccineNotes"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minLines="2"
+                        android:inputType="textMultiLine"
+                        tools:text="Mild swelling at injection site; cold compress advised." />
+                </com.google.android.material.textfield.TextInputLayout>
+                <!-- =============== End Vaccination (FIXED IDs) =============== -->
+
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
