@@ -1,32 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
     android:background="@color/white"
-    android:padding="16dp">
+    android:padding="12dp">
 
-    <!-- Pull-to-refresh container -->
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipeRefreshHistory"
+    <!-- Search bar -->
+    <LinearLayout
+        android:id="@+id/search_container"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constrainedWidth="true"
-        app:layout_constrainedHeight="true"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="@drawable/search_bg_rounded"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_history"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingBottom="16dp"
-            tools:listitem="@layout/item_history" />
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+    <ImageView
+        android:id="@+id/ic_search"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_gravity="center_vertical"
+        android:src="@drawable/ic_search_black_24dp"
+        android:contentDescription="Search" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <EditText
+        android:id="@+id/et_search"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:hint="Search by patient, date or appointment id"
+        android:imeOptions="actionDone"
+        android:maxLines="1"
+        android:inputType="text"
+        android:paddingStart="8dp"
+        android:background="@android:color/transparent"/>
+
+    <ImageButton
+        android:id="@+id/btn_clear"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_close_black_24dp"
+        android:contentDescription="Clear"
+        android:visibility="gone"/>
+</LinearLayout>
+
+    <!-- Pull-to-refresh container (below search) -->
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+android:id="@+id/swipeRefreshHistory"
+android:layout_width="0dp"
+android:layout_height="0dp"
+app:layout_constraintTop_toBottomOf="@id/search_container"
+app:layout_constraintBottom_toBottomOf="parent"
+app:layout_constraintStart_toStartOf="parent"
+app:layout_constraintEnd_toEndOf="parent"
+android:layout_marginTop="12dp">
+
+<androidx.recyclerview.widget.RecyclerView
+    android:id="@+id/rv_history"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:paddingBottom="16dp"
+    tools:listitem="@layout/item_history" />
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
