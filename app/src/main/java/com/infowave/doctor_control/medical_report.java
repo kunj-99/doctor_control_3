@@ -4,18 +4,19 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.CheckBox;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -29,19 +30,20 @@ import com.android.volley.toolbox.Volley;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.infowave.doctor_control.loaderutil;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 
 public class medical_report extends AppCompatActivity {
 
     private static final int REQUEST_CAMERA = 1;
     private static final int REQUEST_GALLERY = 2;
+
+    // --- Keyboard-aware scroll container ---
+    private android.widget.ScrollView formScroll;
 
     private android.widget.LinearLayout virtualReportForm, directUploadSection, medicationsContainer;
     private android.widget.RadioGroup radioGroupUploadType;
@@ -55,7 +57,7 @@ public class medical_report extends AppCompatActivity {
             etTemperature, etPulse, etSpo2, etBloodPressure, etSignature, etReportType;
     private TextInputEditText etSymptoms, etRespiratorySystem;
 
-    // NEW: investigation checkbox + notes field
+    // Investigation checkbox + notes
     private CheckBox cbInvestigation;
     private TextInputLayout tilInvestigationNotes;
     private TextInputEditText etInvestigationNotes;
@@ -72,10 +74,8 @@ public class medical_report extends AppCompatActivity {
 
         // ===== Edge-to-edge with black scrims (status/nav) =====
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        // Make actual system bars transparent so our scrims show
         getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
         getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
-        // We are painting black behind them, so keep system icons light (white)
         WindowInsetsControllerCompat wic =
                 new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         wic.setAppearanceLightStatusBars(false);
@@ -87,8 +87,6 @@ public class medical_report extends AppCompatActivity {
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
             Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-
-            // Set scrim heights from insets
             if (statusScrim != null) {
                 statusScrim.getLayoutParams().height = sys.top;
                 statusScrim.setLayoutParams(statusScrim.getLayoutParams());
@@ -99,14 +97,13 @@ public class medical_report extends AppCompatActivity {
                 navScrim.setLayoutParams(navScrim.getLayoutParams());
                 navScrim.setVisibility(sys.bottom > 0 ? View.VISIBLE : View.GONE);
             }
-
-            // Keep left/right safe; top/bottom are handled by scrims & constraints
             v.setPadding(sys.left, 0, sys.right, 0);
             return insets;
         });
         // ===== End scrim setup =====
 
         initializeViews();
+        setupKeyboardAwareScrolling(); // <— NEW
         setupRadioGroup();
 
         appointmentId = getIntent().getStringExtra("appointment_id");
@@ -119,6 +116,9 @@ public class medical_report extends AppCompatActivity {
 
     @SuppressLint("WrongViewCast")
     private void initializeViews() {
+        // IMPORTANT: Ensure your XML ScrollView has id @+id/form_scroll
+        formScroll          = findViewById(R.id.form_scroll);
+
         virtualReportForm    = findViewById(R.id.virtual_report_form);
         directUploadSection  = findViewById(R.id.direct_upload_section);
         medicationsContainer = findViewById(R.id.medications_container);
@@ -152,15 +152,15 @@ public class medical_report extends AppCompatActivity {
         if (cbInvestigation != null && tilInvestigationNotes != null) {
             cbInvestigation.setOnCheckedChangeListener((button, checked) -> {
                 tilInvestigationNotes.setVisibility(checked ? View.VISIBLE : View.GONE);
-                if (!checked && etInvestigationNotes != null) {
-                    etInvestigationNotes.setText(null);
-                }
+                if (!checked && etInvestigationNotes != null) etInvestigationNotes.setText(null);
             });
         }
 
         btnUploadImage.setOnClickListener(v -> showImagePickerDialog());
         btnSaveReport .setOnClickListener(v -> saveReport());
         btnAddMedicine.setOnClickListener(v -> addMedicineField());
+
+        ivReportImage.setOnClickListener(v -> showImagePickerDialog());
     }
 
     private void setupRadioGroup() {
@@ -173,6 +173,54 @@ public class medical_report extends AppCompatActivity {
                 directUploadSection.setVisibility(View.VISIBLE);
             }
         });
+        // Optional default:
+        // ((android.widget.RadioButton)findViewById(R.id.radioVirtualReport)).setChecked(true);
+    }
+
+    // ---------------- Keyboard-aware scrolling ----------------
+    private void setupKeyboardAwareScrolling() {
+        if (formScroll == null) return;
+
+        // Apply IME bottom padding to the ScrollView
+        ViewCompat.setOnApplyWindowInsetsListener(formScroll, (v, insets) -> {
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), ime.bottom);
+            return insets;
+        });
+
+        View[] fields = new View[]{
+                etPatientName, etAge, etSex, etWeight, etAddress, etDate,
+                etTemperature, etPulse, etSpo2, etBloodPressure,
+                etSymptoms, etRespiratorySystem, etSignature, etReportType,
+                etInvestigationNotes
+        };
+
+        for (View f : fields) {
+            if (f == null) continue;
+            f.setOnFocusChangeListener((fv, hasFocus) -> {
+                if (hasFocus) formScroll.post(() -> scrollIntoView(formScroll, fv));
+            });
+            f.setOnClickListener(fv -> formScroll.post(() -> scrollIntoView(formScroll, fv)));
+        }
+
+        formScroll.getViewTreeObserver().addOnGlobalLayoutListener(
+                new ViewTreeObserver.OnGlobalLayoutListener() {
+                    @Override public void onGlobalLayout() {
+                        View focused = getCurrentFocus();
+                        if (focused != null) {
+                            formScroll.post(() -> scrollIntoView(formScroll, focused));
+                        }
+                    }
+                }
+        );
+    }
+
+    private void scrollIntoView(android.widget.ScrollView sv, View child) {
+        if (sv == null || child == null) return;
+        Rect r = new Rect();
+        child.getDrawingRect(r);
+        sv.offsetDescendantRectToMyCoords(child, r);
+        sv.smoothScrollTo(0, r.top);
     }
 
     private void fetchAppointmentDetails(String id) {
@@ -227,55 +275,49 @@ public class medical_report extends AppCompatActivity {
     }
 
     private void openCamera() {
-        File imageFile = new File(getExternalCacheDir(),
-                "report_" + System.currentTimeMillis() + ".jpg");
-        cameraImageUri = FileProvider.getUriForFile(
-                this,
-                getPackageName() + ".fileprovider",
-                imageFile);
+        // Use MediaStore insert → no FileProvider complexity needed
+        android.content.ContentValues cv = new android.content.ContentValues();
+        cv.put(MediaStore.Images.Media.DISPLAY_NAME, "report_" + System.currentTimeMillis() + ".jpg");
+        cv.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+        cameraImageUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
 
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         intent.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri);
-        intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION |
-                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivityForResult(intent, REQUEST_CAMERA);
     }
 
     @SuppressLint("IntentReset")
     private void openGallery() {
-        Intent intent = new Intent(Intent.ACTION_PICK,
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         intent.setType("image/*");
         startActivityForResult(intent, REQUEST_GALLERY);
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
             loaderutil.showLoader(this);
-            if (requestCode == REQUEST_CAMERA) {
-                try {
-                    selectedBitmap = MediaStore.Images.Media.getBitmap(
-                            this.getContentResolver(), cameraImageUri);
-                    ivReportImage.setImageBitmap(selectedBitmap);
-                    ivReportImage.setVisibility(View.VISIBLE);
-                } catch (IOException e) {
-                    showError("Failed to load captured image.");
+            try {
+                if (requestCode == REQUEST_CAMERA && cameraImageUri != null) {
+                    selectedBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), cameraImageUri);
+                } else if (requestCode == REQUEST_GALLERY && data != null && data.getData() != null) {
+                    selectedImageUri = data.getData();
+                    selectedBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImageUri);
                 }
-            } else if (requestCode == REQUEST_GALLERY &&
-                    data != null && data.getData() != null) {
-                selectedImageUri = data.getData();
-                try {
-                    selectedBitmap = MediaStore.Images.Media.getBitmap(
-                            this.getContentResolver(), selectedImageUri);
+                if (selectedBitmap != null) {
                     ivReportImage.setImageBitmap(selectedBitmap);
                     ivReportImage.setVisibility(View.VISIBLE);
-                } catch (IOException e) {
+                } else {
                     showError("Failed to load image.");
                 }
+            } catch (IOException e) {
+                showError("Failed to load image.");
+            } finally {
+                loaderutil.hideLoader();
             }
-            loaderutil.hideLoader();
         }
     }
 
@@ -302,26 +344,25 @@ public class medical_report extends AppCompatActivity {
 
         try {
             postData.put("appointment_id", appointmentId);
-            postData.put("patient_name", etPatientName.getText().toString());
-            postData.put("age", etAge.getText().toString());
-            postData.put("sex", etSex.getText().toString());
-            postData.put("weight", etWeight.getText().toString());
-            postData.put("patient_address", etAddress.getText().toString());
-            postData.put("visit_date", etDate.getText().toString());
-            postData.put("temperature", etTemperature.getText().toString());
-            postData.put("pulse", etPulse.getText().toString());
-            postData.put("spo2", etSpo2.getText().toString());
-            postData.put("blood_pressure", etBloodPressure.getText().toString());
-            postData.put("report_type", etReportType.getText().toString());
-            postData.put("symptoms", etSymptoms.getText().toString());
-            postData.put("respiratory_system", etRespiratorySystem.getText().toString());
-            postData.put("doctor_name", etSignature.getText().toString());
-            postData.put("doctor_signature", etSignature.getText().toString());
+            postData.put("patient_name", s(etPatientName));
+            postData.put("age",          s(etAge));
+            postData.put("sex",          s(etSex));
+            postData.put("weight",       s(etWeight));
+            postData.put("patient_address", s(etAddress));
+            postData.put("visit_date",   s(etDate));
+            postData.put("temperature",  s(etTemperature));
+            postData.put("pulse",        s(etPulse));
+            postData.put("spo2",         s(etSpo2));
+            postData.put("blood_pressure", s(etBloodPressure));
+            postData.put("report_type",  s(etReportType));
+            postData.put("symptoms",     s(etSymptoms));
+            postData.put("respiratory_system", s(etRespiratorySystem));
+            postData.put("doctor_name",  s(etSignature));
+            postData.put("doctor_signature", s(etSignature));
 
-            // Include investigation notes only when checked
             String investigations = "";
             if (cbInvestigation != null && cbInvestigation.isChecked() && etInvestigationNotes != null) {
-                investigations = String.valueOf(etInvestigationNotes.getText()).trim();
+                investigations = s(etInvestigationNotes);
             }
             postData.put("investigations", investigations);
 
@@ -341,11 +382,10 @@ public class medical_report extends AppCompatActivity {
                 View child = medicationsContainer.getChildAt(i);
                 TextInputLayout medicineNameLayout = child.findViewById(R.id.medicineNameLayout);
                 TextInputLayout dosageLayout       = child.findViewById(R.id.dosageLayout);
-                String medicineName = "", dosage = "";
-                if (medicineNameLayout.getEditText() != null)
-                    medicineName = medicineNameLayout.getEditText().getText().toString().trim();
-                if (dosageLayout.getEditText() != null)
-                    dosage = dosageLayout.getEditText().getText().toString().trim();
+                String medicineName = (medicineNameLayout.getEditText() != null)
+                        ? medicineNameLayout.getEditText().getText().toString().trim() : "";
+                String dosage = (dosageLayout.getEditText() != null)
+                        ? dosageLayout.getEditText().getText().toString().trim() : "";
                 if (!medicineName.isEmpty() && !dosage.isEmpty()) {
                     JSONObject medObject = new JSONObject();
                     medObject.put("medicine_name", medicineName);
@@ -361,7 +401,6 @@ public class medical_report extends AppCompatActivity {
         }
 
         loaderutil.showLoader(this);
-
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST, url, postData,
                 response -> {
@@ -381,13 +420,16 @@ public class medical_report extends AppCompatActivity {
                     loaderutil.hideLoader();
                     Toast.makeText(this, "Error sending report to server.", Toast.LENGTH_SHORT).show();
                 });
-
         requestQueue.add(request);
+    }
+
+    private static String s(TextInputEditText et) {
+        return (et != null && et.getText() != null) ? et.getText().toString().trim() : "";
     }
 
     private String getStringImage(Bitmap bmp) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        bmp.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+        bmp.compress(Bitmap.CompressFormat.JPEG, 90, baos);
         return Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
     }
 

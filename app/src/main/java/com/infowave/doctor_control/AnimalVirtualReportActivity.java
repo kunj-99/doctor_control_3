@@ -4,17 +4,21 @@ import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.view.View;
+import android.view.ViewTreeObserver;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.ScrollView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -41,11 +45,14 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
     private static final int REQUEST_CAMERA = 1001;
     private static final int REQUEST_GALLERY = 1002;
 
+    // --- Keyboard-aware scroll container ---
+    private ScrollView formScroll;
+
     private RadioGroup radioGroupUploadType;
     private RadioButton radioVirtualReport, radioDirectUpload;
     private LinearLayout virtualForm, directUploadSection;
     private ImageView ivReportImage;
-    private android.widget.Button btnUploadImage, btnCaptureImage, btnSave, btnAddMedicine, btnUploadDirect;
+    private Button btnUploadImage, btnCaptureImage, btnSave, btnAddMedicine, btnUploadDirect;
     private LinearLayout medsContainer;
 
     private TextInputEditText etAnimalName, etSpeciesBreed, etSex, etAge, etWeight,
@@ -54,7 +61,7 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
             etCrtSec, etBehaviorGait, etSkinCoat, etSymptoms, etRespiratorySystem,
             etReasons, etInvestigationNotes, etSignature, etReportType;
 
-    // Vaccination UI (must exist in XML as per your last layout)
+    // Vaccination UI (must exist in XML as per your layout)
     private TextInputLayout tilVaccinationName;     // R.id.tilVaccinationName
     private TextInputEditText etVaccinationName;    // R.id.etVaccinationName
     private View tvVaccinationNotesLabel;           // R.id.tvVaccinationNotesLabel (TextView label)
@@ -78,6 +85,7 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_animal_virtual_report);
 
+        // Edge-to-edge
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
         getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
@@ -86,6 +94,7 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         wic.setAppearanceLightStatusBars(false);
         wic.setAppearanceLightNavigationBars(false);
 
+        // Scrims & insets for the container
         final View root = findViewById(R.id.root_container_animal);
         final View statusScrim = findViewById(R.id.status_bar_scrim);
         final View navScrim = findViewById(R.id.navigation_bar_scrim);
@@ -105,7 +114,12 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
             return insets;
         });
 
+        // --- Bind views (includes the ScrollView) ---
         initializeViews();
+
+        // Keyboard-aware scrolling (works for all fields)
+        setupKeyboardAwareScrolling();
+
         setupRadioGroup();
 
         // ---- Read vaccination extras from Intent ----
@@ -119,13 +133,10 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
 
         // Apply visibility & prefill rules as requested
         if (hasVaccinationFromIntent) {
-            // Show both Name + Notes UI
             setVaccinationVisibility(true);
-            // Prefill name from intent; clear notes so doctor can write
             if (etVaccinationName != null) etVaccinationName.setText(nvl(vaccinationNameFromIntent));
             if (etVaccineNotes != null) etVaccineNotes.setText("");
         } else {
-            // Hide both if not present in Intent
             setVaccinationVisibility(false);
         }
 
@@ -137,6 +148,10 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
     }
 
     private void initializeViews() {
+        // ScrollView from XML
+        formScroll = findViewById(R.id.form_scroll);
+
+
         radioGroupUploadType = findViewById(R.id.radioGroupUploadType);
         radioVirtualReport   = findViewById(R.id.radioVirtualReport);
         radioDirectUpload    = findViewById(R.id.radioDirectUpload);
@@ -176,7 +191,7 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         etSignature          = findViewById(R.id.etSignature);
         etReportType         = findViewById(R.id.etReportType);
 
-        // Vaccination UI (present in XML)
+        // Vaccination UI
         tilVaccinationName      = findViewById(R.id.tilVaccinationName);
         etVaccinationName       = findViewById(R.id.etVaccinationName);
         tvVaccinationNotesLabel = findViewById(R.id.tvVaccinationNotesLabel);
@@ -201,26 +216,6 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         }
     }
 
-    private void setVaccinationVisibility(boolean visible) {
-        int vis = visible ? View.VISIBLE : View.GONE;
-        if (tilVaccinationName != null)      tilVaccinationName.setVisibility(vis);
-        if (tvVaccinationNotesLabel != null) tvVaccinationNotesLabel.setVisibility(vis);
-        if (tilVaccineNotes != null)         tilVaccineNotes.setVisibility(vis);
-
-        if (!visible) {
-            if (etVaccinationName != null) etVaccinationName.setText(null);
-            if (etVaccineNotes != null)    etVaccineNotes.setText(null);
-        }
-    }
-
-    private void uploadDirectImage() {
-        if (selectedBitmap == null) {
-            Toast.makeText(this, "Please select or capture an image.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        saveReport();
-    }
-
     private void setupRadioGroup() {
         radioGroupUploadType.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.radioVirtualReport) {
@@ -233,6 +228,65 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         });
         radioVirtualReport.setChecked(true);
     }
+
+    // ---------------- Keyboard-aware scrolling ----------------
+
+    private void setupKeyboardAwareScrolling() {
+        // Apply IME bottom padding to the ScrollView
+        ViewCompat.setOnApplyWindowInsetsListener(formScroll, (v, insets) -> {
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), ime.bottom);
+            return insets;
+        });
+
+        View[] focusables = new View[]{
+                etAnimalName, etSpeciesBreed, etSex, etAge, etWeight,
+                etAddress, etDate, etTemperature, etPulse, etSpo2, etBloodPressure,
+                etRespiratoryRateBpm, etPainScore, etHydrationStatus, etMucousMembranes,
+                etCrtSec, etBehaviorGait, etSkinCoat, etSymptoms, etRespiratorySystem,
+                etReasons, etInvestigationNotes, etSignature, etReportType
+        };
+
+        for (View v : focusables) {
+            if (v == null) continue;
+
+            v.setOnFocusChangeListener((fv, hasFocus) -> {
+                if (hasFocus && formScroll != null) {
+                    formScroll.post(() -> scrollIntoView(formScroll, fv));
+                }
+            });
+
+            v.setOnClickListener(fv -> {
+                if (formScroll != null) {
+                    formScroll.post(() -> scrollIntoView(formScroll, fv));
+                }
+            });
+        }
+
+        if (formScroll != null) {
+            formScroll.getViewTreeObserver().addOnGlobalLayoutListener(
+                    new ViewTreeObserver.OnGlobalLayoutListener() {
+                        @Override
+                        public void onGlobalLayout() {
+                            View focused = getCurrentFocus();
+                            if (focused != null) {
+                                formScroll.post(() -> scrollIntoView(formScroll, focused));
+                            }
+                        }
+                    }
+            );
+        }
+    }
+
+    private void scrollIntoView(ScrollView sv, View child) {
+        if (sv == null || child == null) return;
+        Rect r = new Rect();
+        child.getDrawingRect(r);
+        sv.offsetDescendantRectToMyCoords(child, r);
+        sv.smoothScrollTo(0, r.top);
+    }
+
+    // ---------------- Image capture / pick ----------------
 
     private void openCamera() {
         ContentValues cv = new ContentValues();
@@ -275,6 +329,16 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
             Toast.makeText(this, "Failed to load image.", Toast.LENGTH_SHORT).show();
         }
     }
+
+    private void uploadDirectImage() {
+        if (selectedBitmap == null) {
+            Toast.makeText(this, "Please select or capture an image.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        saveReport();
+    }
+
+    // ---------------- Save report ----------------
 
     private void saveReport() {
         int selectedRadioId = radioGroupUploadType.getCheckedRadioButtonId();
@@ -341,21 +405,17 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
 
             // Vaccination: send ONLY if it was present in Intent (shown to user)
             if (hasVaccinationFromIntent) {
-                // ID from intent (optional)
                 if (!isEmpty(vaccinationIdFromIntent)) {
                     postData.put("vaccination_id", vaccinationIdFromIntent);
                 } else {
                     postData.put("vaccination_id", JSONObject.NULL);
                 }
-                // Name: prefer edited value in UI; fallback to intent
                 String vxNameFinal = (etVaccinationName != null) ? text(etVaccinationName) : nvl(vaccinationNameFromIntent);
                 postData.put("vaccination_name", vxNameFinal);
 
-                // Notes typed by doctor
                 String vxNotes = (etVaccineNotes != null) ? text(etVaccineNotes) : "";
                 postData.put("vaccination_notes", vxNotes);
             }
-            // If not present, we omit vaccination_* keys → backend ignores.
 
             // Attachment
             if (selectedRadioId == R.id.radioDirectUpload) {
@@ -396,7 +456,19 @@ public class AnimalVirtualReportActivity extends AppCompatActivity {
         requestQueue.add(request);
     }
 
-    // ------------- helpers -------------
+    // ---------------- helpers ----------------
+
+    private void setVaccinationVisibility(boolean visible) {
+        int vis = visible ? View.VISIBLE : View.GONE;
+        if (tilVaccinationName != null)      tilVaccinationName.setVisibility(vis);
+        if (tvVaccinationNotesLabel != null) tvVaccinationNotesLabel.setVisibility(vis);
+        if (tilVaccineNotes != null)         tilVaccineNotes.setVisibility(vis);
+
+        if (!visible) {
+            if (etVaccinationName != null) etVaccinationName.setText(null);
+            if (etVaccineNotes != null)    etVaccineNotes.setText(null);
+        }
+    }
 
     private static String text(TextInputEditText et) {
         return (et != null && et.getText() != null) ? et.getText().toString().trim() : "";

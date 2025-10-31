@@ -18,14 +18,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Keyboard-safe ScrollView -->
     <ScrollView
-        android:id="@+id/scroll_content_animal"
+        android:id="@+id/form_scroll"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:background="@android:color/white"
         android:fillViewport="true"
-        android:padding="16dp"
         android:clipToPadding="false"
+        android:descendantFocusability="afterDescendants"
+        android:focusableInTouchMode="true"
         app:layout_constraintTop_toBottomOf="@id/status_bar_scrim"
         app:layout_constraintBottom_toTopOf="@id/navigation_bar_scrim"
         app:layout_constraintStart_toStartOf="parent"
@@ -147,7 +149,8 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etAnimalName"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <LinearLayout
@@ -163,7 +166,8 @@
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etSpeciesBreed"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -174,7 +178,8 @@
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etSex"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -192,7 +197,8 @@
                             android:id="@+id/etAge"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal" />
+                            android:inputType="numberDecimal"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -204,7 +210,8 @@
                             android:id="@+id/etWeight"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal" />
+                            android:inputType="numberDecimal"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -217,7 +224,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textMultiLine"
-                        android:minLines="3" />
+                        android:minLines="3"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -228,7 +236,8 @@
                         android:id="@+id/etDate"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="date" />
+                        android:inputType="date"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- ================= Vaccination (FIXED IDs) ================= -->
@@ -242,7 +251,6 @@
                     android:textStyle="bold"
                     android:layout_marginTop="16dp" />
 
-                <!-- Vaccination Name -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilVaccinationName"
                     android:layout_width="match_parent"
@@ -251,10 +259,10 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etVaccinationName"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Vaccination Notes -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilVaccineNotes"
                     android:layout_width="match_parent"
@@ -266,6 +274,7 @@
                         android:layout_height="wrap_content"
                         android:minLines="2"
                         android:inputType="textMultiLine"
+                        android:imeOptions="actionNext"
                         tools:text="Mild swelling at injection site; cold compress advised." />
                 </com.google.android.material.textfield.TextInputLayout>
                 <!-- =============== End Vaccination (FIXED IDs) =============== -->
@@ -293,7 +302,8 @@
                             android:id="@+id/etTemperature"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal" />
+                            android:inputType="numberDecimal"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -305,7 +315,8 @@
                             android:id="@+id/etPulse"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number" />
+                            android:inputType="number"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -323,7 +334,8 @@
                             android:id="@+id/etSpo2"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number" />
+                            android:inputType="number"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -335,7 +347,8 @@
                             android:id="@+id/etBloodPressure"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text" />
+                            android:inputType="text"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -353,7 +366,8 @@
                             android:id="@+id/etRespiratoryRateBpm"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number" />
+                            android:inputType="number"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -365,7 +379,8 @@
                             android:id="@+id/etPainScore"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number" />
+                            android:inputType="number"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -377,7 +392,8 @@
                         android:id="@+id/etHydrationStatus"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="text" />
+                        android:inputType="text"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <LinearLayout
@@ -394,7 +410,8 @@
                             android:id="@+id/etMucousMembranes"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text" />
+                            android:inputType="text"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -406,7 +423,8 @@
                             android:id="@+id/etCrtSec"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal" />
+                            android:inputType="numberDecimal"
+                            android:imeOptions="actionNext" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -419,7 +437,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textMultiLine"
-                        android:minLines="2" />
+                        android:minLines="2"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -431,7 +450,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textMultiLine"
-                        android:minLines="2" />
+                        android:minLines="2"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
@@ -452,7 +472,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:minLines="3"
-                        android:inputType="textMultiLine" />
+                        android:inputType="textMultiLine"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -463,7 +484,8 @@
                         android:id="@+id/etRespiratorySystem"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="text" />
+                        android:inputType="text"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -475,7 +497,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:minLines="2"
-                        android:inputType="textMultiLine" />
+                        android:inputType="textMultiLine"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
@@ -508,7 +531,8 @@
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etMedicine"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
+                                android:layout_height="wrap_content"
+                                android:imeOptions="actionNext" />
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
@@ -520,7 +544,8 @@
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etDosage"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
+                                android:layout_height="wrap_content"
+                                android:imeOptions="actionNext" />
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
                 </LinearLayout>
@@ -561,7 +586,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:minLines="2"
-                        android:inputType="textMultiLine" />
+                        android:inputType="textMultiLine"
+                        android:imeOptions="actionNext" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -572,7 +598,8 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etSignature"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:imeOptions="actionDone" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -583,7 +610,8 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etReportType"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
+                        android:layout_height="wrap_content"
+                        android:imeOptions="actionDone" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Save Report button ONLY for virtual report -->
