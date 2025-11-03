@@ -4,16 +4,24 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import android.Manifest;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Looper;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -57,16 +65,37 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
     private TextView tvDistance, tvDuration;
     private LocationCallback locationCallback;
 
+    // Scrim & overlay refs
+    private View statusScrim, navScrim, rootContainer;
+    private LinearLayout infoContainer;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_track_patient_location);
 
-        tvDistance = findViewById(R.id.tvDistance);
-        tvDuration = findViewById(R.id.tvDuration);
+        // System bars to black (actual bar colors)
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        getWindow().setStatusBarColor(Color.BLACK);
+        getWindow().setNavigationBarColor(Color.BLACK);
+        WindowInsetsControllerCompat controller =
+                new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(false);
+        controller.setAppearanceLightNavigationBars(false);
+
+        // Views
+        rootContainer   = findViewById(R.id.root_container);
+        statusScrim     = findViewById(R.id.status_bar_scrim);
+        navScrim        = findViewById(R.id.navigation_bar_scrim);
+        infoContainer   = findViewById(R.id.info_container);
+
+        tvDistance      = findViewById(R.id.tvDistance);
+        tvDuration      = findViewById(R.id.tvDuration);
+        Button btnNavigate = findViewById(R.id.btnNavigation);
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
+        // MapView init
         Bundle mapViewBundle = null;
         if (savedInstanceState != null) {
             mapViewBundle = savedInstanceState.getBundle(MAPVIEW_BUNDLE_KEY);
@@ -75,6 +104,38 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         mapView.onCreate(mapViewBundle);
         mapView.getMapAsync(this);
 
+        // Apply insets: set scrim heights and push info overlay below status bar
+        ViewCompat.setOnApplyWindowInsetsListener(rootContainer, (v, insets) -> {
+            Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // Set top/bottom scrim heights
+            if (statusScrim != null) {
+                ViewGroup.LayoutParams lp = statusScrim.getLayoutParams();
+                lp.height = sys.top;
+                statusScrim.setLayoutParams(lp);
+                statusScrim.setVisibility(sys.top > 0 ? View.VISIBLE : View.GONE);
+            }
+            if (navScrim != null) {
+                ViewGroup.LayoutParams lp = navScrim.getLayoutParams();
+                lp.height = sys.bottom;
+                navScrim.setLayoutParams(lp);
+                navScrim.setVisibility(sys.bottom > 0 ? View.VISIBLE : View.GONE);
+            }
+
+            // Ensure info overlay starts below the status bar
+            if (infoContainer != null) {
+                int left   = infoContainer.getPaddingLeft();
+                int right  = infoContainer.getPaddingRight();
+                int bottom = infoContainer.getPaddingBottom();
+
+                // Keep its original top padding (16dp) and add the status bar height
+                int originalTop = dp(16);
+                infoContainer.setPadding(left, originalTop + sys.top, right, bottom);
+            }
+            return insets;
+        });
+
+        // Parse destination from map_link (?query=lat,lng)
         String mapLink = getIntent().getStringExtra("map_link");
         if (mapLink != null && !mapLink.isEmpty()) {
             Uri uri = Uri.parse(mapLink);
@@ -101,7 +162,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             return;
         }
 
-        Button btnNavigate = findViewById(R.id.btnNavigation);
+        // External Google Maps turn-by-turn navigation (driving mode)
         if (btnNavigate != null) {
             btnNavigate.setOnClickListener(v -> {
                 if (destinationLocation != null) {
@@ -119,6 +180,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             });
         }
 
+        // Location permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -127,6 +189,10 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         } else {
             fetchCurrentLocation();
         }
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void fetchCurrentLocation() {
@@ -160,13 +226,13 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
-                if (locationResult == null) {
-                    return;
-                }
+                if (locationResult == null) return;
+
                 currentLocation = new LatLng(
                         locationResult.getLastLocation().getLatitude(),
                         locationResult.getLastLocation().getLongitude()
                 );
+
                 if (gMap != null) {
                     if (directMode) {
                         startDirectNavigation();
@@ -177,8 +243,8 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             }
         };
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
@@ -202,9 +268,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
     private void startDirectNavigation() {
         gMap.clear();
         if (destinationLocation != null) {
-            gMap.addMarker(new MarkerOptions()
-                    .position(destinationLocation)
-                    .title("Destination"));
+            gMap.addMarker(new MarkerOptions().position(destinationLocation).title("Destination"));
         }
         gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(destinationLocation, 12));
         String url = getDirectionsUrl(currentLocation, destinationLocation);
@@ -221,9 +285,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
         }
         if (destinationLocation != null) {
-            gMap.addMarker(new MarkerOptions()
-                    .position(destinationLocation)
-                    .title("Destination"));
+            gMap.addMarker(new MarkerOptions().position(destinationLocation).title("Destination"));
         }
         if (currentLocation != null) {
             if (directMode) {
@@ -239,8 +301,8 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
     private String getDirectionsUrl(LatLng origin, LatLng dest) {
         String baseUrl = ApiConfig.endpoint("Doctors/directions.php") + "?";
         String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
-        String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
-        String mode = "mode=driving";
+        String str_dest   = "destination=" + dest.latitude + "," + dest.longitude;
+        String mode       = "mode=driving";
         String parameters = str_origin + "&" + str_dest + "&" + mode;
         return baseUrl + parameters;
     }
@@ -254,7 +316,6 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                 return null;
             }
         }
-
         @Override
         protected void onPostExecute(String result) {
             if (result != null) {
@@ -272,9 +333,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                             tvDuration.setText("Duration: " + durationText);
                         }
                     }
-                } catch (Exception e) {
-                    Toast.makeText(track_patient_location.this, "Unable to parse route information", Toast.LENGTH_SHORT).show();
-                }
+                } catch (Exception ignored) {}
                 new ParserTask().execute(result);
             } else {
                 Toast.makeText(track_patient_location.this, "Failed to retrieve route", Toast.LENGTH_SHORT).show();
@@ -283,7 +342,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
     }
 
     private String downloadUrl(String strUrl) throws Exception {
-        String data = "";
+        String data;
         InputStream iStream = null;
         HttpURLConnection urlConnection = null;
         try {
@@ -294,16 +353,12 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             BufferedReader br = new BufferedReader(new InputStreamReader(iStream));
             StringBuilder sb = new StringBuilder();
             String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
-            }
+            while ((line = br.readLine()) != null) sb.append(line);
             data = sb.toString();
             br.close();
         } finally {
-            if (iStream != null)
-                iStream.close();
-            if (urlConnection != null)
-                urlConnection.disconnect();
+            if (iStream != null) iStream.close();
+            if (urlConnection != null) urlConnection.disconnect();
         }
         return data;
     }
@@ -319,50 +374,45 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                 return null;
             }
         }
-
         @Override
         protected void onPostExecute(List<List<LatLng>> result) {
             if (result == null || result.isEmpty()) {
                 Toast.makeText(track_patient_location.this, "No route found", Toast.LENGTH_SHORT).show();
                 return;
             }
-            ArrayList<LatLng> points;
-            PolylineOptions lineOptions = new PolylineOptions();
+            PolylineOptions lineOptions = new PolylineOptions()
+                    .width(10f)
+                    .color(Color.BLUE);
+
             for (List<LatLng> path : result) {
-                points = new ArrayList<>(path);
-                lineOptions.addAll(points);
-                lineOptions.width(10);
-                lineOptions.color(0xFF0000FF);
+                lineOptions.addAll(path);
             }
-            if (lineOptions != null) {
-                gMap.addPolyline(lineOptions);
-            } else {
-                Toast.makeText(track_patient_location.this, "Unable to draw route", Toast.LENGTH_SHORT).show();
-            }
+            gMap.addPolyline(lineOptions);
         }
     }
 
-    public class DirectionsJSONParser {
+    // ---- FIXED: removed the extra '>' in the generic ----
+    public static class DirectionsJSONParser {
+
         public List<List<LatLng>> parse(JSONObject jObject) {
             List<List<LatLng>> routes = new ArrayList<>();
             try {
                 JSONArray jRoutes = jObject.getJSONArray("routes");
                 for (int i = 0; i < jRoutes.length(); i++) {
-                    JSONArray jLegs = ((JSONObject) jRoutes.get(i)).getJSONArray("legs");
+                    JSONArray jLegs = jRoutes.getJSONObject(i).getJSONArray("legs");
                     List<LatLng> path = new ArrayList<>();
                     for (int j = 0; j < jLegs.length(); j++) {
-                        JSONArray jSteps = ((JSONObject) jLegs.get(j)).getJSONArray("steps");
+                        JSONArray jSteps = jLegs.getJSONObject(j).getJSONArray("steps");
                         for (int k = 0; k < jSteps.length(); k++) {
-                            String polyline = ((JSONObject) ((JSONObject) jSteps.get(k)).get("polyline")).getString("points");
-                            List<LatLng> list = decodePoly(polyline);
-                            path.addAll(list);
+                            String polyline = jSteps.getJSONObject(k)
+                                    .getJSONObject("polyline")
+                                    .getString("points");
+                            path.addAll(decodePoly(polyline));
                         }
                     }
                     routes.add(path);
                 }
-            } catch (Exception e) {
-                // No logs, show no error
-            }
+            } catch (Exception ignored) {}
             return routes;
         }
 
@@ -370,6 +420,7 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
             List<LatLng> poly = new ArrayList<>();
             int index = 0, len = encoded.length();
             int lat = 0, lng = 0;
+
             while (index < len) {
                 int b, shift = 0, result = 0;
                 do {
@@ -377,56 +428,38 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
                     result |= (b & 0x1f) << shift;
                     shift += 5;
                 } while (b >= 0x20);
-                int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+                int dlat = ((result & 1) != 0) ? ~(result >> 1) : (result >> 1);
                 lat += dlat;
-                shift = 0;
-                result = 0;
+
+                shift = 0; result = 0;
                 do {
                     b = encoded.charAt(index++) - 63;
                     result |= (b & 0x1f) << shift;
                     shift += 5;
                 } while (b >= 0x20);
-                int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+                int dlng = ((result & 1) != 0) ? ~(result >> 1) : (result >> 1);
                 lng += dlng;
-                poly.add(new LatLng((double) lat / 1E5, (double) lng / 1E5));
+
+                poly.add(new LatLng(lat / 1E5, lng / 1E5));
             }
             return poly;
         }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mapView.onResume();
-    }
-    @Override
-    protected void onStart() {
-        super.onStart();
-        mapView.onStart();
-    }
-    @Override
-    protected void onStop() {
-        super.onStop();
-        mapView.onStop();
-    }
-    @Override
-    protected void onPause() {
+    // ---- MapView lifecycle ----
+    @Override protected void onResume() { super.onResume(); mapView.onResume(); }
+    @Override protected void onStart()  { super.onStart();  mapView.onStart(); }
+    @Override protected void onStop()   { super.onStop();   mapView.onStop(); }
+    @Override protected void onPause()  {
         if (fusedLocationClient != null && locationCallback != null) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
         }
         mapView.onPause();
         super.onPause();
     }
-    @Override
-    protected void onDestroy() {
-        mapView.onDestroy();
-        super.onDestroy();
-    }
-    @Override
-    public void onLowMemory() {
-        super.onLowMemory();
-        mapView.onLowMemory();
-    }
+    @Override protected void onDestroy(){ mapView.onDestroy(); super.onDestroy(); }
+    @Override public void onLowMemory() { super.onLowMemory(); mapView.onLowMemory(); }
+
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -438,15 +471,17 @@ public class track_patient_location extends AppCompatActivity implements OnMapRe
         mapView.onSaveInstanceState(mapViewBundle);
     }
 
+    // ---- Permission result ----
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 fetchCurrentLocation();
                 if (gMap != null) {
-                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                            && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                         return;
                     }
                     gMap.setMyLocationEnabled(true);

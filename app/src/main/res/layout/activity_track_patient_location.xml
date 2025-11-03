@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
+    android:id="@+id/root_container"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    tools:context=".track_patient_location">
 
     <!-- MapView fills the entire screen -->
     <com.google.android.gms.maps.MapView
@@ -12,12 +13,13 @@
         android:layout_height="match_parent"
         tools:ignore="MissingClass" />
 
-    <!-- Container for distance and duration display -->
+    <!-- Info overlay (we'll push it below the status bar via insets in code) -->
     <LinearLayout
+        android:id="@+id/info_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:layout_gravity="top|start"
+        android:orientation="vertical"
         android:padding="16dp"
         android:background="#80000000">
 
@@ -36,6 +38,7 @@
             android:text="Duration:"
             android:textColor="@android:color/white"
             android:textSize="16sp" />
+
         <Button
             android:id="@+id/btnNavigation"
             android:layout_width="wrap_content"
@@ -43,4 +46,21 @@
             android:text="Start Bike Navigation" />
     </LinearLayout>
 
+    <!-- TOP status bar black overlay (height set via WindowInsets) -->
+    <View
+        android:id="@+id/status_bar_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_gravity="top"
+        android:background="@android:color/black"
+        android:visibility="gone" />
+
+    <!-- BOTTOM navigation bar black overlay (height set via WindowInsets) -->
+    <View
+        android:id="@+id/navigation_bar_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_gravity="bottom"
+        android:background="@android:color/black"
+        android:visibility="gone" />
 </FrameLayout>
