@@ -1,26 +1,55 @@
 package com.infowave.doctor_control;
 
 import android.os.Bundle;
-import android.util.Log;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowInsets;
+import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import com.infowave.doctor_control.adapter.PaymentAdapter;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.infowave.doctor_control.adapter.PaymentHistoryAdapter;
+import com.infowave.doctor_control.adapter.SettlementAppointmentAdapter;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.List;
 
 public class PaymentHistoryActivity extends AppCompatActivity {
 
-    ListView listView;
-    ArrayList<PaymentModel> paymentList;
+    private ListView listView;
+    private EditText etSearch;
+    private PaymentHistoryAdapter adapter;
+
+    // TODO: वास्तविक login/session से पास करें
+    private int doctorId = 1;
+
+    // Settled summaries only
+    private final ArrayList<PaymentSummary> completedList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment_history);
+
+        // Edge-to-edge padding (आपके मौजूदा पैटर्न के अनुसार)
         View decoreview = getWindow().getDecorView();
         decoreview.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             @NonNull
@@ -30,27 +59,186 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                 int top = insets.getSystemWindowInsetTop();
                 int right = insets.getSystemWindowInsetRight();
                 int bottom = insets.getSystemWindowInsetBottom();
-                v.setPadding(left,top,right,bottom);
+                v.setPadding(left, top, right, bottom);
                 return insets.consumeSystemWindowInsets();
             }
         });
+
         listView = findViewById(R.id.list_payment);
-        listView.setDivider(null); // Optional: remove ListView divider lines
+        etSearch = findViewById(R.id.et_search);
 
-        paymentList = new ArrayList<>();
-
-        // Dummy Data for display
-        paymentList.add(new PaymentModel("John Patel", R.drawable.plaseholder_error, "₹1200","complete"));
-        paymentList.add(new PaymentModel("Riya Shah", R.drawable.plaseholder_error, "₹1500","complete"));
-        paymentList.add(new PaymentModel("Amit Joshi", R.drawable.plaseholder_error, "₹950","complete"));
-
-        if (paymentList.isEmpty()) {
-            Toast.makeText(this, "No payment data available", Toast.LENGTH_SHORT).show();
-        }
-
-        Log.d("PaymentHistoryActivity", "Payment List Size: " + paymentList.size());
-
-        PaymentAdapter adapter = new PaymentAdapter(this, paymentList);
+        adapter = new PaymentHistoryAdapter(this, /*initial*/ new ArrayList<>());
+        listView.setDivider(null);
         listView.setAdapter(adapter);
+
+        // Live Search
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                adapter.filter(s == null ? "" : s.toString());
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        // कार्ड क्लिक → उस Settled summary की सभी appointments दिखाएँ (बॉटम शीट)
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            PaymentSummary summary = (PaymentSummary) adapter.getItem(position);
+            if (summary == null) return;
+            showSettlementAppointmentsBottomSheet(summary);
+        });
+
+        fetchCompletedSettlements(doctorId);
+    }
+
+    private void fetchCompletedSettlements(int doctorId) {
+        try {
+            String base = ApiConfig.endpoint(
+                    "Doctors/get_doctor_settlements.php",
+                    "doctor_id",
+                    URLEncoder.encode(String.valueOf(doctorId), StandardCharsets.UTF_8.name())
+            );
+            // केवल Settled summaries
+            String url = base + "&status=Settled";
+
+            StringRequest req = new StringRequest(Request.Method.GET, url, response -> {
+                try {
+                    JSONObject root = new JSONObject(response);
+                    if (!root.optBoolean("success", false)) {
+                        Toast.makeText(this, root.optString("message", "Failed"), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    JSONArray arr = root.optJSONArray("data");
+                    completedList.clear();
+
+                    if (arr != null) {
+                        for (int i = 0; i < arr.length(); i++) {
+                            JSONObject o = arr.getJSONObject(i);
+
+                            PaymentSummary s = new PaymentSummary();
+                            s.summaryId             = o.optInt("summary_id");
+                            s.doctorId              = o.optInt("doctor_id");
+                            s.appointmentIdsCsv     = o.optString("appointment_ids_csv", "");
+                            s.appointmentCount      = o.optInt("appointment_count", 0);
+                            s.onlineAppointments    = o.optInt("online_appointments", 0);
+                            s.offlineAppointments   = o.optInt("offline_appointments", 0);
+                            s.totalBaseExGst        = o.optDouble("total_base_ex_gst", 0);
+                            s.totalGst              = o.optDouble("total_gst", 0);
+                            s.adminCollectedTotal   = o.optDouble("admin_collected_total", 0);
+                            s.doctorCollectedTotal  = o.optDouble("doctor_collected_total", 0);
+                            s.adminCut              = o.optDouble("admin_cut", 0);
+                            s.doctorCut             = o.optDouble("doctor_cut", 0);
+                            s.adjustmentAmount      = o.optDouble("adjustment_amount", 0);
+                            s.givenToDoctor         = o.optDouble("given_to_doctor", 0);
+                            s.receivedFromDoctor    = o.optDouble("received_from_doctor", 0);
+
+                            // API 'Settled' भेजती है
+                            s.settlementStatus      = o.optString("settlement_status", "Settled");
+                            s.notes                 = o.optString("notes", "");
+                            s.createdAt             = o.optString("created_at", "");
+                            s.updatedAt             = o.optString("updated_at", "");
+
+                            if ("Settled".equalsIgnoreCase(s.settlementStatus)) {
+                                completedList.add(s);
+                            }
+                        }
+                    }
+
+                    // ✅ एडेप्टर को ताज़ा डेटा देकर उसकी filtered लिस्ट भी रीसेट करें
+                    adapter.setData(completedList);
+
+                    if (completedList.isEmpty()) {
+                        Toast.makeText(this, "No settled settlements found.", Toast.LENGTH_SHORT).show();
+                    }
+
+                } catch (Exception e) {
+                    Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }, error -> {
+                String msg = (error.getMessage() != null) ? error.getMessage() : "Network error";
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+            });
+
+            req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
+            Volley.newRequestQueue(this).add(req);
+
+        } catch (Exception e) {
+            Toast.makeText(this, "Build URL failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showSettlementAppointmentsBottomSheet(PaymentSummary summary) {
+        try {
+            View sheetView = LayoutInflater.from(this)
+                    .inflate(R.layout.bottomsheet_settlement_appointments, null);
+
+            TextView tvTitle = sheetView.findViewById(R.id.tvSheetTitle);
+            TextView tvMeta  = sheetView.findViewById(R.id.tvMeta);
+            RecyclerView rv  = sheetView.findViewById(R.id.rvSettlementAppointments);
+            rv.setLayoutManager(new LinearLayoutManager(this));
+
+            tvTitle.setText("Settlement #" + summary.summaryId + " • Settled");
+            tvMeta.setText(
+                    "Appointments: " + summary.appointmentCount +
+                            "  |  Online: " + summary.onlineAppointments +
+                            "  |  Offline: " + summary.offlineAppointments
+            );
+
+            BottomSheetDialog dialog = new BottomSheetDialog(this);
+            dialog.setContentView(sheetView);
+            dialog.show();
+
+            // उसी summary की appointments
+            String base = ApiConfig.endpoint(
+                    "Doctors/get_settlement_appointments.php",
+                    "doctor_id",
+                    URLEncoder.encode(String.valueOf(summary.doctorId), StandardCharsets.UTF_8.name())
+            );
+            String url = base + "&summary_id=" + summary.summaryId;
+
+            StringRequest req = new StringRequest(Request.Method.GET, url, response -> {
+                try {
+                    JSONObject root = new JSONObject(response);
+                    if (!root.optBoolean("success", false)) {
+                        Toast.makeText(this, root.optString("message", "Failed"), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    JSONArray arr = root.optJSONArray("data");
+                    if (arr == null) arr = new JSONArray();
+
+                    List<SettlementAppointment> data = new ArrayList<>();
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject o = arr.getJSONObject(i);
+
+                        SettlementAppointment a = new SettlementAppointment();
+                        a.appointmentId   = o.optInt("appointment_id");
+                        a.patientId       = o.optInt("patient_id");
+                        a.patientName     = o.optString("patient_name", "");
+                        a.paymentMethod   = o.optString("payment_method", "");
+                        a.deposit         = o.optDouble("deposit", 0);
+                        a.depositStatus   = o.optString("deposit_status", "");
+                        a.amountTotal     = o.optDouble("amount_total", 0);
+                        a.gst             = o.optDouble("gst", 0);
+                        a.baseExGst       = o.optDouble("base_ex_gst", 0);
+                        a.adminCommission = o.optDouble("admin_commission", 0);
+                        a.doctorEarning   = o.optDouble("doctor_earning", 0);
+                        a.paymentStatus   = o.optString("payment_status", "");
+                        a.createdAt       = o.optString("created_at", "");
+
+                        data.add(a);
+                    }
+                    rv.setAdapter(new SettlementAppointmentAdapter(data));
+
+                } catch (Exception e) {
+                    Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }, error -> Toast.makeText(this, "Network error: " + (error.getMessage()!=null?error.getMessage():""), Toast.LENGTH_SHORT).show());
+
+            req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
+            Volley.newRequestQueue(this).add(req);
+
+        } catch (Exception e) {
+            Toast.makeText(this, "Bottom sheet error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 }

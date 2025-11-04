@@ -58,7 +58,7 @@ public class PaymentSummaryAdapter extends RecyclerView.Adapter<PaymentSummaryAd
         h.tvTotalEarning.setText("Base (ex-GST): ₹" + String.format("%.2f", s.totalBaseExGst));
         h.tvNotes.setText(s.notes);
 
-        // Totals (transparency)
+        // Transparency totals
         h.tvTotalGst.setText("GST: ₹" + String.format("%.2f", s.totalGst));
         h.tvAdminCollected.setText("Admin Collected: ₹" + String.format("%.2f", s.adminCollectedTotal));
         h.tvDoctorCollected.setText("Doctor Collected: ₹" + String.format("%.2f", s.doctorCollectedTotal));
@@ -68,34 +68,56 @@ public class PaymentSummaryAdapter extends RecyclerView.Adapter<PaymentSummaryAd
         h.tvDoctorCut.setText("Doctor Cut: ₹" + String.format("%.2f", s.doctorCut));
         h.tvAdjustmentAmount.setText("Adjustment: ₹" + String.format("%.2f", s.adjustmentAmount));
 
-        // Show debits/credits explicitly too
+        // Explicit credits/debits
         h.tvGivenToDoctor.setText("Given To Doctor: ₹" + String.format("%.2f", s.givenToDoctor));
         h.tvReceivedFromDoctor.setText("Received From Doctor: ₹" + String.format("%.2f", s.receivedFromDoctor));
 
-        // Badge + Pay button logic
+        // ---- Business rules for button/status ----
+        // amtAdminToDoctor > 0  => Admin → Doctor (doctor को पैसा लेना है) => Pay button DISABLED (Receive label)
+        // amtDoctorToAdmin > 0  => Doctor → Admin (doctor को पैसा देना है)  => Pay button ENABLED
+        // दोनों 0                => no dues => button GONE
         double amtAdminToDoctor = s.givenToDoctor;      // Admin → Doctor
         double amtDoctorToAdmin = s.receivedFromDoctor; // Doctor → Admin
 
+        // Reset button baseline state
+        h.btnPay.setEnabled(true);
+        h.btnPay.setAlpha(1f);
+        h.btnPay.setVisibility(View.VISIBLE);
+        h.btnPay.setOnClickListener(null);
+
         if (amtAdminToDoctor > 0) {
-            h.tvSettlementStatus.setText("Pending (Admin → Doctor)");
-            h.tvSettlementStatus.setTextColor(Color.parseColor("#2E7D32")); // green
-            h.btnPay.setText("Pay Doctor ₹" + String.format("%.2f", amtAdminToDoctor));
-            h.btnPay.setVisibility(View.VISIBLE);
+            // Doctor will RECEIVE from Admin
+            h.tvSettlementStatus.setText("Pending • (Admin → Doctor)");
+            h.tvSettlementStatus.setTextColor(Color.parseColor("#2E7D32")); // Green
+
+            // Disabled button with "Receive" label (as per requirement)
+            h.btnPay.setText("Receive from Admin ₹" + String.format("%.2f", amtAdminToDoctor));
+            h.btnPay.setEnabled(false);
+            h.btnPay.setAlpha(0.6f);          // subtle disabled look
+            h.btnPay.setClickable(false);
+            // No click action – doctor cannot pay in this direction
+
         } else if (amtDoctorToAdmin > 0) {
-            h.tvSettlementStatus.setText("Pending (Doctor → Admin)");
-            h.tvSettlementStatus.setTextColor(Color.parseColor("#EF6C00")); // orange
+            // Doctor must PAY Admin
+            h.tvSettlementStatus.setText("Pending • (Doctor → Admin)");
+            h.tvSettlementStatus.setTextColor(Color.parseColor("#EF6C00")); // Orange
+
             h.btnPay.setText("Pay Admin ₹" + String.format("%.2f", amtDoctorToAdmin));
-            h.btnPay.setVisibility(View.VISIBLE);
+            h.btnPay.setEnabled(true);
+            h.btnPay.setAlpha(1f);
+            h.btnPay.setClickable(true);
+            h.btnPay.setOnClickListener(v -> {
+                if (onPayClickListener != null) onPayClickListener.onPayClick(s);
+            });
+
         } else {
+            // No dues
             h.tvSettlementStatus.setText("Pending");
             h.tvSettlementStatus.setTextColor(Color.parseColor("#616161"));
             h.btnPay.setVisibility(View.GONE);
         }
 
-        h.btnPay.setOnClickListener(v -> {
-            if (onPayClickListener != null) onPayClickListener.onPayClick(s);
-        });
-
+        // Card click → open appointments included in this settlement
         h.itemView.setOnClickListener(v -> {
             if (onCardClickListener != null) onCardClickListener.onCardClick(s);
         });
@@ -123,7 +145,7 @@ public class PaymentSummaryAdapter extends RecyclerView.Adapter<PaymentSummaryAd
             tvCreatedAt          = itemView.findViewById(R.id.tvCreatedAt);
             btnPay               = itemView.findViewById(R.id.btnPay);
 
-            // NEW totals
+            // Totals
             tvTotalGst           = itemView.findViewById(R.id.tvTotalGst);
             tvAdminCollected     = itemView.findViewById(R.id.tvAdminCollected);
             tvDoctorCollected    = itemView.findViewById(R.id.tvDoctorCollected);
