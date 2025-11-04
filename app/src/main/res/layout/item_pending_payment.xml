@@ -1,136 +1,195 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardPending"
     android:layout_width="match_parent"
-    android:layout_margin="14dp"
     android:layout_height="wrap_content"
-    android:elevation="8dp"
-    android:radius="18dp"
-    android:backgroundTint="#FAFAFA">
+    android:layout_marginHorizontal="14dp"
+    android:layout_marginVertical="10dp"
+    android:foreground="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:transitionName="settlementCard"
+    app:cardUseCompatPadding="true"
+    app:contentPadding="0dp"
+    app:cardBackgroundColor="@android:color/transparent"
+    app:cardElevation="6dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:background="@drawable/bg_card_soft"
+        android:padding="16dp">
 
-        <!-- Header -->
+        <!-- Header Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-           >
+            android:gravity="center_vertical">
 
+            <!-- Status chip (direction text: Admin → Doctor / Doctor → Admin) -->
             <TextView
                 android:id="@+id/tvSettlementStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Pending"
-                android:textColor="#FF3B30"
+                android:text="Pending (Admin → Doctor)"
+                android:textSize="12sp"
                 android:textStyle="bold"
-                android:textSize="16sp"
-                android:background="@drawable/status_badge"
-                android:paddingLeft="14dp"
-                android:paddingRight="14dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp"
-                android:layout_gravity="start"/>
+                android:textColor="#1B5E20"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/chip_pending_positive" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
             <TextView
                 android:id="@+id/tvCreatedAt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="2025-05-11"
-                android:textColor="#888"
-                android:textSize="13sp"
-                android:layout_gravity="end" />
+                android:text="2025-11-03 06:30:01"
+                android:textSize="12sp"
+                android:textColor="#8A8A8A" />
         </LinearLayout>
+
+        <!-- Title / Sub -->
+        <TextView
+            android:id="@+id/tvNotes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Settlement from 2025-10-30 21:42:47 to 2025-11-03 12:00:01"
+            android:textSize="13sp"
+            android:textColor="#6B6B6B"
+            android:layout_marginTop="8dp" />
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#E0E0E0"
-            android:layout_marginVertical="8dp"/>
+            android:background="#EEEEEE"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="10dp" />
 
-        <!-- Main info -->
+        <!-- Doctor + Totals Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
+            <!-- Left column -->
             <LinearLayout
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/tvDoctorId"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Doctor ID: 11"
+                    android:text="Doctor ID: 1"
                     android:textStyle="bold"
-                    android:textColor="#222"
-                    android:textSize="16sp"/>
+                    android:textColor="#212121"
+                    android:textSize="15sp" />
 
                 <TextView
                     android:id="@+id/tvTotalEarning"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Total Earning: ₹1626.20"
-                    android:textColor="#222"
-                    android:textSize="15sp"/>
+                    android:text="Base (ex-GST): ₹1500.00"
+                    android:textColor="#212121"
+                    android:textSize="14sp"
+                    android:layout_marginTop="6dp" />
 
                 <TextView
-                    android:id="@+id/tvNotes"
+                    android:id="@+id/tvTotalGst"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Settlement from 2025-05-06 to 2025-05-11"
-                    android:textColor="#606060"
+                    android:text="GST: ₹150.00"
+                    android:textColor="#212121"
                     android:textSize="14sp"
-                    android:paddingTop="3dp"/>
+                    android:layout_marginTop="2dp" />
             </LinearLayout>
 
+            <!-- Right column -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:gravity="end"
-                android:paddingLeft="12dp">
+                android:gravity="end">
 
                 <TextView
-                    android:id="@+id/tvAdminCut"
+                    android:id="@+id/tvAdminCollected"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Admin Cut: ₹325.24"
-                    android:textColor="#FF9800"
-                    android:textStyle="bold"
-                    android:textSize="15sp"/>
+                    android:text="Admin Collected: ₹980.00"
+                    android:textColor="#424242"
+                    android:textSize="14sp" />
 
                 <TextView
-                    android:id="@+id/tvDoctorCut"
+                    android:id="@+id/tvDoctorCollected"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Doctor Cut: ₹1300.96"
-                    android:textColor="#00C853"
-                    android:textSize="15sp"/>
-
-                <TextView
-                    android:id="@+id/tvAdjustmentAmount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Adjustment: ₹493.24"
-                    android:textColor="#2979FF"
-                    android:textSize="15sp"/>
+                    android:text="Doctor Collected: ₹670.00"
+                    android:textColor="#424242"
+                    android:textSize="14sp"
+                    android:layout_marginTop="2dp" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#E0E0E0"
-            android:layout_marginVertical="8dp"/>
+            android:background="#EEEEEE"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp" />
 
-        <!-- Payment Info Row -->
+        <!-- Cuts Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvAdminCut"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Admin Cut: ₹300.00"
+                android:textStyle="bold"
+                android:textColor="#F57C00"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvDoctorCut"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Doctor Cut: ₹1200.00"
+                android:textColor="#2E7D32"
+                android:textSize="14sp"
+                android:layout_marginTop="2dp" />
+
+            <TextView
+                android:id="@+id/tvAdjustmentAmount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Adjustment: -₹530.00"
+                android:textColor="#1565C0"
+                android:textSize="14sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp" />
+
+        <!-- Given/Received Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -140,19 +199,19 @@
             <TextView
                 android:id="@+id/tvGivenToDoctor"
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="Given To Doctor: ₹0.00"
-                android:textColor="#444"
-                android:textSize="15sp"/>
+                android:textColor="#444444"
+                android:textSize="14sp" />
 
             <TextView
                 android:id="@+id/tvReceivedFromDoctor"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Received From Doctor: ₹493.24"
-                android:textColor="#444"
-                android:textSize="15sp"/>
+                android:text="Received From Doctor: ₹0.00"
+                android:textColor="#444444"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <!-- Pay Button -->
@@ -160,21 +219,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="end"
-            android:orientation="horizontal"
-            android:layout_marginTop="12dp">
+            android:layout_marginTop="14dp">
 
             <Button
                 android:id="@+id/btnPay"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:text="Pay ₹493.24"
-                android:textColor="@android:color/white"
+                android:layout_height="44dp"
+                android:text="Pay Doctor ₹530.00"
+                android:textAllCaps="false"
                 android:textStyle="bold"
-                android:backgroundTint="#FF3B30"
-                android:paddingLeft="24dp"
-                android:paddingRight="24dp"
-                android:layout_gravity="end"
-                android:elevation="2dp"/>
+                android:textColor="@android:color/white"
+                android:paddingHorizontal="22dp"
+                android:background="@drawable/btn_pay_primary"
+                android:elevation="2dp" />
         </LinearLayout>
+
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

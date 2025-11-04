@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardUseCompatPadding="true"
+    app:cardElevation="6dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <!-- Top row: Patient + Status chip -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvPatientName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Patient: -"
+                android:textStyle="bold"
+                android:textColor="#1B1B1B"
+                android:textSize="16sp"/>
+
+            <!-- Status chip (adapter sets text/color) -->
+            <TextView
+                android:id="@+id/tvPaymentStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Status"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#1B5E20"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:background="@drawable/bg_status_chip_positive"/>
+        </LinearLayout>
+
+        <!-- Amount / GST / Base -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="6dp">
+
+            <TextView
+                android:id="@+id/tvAmount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Total: ₹0.00"
+                android:textColor="#222"
+                android:textSize="15sp"/>
+
+            <TextView
+                android:id="@+id/tvGst"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GST: ₹0.00"
+                android:textColor="#222"
+                android:textSize="15sp"/>
+
+            <TextView
+                android:id="@+id/tvBase"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Base: ₹0.00"
+                android:textColor="#222"
+                android:textSize="15sp"/>
+        </LinearLayout>
+
+        <!-- Method + Deposit -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp">
+
+            <TextView
+                android:id="@+id/tvMethod"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Method: -"
+                android:textColor="#555"
+                android:textSize="14sp"/>
+
+            <TextView
+                android:id="@+id/tvDeposit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Deposit: -"
+                android:textColor="#555"
+                android:textSize="14sp"/>
+        </LinearLayout>
+
+        <!-- Created at -->
+        <TextView
+            android:id="@+id/tvCreatedAt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Created: -"
+            android:textColor="#777"
+            android:textSize="13sp"
+            android:layout_marginTop="6dp"/>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

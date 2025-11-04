@@ -12,10 +12,19 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.infowave.doctor_control.adapter.PaymentSummaryAdapter;
-import com.infowave.doctor_control.adapter.PendingPaymentAppointmentAdapter;
+import com.infowave.doctor_control.adapter.SettlementAppointmentAdapter;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,99 +32,203 @@ public class PendingPaymentActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private PaymentSummaryAdapter adapter;
 
+    // TODO: Login के बाद doctorId assign करें; demo के लिए 1
+    private int doctorId = 1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pending_payment);
 
-        // Optional: Handle window insets for edge-to-edge screens (can be omitted on latest Android)
+        // Edge-to-edge padding (बिना theme बदले)
         View decorView = getWindow().getDecorView();
-        decorView.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
-            @NonNull
-            @Override
-            public WindowInsets onApplyWindowInsets(@NonNull View v, @NonNull WindowInsets insets) {
-                int left = insets.getSystemWindowInsetLeft();
-                int top = insets.getSystemWindowInsetTop();
-                int right = insets.getSystemWindowInsetRight();
-                int bottom = insets.getSystemWindowInsetBottom();
-                v.setPadding(left, top, right, bottom);
-                return insets.consumeSystemWindowInsets();
-            }
+        decorView.setOnApplyWindowInsetsListener((@NonNull View v, @NonNull WindowInsets insets) -> {
+            v.setPadding(
+                    insets.getSystemWindowInsetLeft(),
+                    insets.getSystemWindowInsetTop(),
+                    insets.getSystemWindowInsetRight(),
+                    insets.getSystemWindowInsetBottom()
+            );
+            return insets.consumeSystemWindowInsets();
         });
 
         recyclerView = findViewById(R.id.recyclerViewPaymentSummary);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        List<PaymentSummary> summaryList = getPendingSummaries(); // Your data source
-
         adapter = new PaymentSummaryAdapter(
-                summaryList,
+                new ArrayList<>(),
                 summary -> {
-                    // On Pay button clicked
-                    double amount = (summary.receivedFromDoctor > 0) ? summary.receivedFromDoctor : summary.givenToDoctor;
-                    Toast.makeText(this, "Paying ₹" + amount + " for Doctor ID " + summary.doctorId, Toast.LENGTH_SHORT).show();
-                    // Call your payment flow here (UPI, wallet, etc)
+                    // Pay button pressed (dynamic label already set in adapter)
+                    double amtAdminToDoctor = summary.givenToDoctor;      // Admin → Doctor
+                    double amtDoctorToAdmin = summary.receivedFromDoctor; // Doctor → Admin
+
+                    if (amtAdminToDoctor <= 0 && amtDoctorToAdmin <= 0) {
+                        Toast.makeText(this, "No dues for this settlement.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    String whom = (amtAdminToDoctor > 0) ? "Doctor" : "Admin";
+                    double amount = (amtAdminToDoctor > 0) ? amtAdminToDoctor : amtDoctorToAdmin;
+
+                    Toast.makeText(this,
+                            "Proceed to pay " + whom + " ₹" + String.format("%.2f", amount) +
+                                    " (Summary #" + summary.summaryId + ")",
+                            Toast.LENGTH_SHORT).show();
+
+                    // TODO: Integrate PhonePe Checkout / UPI / Wallet flow here
                 },
-                doctorId -> {
-                    // On Card clicked
-                    showPendingPaymentAppointmentBottomSheet(doctorId);
-                }
+                // Card click → show the exact appointments included in THIS settlement
+                this::showSettlementAppointmentsBottomSheet
         );
-
         recyclerView.setAdapter(adapter);
+
+        // Pull only Pending settlements for the logged-in doctor
+        fetchPendingSummaries(doctorId);
     }
 
-    // Sample pending payment summaries
-    private List<PaymentSummary> getPendingSummaries() {
-        List<PaymentSummary> list = new ArrayList<>();
-        PaymentSummary s1 = new PaymentSummary();
-        s1.summaryId = 9; s1.doctorId = 11; s1.settlementStatus = "Pending";
-        s1.totalEarning = 1626.20F; s1.adminCut = 325.24; s1.doctorCut = 1300.96;
-        s1.adjustmentAmount = 493.24; s1.givenToDoctor = 0; s1.receivedFromDoctor = 493.24;
-        s1.notes = "Settlement from 2025-05-06 to 2025-05-11";
-        s1.createdAt = "2025-05-11 09:39:13";
-        list.add(s1);
+    private void fetchPendingSummaries(int doctorId) {
+        try {
+            String base = ApiConfig.endpoint(
+                    "Doctors/get_doctor_settlements.php",
+                    "doctor_id",
+                    URLEncoder.encode(String.valueOf(doctorId), StandardCharsets.UTF_8.name())
+            );
+            String url = base + "&status=Pending";
 
-        PaymentSummary s2 = new PaymentSummary();
-        s2.summaryId = 10; s2.doctorId = 10; s2.settlementStatus = "Pending";
-        s2.totalEarning = 6577.08F; s2.adminCut = 1315.42; s2.doctorCut = 5261.66;
-        s2.adjustmentAmount = 1665.42; s2.givenToDoctor = 0; s2.receivedFromDoctor = 1665.42;
-        s2.notes = "Settlement from 2025-05-06 to 2025-05-11";
-        s2.createdAt = "2025-05-11 09:39:13";
-        list.add(s2);
+            StringRequest req = new StringRequest(Request.Method.GET, url, response -> {
+                try {
+                    JSONObject root = new JSONObject(response);
+                    if (!root.optBoolean("success", false)) {
+                        Toast.makeText(this, root.optString("message", "Failed"), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
 
-        return list;
-    }
+                    JSONArray arr = root.optJSONArray("data");
+                    if (arr == null) arr = new JSONArray();
 
-    // Show appointments with payment_status 'Pending' for given doctor
-    private void showPendingPaymentAppointmentBottomSheet(int doctorId) {
-        // Fetch all appointments for this doctor with payment_status 'Pending'
-        List<PendingPaymentAppointment> pendingList = new ArrayList<>();
-        for (PendingPaymentAppointment a : getAllPendingPaymentAppointments()) {
-            if (a.doctorId == doctorId && "Pending".equalsIgnoreCase(a.paymentStatus)) {
-                pendingList.add(a);
-            }
+                    List<PaymentSummary> list = new ArrayList<>();
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject o = arr.getJSONObject(i);
+                        PaymentSummary s = new PaymentSummary();
+
+                        s.summaryId            = o.optInt("summary_id");
+                        s.doctorId             = o.optInt("doctor_id");
+                        s.appointmentIdsCsv    = o.optString("appointment_ids_csv", "");
+                        s.appointmentCount     = o.optInt("appointment_count", 0);
+                        s.onlineAppointments   = o.optInt("online_appointments", 0);
+                        s.offlineAppointments  = o.optInt("offline_appointments", 0);
+
+                        s.totalBaseExGst       = o.optDouble("total_base_ex_gst", 0);
+                        s.totalGst             = o.optDouble("total_gst", 0);
+                        s.adminCollectedTotal  = o.optDouble("admin_collected_total", 0);
+                        s.doctorCollectedTotal = o.optDouble("doctor_collected_total", 0);
+
+                        s.adminCut             = o.optDouble("admin_cut", 0);
+                        s.doctorCut            = o.optDouble("doctor_cut", 0);
+                        s.adjustmentAmount     = o.optDouble("adjustment_amount", 0);
+
+                        s.givenToDoctor        = o.optDouble("given_to_doctor", 0);
+                        s.receivedFromDoctor   = o.optDouble("received_from_doctor", 0);
+
+                        s.settlementStatus     = o.optString("settlement_status", "Pending");
+                        s.notes                = o.optString("notes", "");
+                        s.createdAt            = o.optString("created_at", "");
+                        s.updatedAt            = o.optString("updated_at", "");
+
+                        // हम server से पहले ही Pending filter करा रहे हैं; फिर भी guard रखें
+                        if ("Pending".equalsIgnoreCase(s.settlementStatus)) {
+                            list.add(s);
+                        }
+                    }
+                    adapter.setData(list);
+
+                } catch (Exception e) {
+                    Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }, error ->
+                    Toast.makeText(this, "Network error: " + (error.getMessage() != null ? error.getMessage() : ""), Toast.LENGTH_SHORT).show()
+            );
+
+            req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
+            Volley.newRequestQueue(this).add(req);
+
+        } catch (Exception e) {
+            Toast.makeText(this, "Build URL failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
-
-        // Inflate bottom sheet
-        View sheetView = LayoutInflater.from(this).inflate(R.layout.bottomsheet_pending_payment_appointment, null);
-        RecyclerView rv = sheetView.findViewById(R.id.rvPendingPaymentAppointments);
-        rv.setLayoutManager(new LinearLayoutManager(this));
-        rv.setAdapter(new PendingPaymentAppointmentAdapter(pendingList));
-        TextView tvTitle = sheetView.findViewById(R.id.tvSheetTitle);
-        tvTitle.setText("Pending Payment Appointments (Doctor ID: " + doctorId + ")");
-
-        BottomSheetDialog dialog = new BottomSheetDialog(this);
-        dialog.setContentView(sheetView);
-        dialog.show();
     }
 
-    // Example: Should return all pending payment appointments (replace with your actual data source)
-    private List<PendingPaymentAppointment> getAllPendingPaymentAppointments() {
-        List<PendingPaymentAppointment> list = new ArrayList<>();
-        list.add(new PendingPaymentAppointment(125, 11, 2, "kunj", 689.95, "Pending", "2025-05-06 01:44:56"));
-        list.add(new PendingPaymentAppointment(128, 10, 10, "Vansh", 515.00, "Pending", "2025-05-06 10:45:32"));
-        // ... add all records (fetch from DB or API in real app)
-        return list;
+    private void showSettlementAppointmentsBottomSheet(PaymentSummary summary) {
+        try {
+            View sheetView = LayoutInflater.from(this)
+                    .inflate(R.layout.bottomsheet_settlement_appointments, null);
+
+            TextView tvTitle = sheetView.findViewById(R.id.tvSheetTitle);
+            TextView tvMeta  = sheetView.findViewById(R.id.tvMeta);
+            RecyclerView rv  = sheetView.findViewById(R.id.rvSettlementAppointments);
+            rv.setLayoutManager(new LinearLayoutManager(this));
+
+            tvTitle.setText("Settlement #" + summary.summaryId + " • " + summary.settlementStatus);
+            tvMeta.setText(
+                    "Appointments: " + summary.appointmentCount +
+                            "  |  Online: " + summary.onlineAppointments +
+                            "  |  Offline: " + summary.offlineAppointments
+            );
+
+            BottomSheetDialog dialog = new BottomSheetDialog(this);
+            dialog.setContentView(sheetView);
+            dialog.show();
+
+            String base = ApiConfig.endpoint(
+                    "Doctors/get_settlement_appointments.php",
+                    "doctor_id",
+                    URLEncoder.encode(String.valueOf(summary.doctorId), StandardCharsets.UTF_8.name())
+            );
+            String url  = base + "&summary_id=" + summary.summaryId;
+
+            StringRequest req = new StringRequest(Request.Method.GET, url, response -> {
+                try {
+                    JSONObject root = new JSONObject(response);
+                    if (!root.optBoolean("success", false)) {
+                        Toast.makeText(this, root.optString("message", "Failed"), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    JSONArray arr = root.optJSONArray("data");
+                    if (arr == null) arr = new JSONArray();
+
+                    List<SettlementAppointment> data = new ArrayList<>();
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject o = arr.getJSONObject(i);
+
+                        SettlementAppointment a = new SettlementAppointment();
+                        a.appointmentId   = o.optInt("appointment_id");
+                        a.patientId       = o.optInt("patient_id");
+                        a.patientName     = o.optString("patient_name", "");
+                        a.paymentMethod   = o.optString("payment_method", "");
+                        a.deposit         = o.optDouble("deposit", 0);
+                        a.depositStatus   = o.optString("deposit_status", "");
+                        a.amountTotal     = o.optDouble("amount_total", 0);
+                        a.gst             = o.optDouble("gst", 0);
+                        a.baseExGst       = o.optDouble("base_ex_gst", 0);
+                        a.adminCommission = o.optDouble("admin_commission", 0);
+                        a.doctorEarning   = o.optDouble("doctor_earning", 0);
+                        a.paymentStatus   = o.optString("payment_status", "");
+                        a.createdAt       = o.optString("created_at", "");
+
+                        data.add(a);
+                    }
+                    rv.setAdapter(new SettlementAppointmentAdapter(data));
+
+                } catch (Exception e) {
+                    Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }, error ->
+                    Toast.makeText(this, "Network error: " + (error.getMessage() != null ? error.getMessage() : ""), Toast.LENGTH_SHORT).show()
+            );
+
+            req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
+            Volley.newRequestQueue(this).add(req);
+
+        } catch (Exception e) {
+            Toast.makeText(this, "Bottom sheet error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 }
