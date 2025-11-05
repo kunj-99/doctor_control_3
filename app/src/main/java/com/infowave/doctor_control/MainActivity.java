@@ -31,6 +31,9 @@ public class MainActivity extends AppCompatActivity {
     ImageView iconSupport, iconReports;
     private Toolbar toolbar;
 
+    // ✅ NEW: guard that asks Active/Inactive on app close
+    private final ActiveStatusManager activeGuard = new ActiveStatusManager();
+
     @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,24 +42,19 @@ public class MainActivity extends AppCompatActivity {
 
         // ===== Edge-to-edge with scrims =====
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        // Make system bars transparent so our scrims are visible
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
-        // Keep icons light on black scrims
         WindowInsetsControllerCompat wic =
                 new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         wic.setAppearanceLightStatusBars(false);
         wic.setAppearanceLightNavigationBars(false);
 
-        // Locate scrims
         final android.view.View statusScrim = findViewById(R.id.status_bar_scrim);
         final android.view.View navScrim = findViewById(R.id.navigation_bar_scrim);
 
-        // Apply only left/right padding if needed; scrims handle top/bottom
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars());
 
-            // Set scrim heights from insets
             if (statusScrim != null) {
                 statusScrim.getLayoutParams().height = sys.top;
                 statusScrim.setLayoutParams(statusScrim.getLayoutParams());
@@ -67,8 +65,6 @@ public class MainActivity extends AppCompatActivity {
                 navScrim.setLayoutParams(navScrim.getLayoutParams());
                 navScrim.setVisibility(sys.bottom > 0 ? android.view.View.VISIBLE : android.view.View.GONE);
             }
-
-            // Keep content width-safe; no top/bottom padding (scrims take those)
             v.setPadding(sys.left, 0, sys.right, 0);
             return insets;
         });
@@ -147,5 +143,22 @@ public class MainActivity extends AppCompatActivity {
     public void navigateToHistory() {
         viewPager.setCurrentItem(2, true);
         bottomNavigationView.setSelectedItemId(R.id.navigation_history);
+    }
+
+    // ✅ NEW: Ask before exiting via Back on the root task
+    @Override
+    public void onBackPressed() {
+        activeGuard.promptAndExit(this,
+                ActiveStatusManager.Trigger.BACK_EXIT,
+                null /* nothing after exit */);
+    }
+
+    // ✅ NEW: Ask when the user presses Home / app switch
+    @Override
+    public void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        activeGuard.promptAndExit(this,
+                ActiveStatusManager.Trigger.HOME_OR_APP_SWITCH,
+                null);
     }
 }
