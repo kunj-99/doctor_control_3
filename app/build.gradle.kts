@@ -48,8 +48,7 @@ dependencies {
     implementation ("com.android.volley:volley:1.2.1")
     implementation ("com.github.bumptech.glide:glide:4.15.1")
     implementation ("com.google.android.gms:play-services-location:19.0.0")
-       implementation ("com.google.android.gms:play-services-maps:18.1.0")
-
+    implementation ("com.google.android.gms:play-services-maps:18.1.0")
 
 
     implementation ("com.google.android.material:material:1.11.0")

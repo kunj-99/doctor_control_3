@@ -1,15 +1,19 @@
 package com.infowave.doctor_control;
 
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.WindowInsets;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -34,8 +38,6 @@ public class PendingPaymentActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
     private PaymentSummaryAdapter adapter;
-
-    // Current logged-in doctor (from SharedPreferences "DoctorPrefs" → "doctor_id")
     private int doctorId = -1;
 
     @Override
@@ -43,23 +45,9 @@ public class PendingPaymentActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pending_payment);
 
-        // Edge-to-edge padding
-        View decorView = getWindow().getDecorView();
-        decorView.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
-            @NonNull
-            @Override
-            public WindowInsets onApplyWindowInsets(@NonNull View v, @NonNull WindowInsets insets) {
-                v.setPadding(
-                        insets.getSystemWindowInsetLeft(),
-                        insets.getSystemWindowInsetTop(),
-                        insets.getSystemWindowInsetRight(),
-                        insets.getSystemWindowInsetBottom()
-                );
-                return insets.consumeSystemWindowInsets();
-            }
-        });
+        // Edge-to-edge, but we supply our own black scrims for BOTH bars.
+        setupSystemBarScrims();
 
-        // Read doctorId exactly like ProfileFragment
         doctorId = getDoctorIdFromPrefs();
         if (doctorId <= 0) {
             Toast.makeText(this, "Doctor ID not found. Please login again.", Toast.LENGTH_LONG).show();
@@ -73,35 +61,106 @@ public class PendingPaymentActivity extends AppCompatActivity {
         adapter = new PaymentSummaryAdapter(
                 new ArrayList<>(),
                 summary -> {
-                    // Only show action when Doctor → Admin dues exist (button is already hidden for Admin→Doctor case in adapter)
-                    double amtDoctorToAdmin = summary.receivedFromDoctor; // Doctor → Admin
+                    double amtDoctorToAdmin = summary.receivedFromDoctor;
                     if (amtDoctorToAdmin > 0) {
                         String payText = "Pay Admin ₹" + String.format(Locale.ROOT, "%.2f", amtDoctorToAdmin);
                         Toast.makeText(this, payText + " (Summary #" + summary.summaryId + ")", Toast.LENGTH_SHORT).show();
-                        // TODO: Trigger UPI/PhonePe flow if required
                     } else {
                         Toast.makeText(this, "No dues to pay.", Toast.LENGTH_SHORT).show();
                     }
                 },
-                // Card click → show all appointments for this settlement
                 this::showSettlementAppointmentsBottomSheet
         );
         recyclerView.setAdapter(adapter);
 
-        // Fetch Pending settlements for THIS doctor
         fetchPendingSummaries(doctorId);
     }
 
-    /** Read doctor_id from the same prefs used in ProfileFragment */
+    /** Edge-to-edge + black status/nav bars via overlay Views sized from insets with reliable fallbacks. */
+    private void setupSystemBarScrims() {
+        // Draw behind system bars
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+
+        final View root = findViewById(R.id.root_container);
+        final View topScrim = findViewById(R.id.system_top_scrim);
+        final View bottomScrim = findViewById(R.id.system_bottom_scrim);
+        final View header = findViewById(R.id.layoutHeader);
+        final RecyclerView list = findViewById(R.id.recyclerViewPaymentSummary);
+
+        // White icons on black bars
+        WindowInsetsControllerCompat ctrl = ViewCompat.getWindowInsetsController(root);
+        if (ctrl != null) {
+            ctrl.setAppearanceLightStatusBars(false);
+            ctrl.setAppearanceLightNavigationBars(false);
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            // Include cutouts for devices with notches
+            int types = WindowInsetsCompat.Type.statusBars()
+                    | WindowInsetsCompat.Type.navigationBars()
+                    | WindowInsetsCompat.Type.displayCutout();
+            Insets bars = insets.getInsets(types);
+
+            // --- Robust status-bar height with fallback ---
+            int top = bars.top;
+            if (top == 0) {
+                // Some OEMs return 0 on the first pass; fall back to status_bar_height dimen
+                int resId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+                if (resId > 0) top = getResources().getDimensionPixelSize(resId);
+            }
+
+            // --- Robust nav-bar height with fallback (gesture nav may be 0) ---
+            int bottom = bars.bottom;
+            if (bottom == 0) {
+                int resId = getResources().getIdentifier("navigation_bar_height", "dimen", "android");
+                if (resId > 0) bottom = getResources().getDimensionPixelSize(resId);
+            }
+
+            // Size/Show scrims
+            if (topScrim != null) {
+                topScrim.getLayoutParams().height = top;
+                topScrim.requestLayout();
+                topScrim.setVisibility(top > 0 ? View.VISIBLE : View.GONE);
+                topScrim.bringToFront();
+            }
+            if (bottomScrim != null) {
+                bottomScrim.getLayoutParams().height = bottom;
+                bottomScrim.requestLayout();
+                bottomScrim.setVisibility(bottom > 0 ? View.VISIBLE : View.GONE);
+                bottomScrim.bringToFront();
+            }
+
+            // Keep header content below the status area
+            if (header != null) {
+                int padTop = Math.max(header.getPaddingTop(), top);
+                header.setPadding(header.getPaddingLeft(), padTop,
+                        header.getPaddingRight(), header.getPaddingBottom());
+            }
+
+            // Keep list above the bottom gesture/nav area
+            if (list != null) {
+                int padBottom = Math.max(list.getPaddingBottom(), bottom);
+                list.setPadding(list.getPaddingLeft(), list.getPaddingTop(),
+                        list.getPaddingRight(), padBottom);
+                list.setClipToPadding(false);
+            }
+
+            // Do NOT consume; keeps bars visible on OEM variants.
+            return insets;
+        });
+
+        // Ensure the very first layout receives insets
+        ViewCompat.requestApplyInsets(root);
+    }
+
     private int getDoctorIdFromPrefs() {
         SharedPreferences sp = getSharedPreferences("DoctorPrefs", MODE_PRIVATE);
         int id = sp.getInt("doctor_id", -1);
         if (id > 0) return id;
-
-        // Fallbacks if older builds saved different keys
         id = sp.getInt("DoctorId", -1);
         if (id > 0) return id;
-
         id = sp.getInt("doc_id", -1);
         return id;
     }
@@ -199,7 +258,6 @@ public class PendingPaymentActivity extends AppCompatActivity {
             dialog.setContentView(sheetView);
             dialog.show();
 
-            // Fetch appointments strictly for THIS doctor + summary
             String base = ApiConfig.endpoint(
                     "Doctors/get_settlement_appointments.php",
                     "doctor_id",

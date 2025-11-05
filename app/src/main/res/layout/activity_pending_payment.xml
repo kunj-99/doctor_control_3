@@ -1,9 +1,11 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F9F9F9">
 
-    <!-- ATTRACTIVE MODERN HEADER -->
+    <!-- Header -->
     <FrameLayout
         android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
@@ -11,16 +13,12 @@
         android:elevation="7dp"
         android:background="@drawable/bg_header_gradient">
 
-        <!-- Rounded white overlay for bottom corners (faux shadow effect) -->
         <View
             android:layout_width="match_parent"
             android:layout_height="25dp"
             android:layout_gravity="bottom"
+            android:layout_marginTop="85dp" />
 
-
-            android:layout_marginTop="85dp"/>
-
-        <!-- Main header content -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -29,7 +27,6 @@
             android:paddingStart="18dp"
             android:paddingEnd="18dp">
 
-            <!-- Optional Back Button -->
             <ImageButton
                 android:id="@+id/btnBack"
                 android:layout_width="40dp"
@@ -38,7 +35,7 @@
                 android:src="@drawable/ic_back"
                 android:contentDescription="Back"
                 android:scaleType="centerInside"
-                android:tint="#FFFFFF"
+                app:tint="#FFFFFF"
                 android:layout_marginEnd="10dp"
                 android:visibility="visible"/>
 
@@ -75,11 +72,29 @@
         </LinearLayout>
     </FrameLayout>
 
-    <!-- RecyclerView below attractive header -->
+    <!-- List -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewPaymentSummary"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/layoutHeader"
-        android:padding="8dp"/>
+        android:padding="8dp" />
+
+    <!-- Black system-bar scrims (TOP & BOTTOM) -->
+    <View
+        android:id="@+id/system_top_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_alignParentTop="true"
+        android:background="#000000"
+        android:elevation="20dp" />
+
+    <View
+        android:id="@+id/system_bottom_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_alignParentBottom="true"
+        android:background="#000000"
+        android:elevation="20dp" />
+
 </RelativeLayout>

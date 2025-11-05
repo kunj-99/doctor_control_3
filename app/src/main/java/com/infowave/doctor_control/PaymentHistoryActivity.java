@@ -1,19 +1,23 @@
 package com.infowave.doctor_control;
 
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.WindowInsets;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -50,20 +54,8 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment_history);
 
-        // Edge-to-edge padding
-        View decoreview = getWindow().getDecorView();
-        decoreview.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
-            @NonNull
-            @Override
-            public WindowInsets onApplyWindowInsets(@NonNull View v, @NonNull WindowInsets insets) {
-                int left = insets.getSystemWindowInsetLeft();
-                int top = insets.getSystemWindowInsetTop();
-                int right = insets.getSystemWindowInsetRight();
-                int bottom = insets.getSystemWindowInsetBottom();
-                v.setPadding(left, top, right, bottom);
-                return insets.consumeSystemWindowInsets();
-            }
-        });
+        // Edge-to-edge with explicit black scrims for BOTH bars
+        setupSystemBarScrims();
 
         // Read doctor id from the same prefs used by ProfileFragment
         doctorId = getDoctorIdFromPrefs();
@@ -76,7 +68,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         listView = findViewById(R.id.list_payment);
         etSearch = findViewById(R.id.et_search);
 
-        // Adapter is built to use the reference list we pass here
         adapter = new PaymentHistoryAdapter(this, completedList);
         listView.setDivider(null);
         listView.setAdapter(adapter);
@@ -101,15 +92,85 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         fetchCompletedSettlements(doctorId);
     }
 
+    /** Makes both status and nav bars black using overlay views with robust inset fallbacks. */
+    private void setupSystemBarScrims() {
+        // Draw behind system bars
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+
+        final View root = findViewById(R.id.root_container);
+        final View content = findViewById(R.id.content_container);
+        final View topScrim = findViewById(R.id.system_top_scrim);
+        final View bottomScrim = findViewById(R.id.system_bottom_scrim);
+        final ListView list = findViewById(R.id.list_payment);
+
+        // Force white icons on black bars
+        WindowInsetsControllerCompat ctrl = ViewCompat.getWindowInsetsController(root);
+        if (ctrl != null) {
+            ctrl.setAppearanceLightStatusBars(false);
+            ctrl.setAppearanceLightNavigationBars(false);
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            int types = WindowInsetsCompat.Type.statusBars()
+                    | WindowInsetsCompat.Type.navigationBars()
+                    | WindowInsetsCompat.Type.displayCutout();
+            Insets bars = insets.getInsets(types);
+
+            int top = bars.top;
+            if (top == 0) {
+                int resId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+                if (resId > 0) top = getResources().getDimensionPixelSize(resId);
+            }
+
+            int bottom = bars.bottom;
+            if (bottom == 0) {
+                int resId = getResources().getIdentifier("navigation_bar_height", "dimen", "android");
+                if (resId > 0) bottom = getResources().getDimensionPixelSize(resId);
+            }
+
+            // Size + show scrims
+            if (topScrim != null) {
+                topScrim.getLayoutParams().height = top;
+                topScrim.requestLayout();
+                topScrim.setVisibility(top > 0 ? View.VISIBLE : View.GONE);
+                topScrim.bringToFront();
+            }
+            if (bottomScrim != null) {
+                bottomScrim.getLayoutParams().height = bottom;
+                bottomScrim.requestLayout();
+                bottomScrim.setVisibility(bottom > 0 ? View.VISIBLE : View.GONE);
+                bottomScrim.bringToFront();
+            }
+
+            // Push content below the status area and above the nav area
+            if (content != null) {
+                int padTop = Math.max(content.getPaddingTop(), top);
+                int padBottom = Math.max(content.getPaddingBottom(), bottom);
+                content.setPadding(content.getPaddingLeft(), padTop,
+                        content.getPaddingRight(), padBottom);
+            }
+            if (list != null) {
+                // Keep list scrollable above the gesture area
+                int padBottom = Math.max(list.getPaddingBottom(), bottom);
+                list.setPadding(list.getPaddingLeft(), list.getPaddingTop(),
+                        list.getPaddingRight(), padBottom);
+                list.setClipToPadding(false);
+            }
+
+            return insets; // do not consume; keeps bars visible
+        });
+
+        ViewCompat.requestApplyInsets(root);
+    }
+
     private int getDoctorIdFromPrefs() {
         SharedPreferences sp = getSharedPreferences("DoctorPrefs", MODE_PRIVATE);
         int id = sp.getInt("doctor_id", -1);
         if (id > 0) return id;
-
-        // Fallbacks (older keys if any)
         id = sp.getInt("DoctorId", -1);
         if (id > 0) return id;
-
         id = sp.getInt("doc_id", -1);
         return id;
     }
@@ -165,7 +226,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                         }
                     }
 
-                    // ✅ Use your adapter API
                     adapter.setData(completedList);
 
                     if (completedList.isEmpty()) {
@@ -209,7 +269,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
             dialog.setContentView(sheetView);
             dialog.show();
 
-            // Fetch appointments for THIS doctor + summary
             String base = ApiConfig.endpoint(
                     "Doctors/get_settlement_appointments.php",
                     "doctor_id",
