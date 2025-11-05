@@ -1,5 +1,6 @@
 package com.infowave.doctor_control;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -38,10 +39,10 @@ public class PaymentHistoryActivity extends AppCompatActivity {
     private EditText etSearch;
     private PaymentHistoryAdapter adapter;
 
-    // TODO: वास्तविक login/session से पास करें
-    private int doctorId = 1;
+    // Current doctor id from SharedPreferences (same store as ProfileFragment)
+    private int doctorId = -1;
 
-    // Settled summaries only
+    // Master list for Settled summaries
     private final ArrayList<PaymentSummary> completedList = new ArrayList<>();
 
     @Override
@@ -49,7 +50,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment_history);
 
-        // Edge-to-edge padding (आपके मौजूदा पैटर्न के अनुसार)
+        // Edge-to-edge padding
         View decoreview = getWindow().getDecorView();
         decoreview.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             @NonNull
@@ -64,30 +65,53 @@ public class PaymentHistoryActivity extends AppCompatActivity {
             }
         });
 
+        // Read doctor id from the same prefs used by ProfileFragment
+        doctorId = getDoctorIdFromPrefs();
+        if (doctorId <= 0) {
+            Toast.makeText(this, "Doctor ID not found. Please login again.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
         listView = findViewById(R.id.list_payment);
         etSearch = findViewById(R.id.et_search);
 
-        adapter = new PaymentHistoryAdapter(this, /*initial*/ new ArrayList<>());
+        // Adapter is built to use the reference list we pass here
+        adapter = new PaymentHistoryAdapter(this, completedList);
         listView.setDivider(null);
         listView.setAdapter(adapter);
 
-        // Live Search
+        // Live search
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                adapter.filter(s == null ? "" : s.toString());
+                adapter.filter(s != null ? s.toString() : "");
             }
             @Override public void afterTextChanged(Editable s) {}
         });
 
-        // कार्ड क्लिक → उस Settled summary की सभी appointments दिखाएँ (बॉटम शीट)
+        // Card click → show all appointments for that Settled summary
         listView.setOnItemClickListener((parent, view, position, id) -> {
             PaymentSummary summary = (PaymentSummary) adapter.getItem(position);
             if (summary == null) return;
             showSettlementAppointmentsBottomSheet(summary);
         });
 
+        // Fetch all Settled settlements for THIS doctor
         fetchCompletedSettlements(doctorId);
+    }
+
+    private int getDoctorIdFromPrefs() {
+        SharedPreferences sp = getSharedPreferences("DoctorPrefs", MODE_PRIVATE);
+        int id = sp.getInt("doctor_id", -1);
+        if (id > 0) return id;
+
+        // Fallbacks (older keys if any)
+        id = sp.getInt("DoctorId", -1);
+        if (id > 0) return id;
+
+        id = sp.getInt("doc_id", -1);
+        return id;
     }
 
     private void fetchCompletedSettlements(int doctorId) {
@@ -97,7 +121,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                     "doctor_id",
                     URLEncoder.encode(String.valueOf(doctorId), StandardCharsets.UTF_8.name())
             );
-            // केवल Settled summaries
             String url = base + "&status=Settled";
 
             StringRequest req = new StringRequest(Request.Method.GET, url, response -> {
@@ -131,8 +154,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                             s.adjustmentAmount      = o.optDouble("adjustment_amount", 0);
                             s.givenToDoctor         = o.optDouble("given_to_doctor", 0);
                             s.receivedFromDoctor    = o.optDouble("received_from_doctor", 0);
-
-                            // API 'Settled' भेजती है
                             s.settlementStatus      = o.optString("settlement_status", "Settled");
                             s.notes                 = o.optString("notes", "");
                             s.createdAt             = o.optString("created_at", "");
@@ -144,7 +165,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                         }
                     }
 
-                    // ✅ एडेप्टर को ताज़ा डेटा देकर उसकी filtered लिस्ट भी रीसेट करें
+                    // ✅ Use your adapter API
                     adapter.setData(completedList);
 
                     if (completedList.isEmpty()) {
@@ -188,7 +209,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
             dialog.setContentView(sheetView);
             dialog.show();
 
-            // उसी summary की appointments
+            // Fetch appointments for THIS doctor + summary
             String base = ApiConfig.endpoint(
                     "Doctors/get_settlement_appointments.php",
                     "doctor_id",

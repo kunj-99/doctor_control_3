@@ -1,5 +1,6 @@
 package com.infowave.doctor_control;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -27,30 +28,44 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class PendingPaymentActivity extends AppCompatActivity {
+
     private RecyclerView recyclerView;
     private PaymentSummaryAdapter adapter;
 
-    // TODO: Login के बाद doctorId assign करें; demo के लिए 1
-    private int doctorId = 1;
+    // Current logged-in doctor (from SharedPreferences "DoctorPrefs" → "doctor_id")
+    private int doctorId = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pending_payment);
 
-        // Edge-to-edge padding (बिना theme बदले)
+        // Edge-to-edge padding
         View decorView = getWindow().getDecorView();
-        decorView.setOnApplyWindowInsetsListener((@NonNull View v, @NonNull WindowInsets insets) -> {
-            v.setPadding(
-                    insets.getSystemWindowInsetLeft(),
-                    insets.getSystemWindowInsetTop(),
-                    insets.getSystemWindowInsetRight(),
-                    insets.getSystemWindowInsetBottom()
-            );
-            return insets.consumeSystemWindowInsets();
+        decorView.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @NonNull
+            @Override
+            public WindowInsets onApplyWindowInsets(@NonNull View v, @NonNull WindowInsets insets) {
+                v.setPadding(
+                        insets.getSystemWindowInsetLeft(),
+                        insets.getSystemWindowInsetTop(),
+                        insets.getSystemWindowInsetRight(),
+                        insets.getSystemWindowInsetBottom()
+                );
+                return insets.consumeSystemWindowInsets();
+            }
         });
+
+        // Read doctorId exactly like ProfileFragment
+        doctorId = getDoctorIdFromPrefs();
+        if (doctorId <= 0) {
+            Toast.makeText(this, "Doctor ID not found. Please login again.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
 
         recyclerView = findViewById(R.id.recyclerViewPaymentSummary);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -58,31 +73,37 @@ public class PendingPaymentActivity extends AppCompatActivity {
         adapter = new PaymentSummaryAdapter(
                 new ArrayList<>(),
                 summary -> {
-                    // Pay button pressed (dynamic label already set in adapter)
-                    double amtAdminToDoctor = summary.givenToDoctor;      // Admin → Doctor
+                    // Only show action when Doctor → Admin dues exist (button is already hidden for Admin→Doctor case in adapter)
                     double amtDoctorToAdmin = summary.receivedFromDoctor; // Doctor → Admin
-
-                    if (amtAdminToDoctor <= 0 && amtDoctorToAdmin <= 0) {
-                        Toast.makeText(this, "No dues for this settlement.", Toast.LENGTH_SHORT).show();
-                        return;
+                    if (amtDoctorToAdmin > 0) {
+                        String payText = "Pay Admin ₹" + String.format(Locale.ROOT, "%.2f", amtDoctorToAdmin);
+                        Toast.makeText(this, payText + " (Summary #" + summary.summaryId + ")", Toast.LENGTH_SHORT).show();
+                        // TODO: Trigger UPI/PhonePe flow if required
+                    } else {
+                        Toast.makeText(this, "No dues to pay.", Toast.LENGTH_SHORT).show();
                     }
-                    String whom = (amtAdminToDoctor > 0) ? "Doctor" : "Admin";
-                    double amount = (amtAdminToDoctor > 0) ? amtAdminToDoctor : amtDoctorToAdmin;
-
-                    Toast.makeText(this,
-                            "Proceed to pay " + whom + " ₹" + String.format("%.2f", amount) +
-                                    " (Summary #" + summary.summaryId + ")",
-                            Toast.LENGTH_SHORT).show();
-
-                    // TODO: Integrate PhonePe Checkout / UPI / Wallet flow here
                 },
-                // Card click → show the exact appointments included in THIS settlement
+                // Card click → show all appointments for this settlement
                 this::showSettlementAppointmentsBottomSheet
         );
         recyclerView.setAdapter(adapter);
 
-        // Pull only Pending settlements for the logged-in doctor
+        // Fetch Pending settlements for THIS doctor
         fetchPendingSummaries(doctorId);
+    }
+
+    /** Read doctor_id from the same prefs used in ProfileFragment */
+    private int getDoctorIdFromPrefs() {
+        SharedPreferences sp = getSharedPreferences("DoctorPrefs", MODE_PRIVATE);
+        int id = sp.getInt("doctor_id", -1);
+        if (id > 0) return id;
+
+        // Fallbacks if older builds saved different keys
+        id = sp.getInt("DoctorId", -1);
+        if (id > 0) return id;
+
+        id = sp.getInt("doc_id", -1);
+        return id;
     }
 
     private void fetchPendingSummaries(int doctorId) {
@@ -109,44 +130,45 @@ public class PendingPaymentActivity extends AppCompatActivity {
                     for (int i = 0; i < arr.length(); i++) {
                         JSONObject o = arr.getJSONObject(i);
                         PaymentSummary s = new PaymentSummary();
+                        s.summaryId             = o.optInt("summary_id");
+                        s.doctorId              = o.optInt("doctor_id");
 
-                        s.summaryId            = o.optInt("summary_id");
-                        s.doctorId             = o.optInt("doctor_id");
-                        s.appointmentIdsCsv    = o.optString("appointment_ids_csv", "");
-                        s.appointmentCount     = o.optInt("appointment_count", 0);
-                        s.onlineAppointments   = o.optInt("online_appointments", 0);
-                        s.offlineAppointments  = o.optInt("offline_appointments", 0);
+                        s.appointmentIdsCsv     = o.optString("appointment_ids_csv", "");
+                        s.appointmentCount      = o.optInt("appointment_count", 0);
+                        s.onlineAppointments    = o.optInt("online_appointments", 0);
+                        s.offlineAppointments   = o.optInt("offline_appointments", 0);
 
-                        s.totalBaseExGst       = o.optDouble("total_base_ex_gst", 0);
-                        s.totalGst             = o.optDouble("total_gst", 0);
-                        s.adminCollectedTotal  = o.optDouble("admin_collected_total", 0);
-                        s.doctorCollectedTotal = o.optDouble("doctor_collected_total", 0);
+                        s.totalBaseExGst        = o.optDouble("total_base_ex_gst", 0);
+                        s.totalGst              = o.optDouble("total_gst", 0);
+                        s.adminCollectedTotal   = o.optDouble("admin_collected_total", 0);
+                        s.doctorCollectedTotal  = o.optDouble("doctor_collected_total", 0);
 
-                        s.adminCut             = o.optDouble("admin_cut", 0);
-                        s.doctorCut            = o.optDouble("doctor_cut", 0);
-                        s.adjustmentAmount     = o.optDouble("adjustment_amount", 0);
+                        s.adminCut              = o.optDouble("admin_cut", 0);
+                        s.doctorCut             = o.optDouble("doctor_cut", 0);
+                        s.adjustmentAmount      = o.optDouble("adjustment_amount", 0);
 
-                        s.givenToDoctor        = o.optDouble("given_to_doctor", 0);
-                        s.receivedFromDoctor   = o.optDouble("received_from_doctor", 0);
+                        s.givenToDoctor         = o.optDouble("given_to_doctor", 0);
+                        s.receivedFromDoctor    = o.optDouble("received_from_doctor", 0);
 
-                        s.settlementStatus     = o.optString("settlement_status", "Pending");
-                        s.notes                = o.optString("notes", "");
-                        s.createdAt            = o.optString("created_at", "");
-                        s.updatedAt            = o.optString("updated_at", "");
+                        s.settlementStatus      = o.optString("settlement_status", "Pending");
+                        s.notes                 = o.optString("notes", "");
+                        s.createdAt             = o.optString("created_at", "");
+                        s.updatedAt             = o.optString("updated_at", "");
 
-                        // हम server से पहले ही Pending filter करा रहे हैं; फिर भी guard रखें
                         if ("Pending".equalsIgnoreCase(s.settlementStatus)) {
                             list.add(s);
                         }
                     }
                     adapter.setData(list);
 
+                    if (list.isEmpty()) {
+                        Toast.makeText(this, "No pending settlements.", Toast.LENGTH_SHORT).show();
+                    }
+
                 } catch (Exception e) {
                     Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
-            }, error ->
-                    Toast.makeText(this, "Network error: " + (error.getMessage() != null ? error.getMessage() : ""), Toast.LENGTH_SHORT).show()
-            );
+            }, error -> Toast.makeText(this, "Network error: " + (error.getMessage()!=null?error.getMessage():""), Toast.LENGTH_SHORT).show());
 
             req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
             Volley.newRequestQueue(this).add(req);
@@ -177,12 +199,13 @@ public class PendingPaymentActivity extends AppCompatActivity {
             dialog.setContentView(sheetView);
             dialog.show();
 
+            // Fetch appointments strictly for THIS doctor + summary
             String base = ApiConfig.endpoint(
                     "Doctors/get_settlement_appointments.php",
                     "doctor_id",
                     URLEncoder.encode(String.valueOf(summary.doctorId), StandardCharsets.UTF_8.name())
             );
-            String url  = base + "&summary_id=" + summary.summaryId;
+            String url = base + "&summary_id=" + summary.summaryId;
 
             StringRequest req = new StringRequest(Request.Method.GET, url, response -> {
                 try {
@@ -220,9 +243,7 @@ public class PendingPaymentActivity extends AppCompatActivity {
                 } catch (Exception e) {
                     Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
-            }, error ->
-                    Toast.makeText(this, "Network error: " + (error.getMessage() != null ? error.getMessage() : ""), Toast.LENGTH_SHORT).show()
-            );
+            }, error -> Toast.makeText(this, "Network error: " + (error.getMessage()!=null?error.getMessage():""), Toast.LENGTH_SHORT).show());
 
             req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
             Volley.newRequestQueue(this).add(req);
