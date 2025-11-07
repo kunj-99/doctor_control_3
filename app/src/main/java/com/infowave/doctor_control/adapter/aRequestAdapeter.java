@@ -57,7 +57,6 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         holder.tvProblem.setText("Problem: " + appointment.getProblem());
         holder.tvDistance.setText(appointment.getDistance());
 
-        // Price + payment method label (kept same logic as before)
         if ("Online".equalsIgnoreCase(appointment.getPaymentMethod())) {
             holder.tvPrice.setText("₹ " + appointment.getTotalPayment() + " paid");
         } else if ("Offline".equalsIgnoreCase(appointment.getPaymentMethod())) {
@@ -67,12 +66,10 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         }
         holder.tvPaymentMethod.setText("Payment Method: " + appointment.getPaymentMethod());
 
-        // Hide optional vet fields by default
         if (holder.tvAnimalCategory != null)   holder.tvAnimalCategory.setVisibility(View.GONE);
         if (holder.tvAnimalBreed != null)      holder.tvAnimalBreed.setVisibility(View.GONE);
         if (holder.tvVaccinationName != null)  holder.tvVaccinationName.setVisibility(View.GONE);
 
-        // Show Animal Category if present
         if (holder.tvAnimalCategory != null) {
             String acn = appointment.getAnimalCategoryName();
             if (!isMissing(acn)) {
@@ -81,7 +78,6 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             }
         }
 
-        // Show Animal Breed if present
         if (holder.tvAnimalBreed != null) {
             String breed = appointment.getAnimalBreed();
             if (!isMissing(breed)) {
@@ -90,7 +86,6 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             }
         }
 
-        // Show Vaccination only when truly present (hide for null/"null"/"N/A"/empty/whitespace)
         if (holder.tvVaccinationName != null) {
             String vxn = appointment.getVaccinationName();
             if (!isMissing(vxn)) {
@@ -101,7 +96,7 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             }
         }
 
-        // Accept -> enter ETA then move to Pending
+        // Accept → enter ETA then move to Pending
         holder.btnAccept.setOnClickListener(v -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
             builder.setTitle("Enter ETA");
@@ -229,6 +224,50 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
         public String getVaccinationName()     { return vaccinationName; }
     }
 
+    // ----------------------- SAFE REMOVAL HELPERS -----------------------
+
+    /** Find current index of an appointment by id in the backing list. */
+    private int indexOfAppointment(String appointmentId) {
+        if (appointmentId == null) return -1;
+        for (int i = 0; i < appointments.size(); i++) {
+            Appointment a = appointments.get(i);
+            if (appointmentId.equals(a.getAppointmentId())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** Remove by id with bounds checks. */
+    private void removeAppointmentSafely(String appointmentId, int suggestedPosition) {
+        // 1) If the original position still points to the same item, use it.
+        if (suggestedPosition >= 0 && suggestedPosition < appointments.size()) {
+            Appointment atPos = appointments.get(suggestedPosition);
+            if (appointmentId.equals(atPos.getAppointmentId())) {
+                appointments.remove(suggestedPosition);
+                notifyItemRemoved(suggestedPosition);
+                if (suggestedPosition < appointments.size()) {
+                    notifyItemRangeChanged(suggestedPosition, appointments.size() - suggestedPosition);
+                }
+                return;
+            }
+        }
+        // 2) Otherwise, look up the current index by id.
+        int idx = indexOfAppointment(appointmentId);
+        if (idx >= 0) {
+            appointments.remove(idx);
+            notifyItemRemoved(idx);
+            if (idx < appointments.size()) {
+                notifyItemRangeChanged(idx, appointments.size() - idx);
+            }
+            return;
+        }
+        // 3) Already gone (e.g., list refreshed) — just refresh UI safely.
+        notifyDataSetChanged();
+    }
+
+    // -------------------------------------------------------------------
+
     private void updateAppointmentStatus(
             String appointmentId,
             String newStatus,
@@ -259,9 +298,9 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
                                 "Appointment updated successfully.",
                                 Toast.LENGTH_SHORT).show();
 
-                        appointments.remove(position);
-                        notifyItemRemoved(position);
-                        notifyItemRangeChanged(position, appointments.size());
+                        // ✅ Safe removal (prevents IndexOutOfBoundsException)
+                        removeAppointmentSafely(appointmentId, position);
+
                     } else {
                         String msg = response.optString("message", "Failed to update appointment.");
                         if (msg.toLowerCase().contains("already")) {

@@ -2,13 +2,16 @@ package com.infowave.doctor_control;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
@@ -25,18 +28,21 @@ import com.infowave.doctor_control.adapter.ViewPagerAdapter;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "DOC_MAIN";
+
     private ViewPager2 viewPager;
     private BottomNavigationView bottomNavigationView;
     private TextView toolbarTitle;
-    ImageView iconSupport, iconReports;
+    private ImageView iconSupport, iconReports;
     private Toolbar toolbar;
 
-    // ✅ NEW: guard that asks Active/Inactive on app close
+    // Ask Active/Inactive on app close
     private final ActiveStatusManager activeGuard = new ActiveStatusManager();
 
     @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "onCreate()");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -54,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets sys = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-
             if (statusScrim != null) {
                 statusScrim.getLayoutParams().height = sys.top;
                 statusScrim.setLayoutParams(statusScrim.getLayoutParams());
@@ -69,20 +74,25 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        // ===== Your existing setup =====
+        // ===== Toolbar & icons =====
         toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) getSupportActionBar().setDisplayShowTitleEnabled(false);
+
         toolbarTitle = findViewById(R.id.toolbar_title);
         iconSupport = findViewById(R.id.icon_support);
         iconReports = findViewById(R.id.icon_reports);
 
-        DoctorFcmTokenHelper.ensureTokenSynced(this);
+        if (iconSupport != null) {
+            iconSupport.setOnClickListener(v ->
+                    startActivity(new Intent(MainActivity.this, suppor.class)));
+        }
+        if (iconReports != null) {
+            iconReports.setOnClickListener(v ->
+                    startActivity(new Intent(MainActivity.this, tarmsandcondition.class)));
+        }
 
-        iconSupport.setOnClickListener(v ->
-                startActivity(new Intent(MainActivity.this, suppor.class)));
-
-        iconReports.setOnClickListener(v ->
-                startActivity(new Intent(MainActivity.this, tarmsandcondition.class)));
-
+        // ===== ViewPager & BottomNav =====
         viewPager = findViewById(R.id.view_pager);
         viewPager.setAdapter(new ViewPagerAdapter(this));
 
@@ -118,45 +128,62 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Android 13+ notification permission
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1001);
-            }
+        // ===== Android 13+ notifications permission (use the service helper for parity) =====
+        MyFirebaseMessagingService.requestNotificationPermissionIfNeeded(this);
+
+        // ===== Sync FCM token like patient side (only if doctor_id is present) =====
+        SharedPreferences sp = getSharedPreferences("DoctorPrefs", MODE_PRIVATE);
+        int doctorId = sp.getInt("doctor_id", -1);
+        Log.d(TAG, "doctor_id in prefs=" + doctorId);
+        if (doctorId > 0) {
+            DoctorFcmTokenHelper.ensureTokenSynced(this);
+        } else {
+            Log.w(TAG, "doctor_id missing; deferring FCM sync until after login");
         }
+
+        // ===== If app opened from FCM, jump to Appointments =====
+        boolean openRequests = getIntent().getBooleanExtra("open_requests", false);
+        if (openRequests) {
+            Log.d(TAG, "open_requests=true from intent → switch to Appointments");
+            bottomNavigationView.setSelectedItemId(R.id.navigation_appointment);
+            viewPager.setCurrentItem(1, false);
+            toolbarTitle.setText("Appointments");
+        }
+
+        // ===== Intercept back to show Active/Inactive guard BEFORE default behavior =====
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                Log.d(TAG, "onBackPressed (intercepted)");
+                activeGuard.promptAndExit(MainActivity.this,
+                        ActiveStatusManager.Trigger.BACK_EXIT,
+                        null);
+            }
+        });
     }
 
     /** Enables or disables swipe gestures on the main ViewPager2. */
     public void setMainViewPagerSwipeEnabled(boolean enabled) {
-        viewPager.setUserInputEnabled(enabled);
+        if (viewPager != null) viewPager.setUserInputEnabled(enabled);
     }
 
-    /** Navigates to the Home screen (position 0) smoothly. */
     public void navigateToHome() {
-        viewPager.setCurrentItem(0, true);
-        bottomNavigationView.setSelectedItemId(R.id.navigation_home);
+        if (viewPager != null) {
+            viewPager.setCurrentItem(0, true);
+            bottomNavigationView.setSelectedItemId(R.id.navigation_home);
+        }
     }
 
-    /** Navigates to the History screen (position 2) smoothly. */
     public void navigateToHistory() {
-        viewPager.setCurrentItem(2, true);
-        bottomNavigationView.setSelectedItemId(R.id.navigation_history);
+        if (viewPager != null) {
+            viewPager.setCurrentItem(2, true);
+            bottomNavigationView.setSelectedItemId(R.id.navigation_history);
+        }
     }
 
-    // ✅ NEW: Ask before exiting via Back on the root task
     @Override
-    public void onBackPressed() {
-        activeGuard.promptAndExit(this,
-                ActiveStatusManager.Trigger.BACK_EXIT,
-                null /* nothing after exit */);
-    }
-
-    // ✅ NEW: Ask when the user presses Home / app switch
-    @Override
-    public void onUserLeaveHint() {
+    protected void onUserLeaveHint() {
         super.onUserLeaveHint();
+        Log.d(TAG, "onUserLeaveHint()");
         activeGuard.promptAndExit(this,
                 ActiveStatusManager.Trigger.HOME_OR_APP_SWITCH,
                 null);
