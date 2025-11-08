@@ -12,6 +12,7 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -43,9 +44,11 @@ import java.util.Map;
 
 public class aOngoingFragment extends Fragment {
 
-    private static final long APPT_REFRESH_MS = 5000;
+    // 🔁 Faster & smooth refresh every 2s
+    private static final long APPT_REFRESH_MS = 1500;
 
     private RecyclerView recyclerView;
+    private TextView emptyStateView;
     private aOngoingAdapter adapter;
     private RequestQueue queue;
 
@@ -58,7 +61,7 @@ public class aOngoingFragment extends Fragment {
     private final ArrayList<String> amounts        = new ArrayList<>();
     private final ArrayList<String> paymentMethods = new ArrayList<>();
 
-    // 🟢 NEW: Vet flags and data
+    // Vet flags and data
     private final ArrayList<Boolean> vetCases           = new ArrayList<>();
     private final ArrayList<String> animalCategoryNames = new ArrayList<>();
     private final ArrayList<String> animalBreeds        = new ArrayList<>();
@@ -96,6 +99,8 @@ public class aOngoingFragment extends Fragment {
         );
 
         recyclerView = view.findViewById(R.id.rv_ongoing_appointments);
+        emptyStateView = view.findViewById(R.id.tv_empty_state);
+
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
         adapter = new aOngoingAdapter(
@@ -189,9 +194,7 @@ public class aOngoingFragment extends Fragment {
                                 if (o == null) continue;
 
                                 String status = o.optString("status", "Unknown");
-                                if (!"Confirmed".equalsIgnoreCase(status)) {
-                                    continue;
-                                }
+                                if (!"Confirmed".equalsIgnoreCase(status)) continue;
 
                                 String apptId = o.optString("appointment_id", "");
                                 appointmentIds.add(apptId);
@@ -203,16 +206,12 @@ public class aOngoingFragment extends Fragment {
                                 amounts.add(o.optString("amount", "0.00"));
                                 paymentMethods.add(o.optString("payment_method", "Unknown"));
 
-                                // 🟢 Vet flag
                                 boolean isVet = o.optInt("is_vet_case", 0) == 1;
                                 vetCases.add(isVet);
-
-                                // 🟢 Vet extras (always read; adapter will hide when empty)
                                 animalCategoryNames.add(clean(o.optString("animal_category_name", "")));
                                 animalBreeds.add(clean(o.optString("animal_breed", "")));
                                 vaccinationNames.add(clean(o.optString("vaccination_name", "")));
 
-                                // Save first ongoing id for services
                                 if (appointmentIds.size() == 1) {
                                     requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                                             .edit()
@@ -221,10 +220,12 @@ public class aOngoingFragment extends Fragment {
                                 }
                             }
 
-                            // ✅ Push vet info to adapter
                             adapter.setVetCases(vetCases);
                             adapter.setVetData(animalCategoryNames, animalBreeds, vaccinationNames);
                             adapter.notifyDataSetChanged();
+
+                            // Toggle empty state vs list
+                            toggleEmptyState(appointmentIds.isEmpty());
 
                             ensureServicesBasedOnAppointments();
 
@@ -269,10 +270,21 @@ public class aOngoingFragment extends Fragment {
             adapter.setVetCases(vetCases);
             adapter.setVetData(animalCategoryNames, animalBreeds, vaccinationNames);
             adapter.notifyDataSetChanged();
+            toggleEmptyState(true);
             stopTrackingServices();
             requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                     .edit().remove("ongoing_appointment_id").apply();
         });
+    }
+
+    private void toggleEmptyState(boolean isEmpty) {
+        if (isEmpty) {
+            recyclerView.setVisibility(View.GONE);
+            emptyStateView.setVisibility(View.VISIBLE);
+        } else {
+            emptyStateView.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
+        }
     }
 
     private void clearAllLists() {
@@ -323,10 +335,12 @@ public class aOngoingFragment extends Fragment {
                             Toast.makeText(getContext(), "Appointment completed!", Toast.LENGTH_SHORT).show();
 
                             if (appointmentIds.isEmpty()) {
+                                toggleEmptyState(true);
                                 requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                                         .edit().remove("ongoing_appointment_id").apply();
                                 stopTrackingServices();
                             } else {
+                                toggleEmptyState(false);
                                 String nextAppt = appointmentIds.get(0);
                                 requireContext().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                                         .edit().putString("ongoing_appointment_id", nextAppt).apply();
@@ -420,7 +434,7 @@ public class aOngoingFragment extends Fragment {
         ctx.stopService(new Intent(ctx, BackgroundService.class));
     }
 
-    // Normalize backend oddities like "null", "N/A", "undefined", or whitespace to empty string
+    // Normalize backend oddities
     private static String clean(String s) {
         if (s == null) return "";
         String t = s.trim();

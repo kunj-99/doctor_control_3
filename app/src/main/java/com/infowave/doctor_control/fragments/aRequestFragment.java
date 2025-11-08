@@ -10,6 +10,7 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -36,9 +37,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class aRequestFragment extends Fragment {
-    private static final int REFRESH_INTERVAL = 5000;
+    // 🔁 Smooth auto refresh every 1.5s
+    private static final int REFRESH_INTERVAL = 1500;
 
     private RecyclerView recyclerView;
+    private TextView emptyStateView;
     private aRequestAdapeter adapter;
     private final ArrayList<aRequestAdapeter.Appointment> appointments = new ArrayList<>();
     private String doctorId;
@@ -58,24 +61,28 @@ public class aRequestFragment extends Fragment {
         fusedClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
         recyclerView = view.findViewById(R.id.rv_pending_appointments);
+        emptyStateView = view.findViewById(R.id.tv_empty_state_request);
+
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
         adapter = new aRequestAdapeter(getContext(), appointments);
         recyclerView.setAdapter(adapter);
 
-        doctorId = String.valueOf(getActivity()
+        doctorId = String.valueOf(requireActivity()
                 .getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE)
                 .getInt("doctor_id", 1));
 
-        // Prime doctor location once
+        // Prime doctor location once, then kick first load
         if (ContextCompat.checkSelfPermission(requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
-                    getActivity(),
+                    requireActivity(),
                     new String[]{ Manifest.permission.ACCESS_FINE_LOCATION },
                     0
             );
+            // Still fetch to show current state even if location not granted yet
+            fetchDataFromServer();
         } else {
             fusedClient.getLastLocation()
                     .addOnSuccessListener(loc -> {
@@ -83,9 +90,9 @@ public class aRequestFragment extends Fragment {
                             doctorLat = loc.getLatitude();
                             doctorLon = loc.getLongitude();
                         }
-                        // kick off first load
                         fetchDataFromServer();
-                    });
+                    })
+                    .addOnFailureListener(e -> fetchDataFromServer());
         }
 
         return view;
@@ -122,7 +129,6 @@ public class aRequestFragment extends Fragment {
 
     @SuppressLint("NotifyDataSetChanged")
     private void fetchDataFromServer() {
-
         String url = ApiConfig.endpoint("Doctors/getRequestappointment.php", "doctor_id", doctorId);
 
         queue.add(new StringRequest(
@@ -136,11 +142,11 @@ public class aRequestFragment extends Fragment {
                         appointments.clear();
                         if (!success || data == null || data.length() == 0) {
                             adapter.notifyDataSetChanged();
+                            toggleEmptyState(true);
                             return;
                         }
 
-                        // Collect map links
-                        List<String> links = new ArrayList<>();
+                        List<String> links = new ArrayList<>(data.length());
                         for (int i = 0; i < data.length(); i++) {
                             JSONObject obj = data.getJSONObject(i);
                             String apptId        = obj.optString("appointment_id", "0");
@@ -150,10 +156,10 @@ public class aRequestFragment extends Fragment {
                             String totalPayment  = obj.optString("amount", "0.00");
                             String paymentMethod = obj.optString("payment_method", "Unknown");
 
-                            // 🟢 NEW FIELDS
+                            // Vet fields
                             String animalCategoryName = obj.optString("animal_category_name", "");
                             String vaccinationName    = obj.optString("vaccination_name", "");
-                            String animal_breed  = obj.optString("animal_breed");
+                            String animal_breed       = obj.optString("animal_breed", "");
 
                             appointments.add(new aRequestAdapeter.Appointment(
                                     apptId,
@@ -170,31 +176,43 @@ public class aRequestFragment extends Fragment {
                         }
 
                         adapter.notifyDataSetChanged();
+                        toggleEmptyState(appointments.isEmpty());
 
-                        // Single batch distance lookup
-                        DistanceCalculator.calculateDistanceBatch(
-                                requireActivity(),
-                                queue,
-                                doctorLat,
-                                doctorLon,
-                                links,
-                                distanceList -> {
-                                    for (int i = 0; i < distanceList.size(); i++) {
-                                        appointments.get(i).setDistance(distanceList.get(i));
+                        if (!appointments.isEmpty()) {
+                            DistanceCalculator.calculateDistanceBatch(
+                                    requireActivity(),
+                                    queue,
+                                    doctorLat,
+                                    doctorLon,
+                                    links,
+                                    distanceList -> {
+                                        for (int i = 0; i < distanceList.size() && i < appointments.size(); i++) {
+                                            appointments.get(i).setDistance(distanceList.get(i));
+                                        }
+                                        adapter.notifyDataSetChanged();
                                     }
-                                    adapter.notifyDataSetChanged();
-                                }
-                        );
-
+                            );
+                        }
                     } catch (JSONException je) {
-                        Toast.makeText(getContext(),
-                                "Error parsing data.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Error parsing data.", Toast.LENGTH_SHORT).show();
+                        toggleEmptyState(appointments.isEmpty());
                     }
                 },
                 error -> {
-                    Toast.makeText(getContext(),
-                            "Error fetching data.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Error fetching data.", Toast.LENGTH_SHORT).show();
+                    toggleEmptyState(appointments.isEmpty());
                 }
         ));
+    }
+
+    private void toggleEmptyState(boolean isEmpty) {
+        if (recyclerView == null || emptyStateView == null) return;
+        if (isEmpty) {
+            recyclerView.setVisibility(View.GONE);
+            emptyStateView.setVisibility(View.VISIBLE);
+        } else {
+            emptyStateView.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
+        }
     }
 }

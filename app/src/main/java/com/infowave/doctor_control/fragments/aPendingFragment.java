@@ -11,6 +11,7 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -37,9 +38,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class aPendingFragment extends Fragment {
-    private static final int REFRESH_INTERVAL_MS = 5000;
+    // 🔁 Smooth refresh every 1.5s
+    private static final int REFRESH_INTERVAL_MS = 1500;
 
     private RecyclerView recyclerView;
+    private TextView emptyStateView;
     private apendingAdapter adapter;
     private final ArrayList<apendingAdapter.Appointment> appointments = new ArrayList<>();
 
@@ -61,6 +64,8 @@ public class aPendingFragment extends Fragment {
         fusedClient = LocationServices.getFusedLocationProviderClient(requireContext());
 
         recyclerView = view.findViewById(R.id.rv_pending_appointments);
+        emptyStateView = view.findViewById(R.id.tv_empty_state_pending);
+
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
         adapter = new apendingAdapter(getContext(), appointments);
@@ -129,69 +134,88 @@ public class aPendingFragment extends Fragment {
                 response -> {
                     try {
                         boolean success = response.optBoolean("success", false);
-                        if (!success) {
-                            appointments.clear();
-                            adapter.notifyDataSetChanged();
-                            return;
-                        }
-
-                        JSONArray arr = response.getJSONArray("data");
                         appointments.clear();
 
-                        List<String> links = new ArrayList<>(arr.length());
+                        if (success && response.has("data")) {
+                            JSONArray arr = response.getJSONArray("data");
 
-                        for (int i = 0; i < arr.length(); i++) {
-                            JSONObject o = arr.getJSONObject(i);
+                            List<String> links = new ArrayList<>(arr.length());
 
-                            String id            = o.optString("appointment_id");
-                            String name          = o.optString("patient_name");
-                            String reason        = o.optString("reason_for_visit");
-                            String link          = o.optString("patient_map_link", "");
-                            String amount        = o.optString("amount", "0.00");
-                            String paymentMethod = o.optString("payment_method", "Unknown");
+                            for (int i = 0; i < arr.length(); i++) {
+                                JSONObject o = arr.getJSONObject(i);
 
-                            // 🟢 NEW: fetch the three vet fields
-                            String animalCategoryName = clean(o.optString("animal_category_name", ""));
-                            String animalBreed        = clean(o.optString("animal_breed", ""));
-                            String vaccinationName    = clean(o.optString("vaccination_name", ""));
+                                String id            = o.optString("appointment_id");
+                                String name          = o.optString("patient_name");
+                                String reason        = o.optString("reason_for_visit");
+                                String link          = o.optString("patient_map_link", "");
+                                String amount        = o.optString("amount", "0.00");
+                                String paymentMethod = o.optString("payment_method", "Unknown");
 
-                            appointments.add(new apendingAdapter.Appointment(
-                                    id,
-                                    name,
-                                    reason,
-                                    "Calculating...",
-                                    link,
-                                    amount,
-                                    paymentMethod,
-                                    animalCategoryName, // NEW
-                                    animalBreed,        // NEW
-                                    vaccinationName     // NEW
-                            ));
-                            links.add(link);
+                                // Vet fields
+                                String animalCategoryName = clean(o.optString("animal_category_name", ""));
+                                String animalBreed        = clean(o.optString("animal_breed", ""));
+                                String vaccinationName    = clean(o.optString("vaccination_name", ""));
+
+                                appointments.add(new apendingAdapter.Appointment(
+                                        id,
+                                        name,
+                                        reason,
+                                        "Calculating...",
+                                        link,
+                                        amount,
+                                        paymentMethod,
+                                        animalCategoryName,
+                                        animalBreed,
+                                        vaccinationName
+                                ));
+                                links.add(link);
+                            }
+
+                            adapter.notifyDataSetChanged();
+
+                            // Toggle empty state
+                            toggleEmptyState(appointments.isEmpty());
+
+                            // Distance batch (only if we have rows)
+                            if (!appointments.isEmpty()) {
+                                DistanceCalculator.calculateDistanceBatch(
+                                        requireActivity(),
+                                        queue,
+                                        doctorLat, doctorLon,
+                                        links,
+                                        results -> {
+                                            for (int i = 0; i < results.size() && i < appointments.size(); i++) {
+                                                appointments.get(i).setDistance(results.get(i));
+                                            }
+                                            adapter.notifyDataSetChanged();
+                                        }
+                                );
+                            }
+                        } else {
+                            // No data
+                            adapter.notifyDataSetChanged();
+                            toggleEmptyState(true);
                         }
-
-                        adapter.notifyDataSetChanged();
-
-                        DistanceCalculator.calculateDistanceBatch(
-                                requireActivity(),
-                                queue,
-                                doctorLat, doctorLon,
-                                links,
-                                results -> {
-                                    for (int i = 0; i < results.size(); i++) {
-                                        appointments.get(i).setDistance(results.get(i));
-                                    }
-                                    adapter.notifyDataSetChanged();
-                                }
-                        );
-                    } catch (JSONException e) {
-                        // ignore silently to keep UI smooth
+                    } catch (JSONException ignored) {
+                        toggleEmptyState(appointments.isEmpty());
                     }
                 },
                 error -> {
-                    // ignore silently to keep UI smooth
+                    // Keep UI smooth, just reflect current list
+                    toggleEmptyState(appointments.isEmpty());
                 }
         ));
+    }
+
+    private void toggleEmptyState(boolean isEmpty) {
+        if (emptyStateView == null || recyclerView == null) return;
+        if (isEmpty) {
+            recyclerView.setVisibility(View.GONE);
+            emptyStateView.setVisibility(View.VISIBLE);
+        } else {
+            emptyStateView.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
+        }
     }
 
     // Normalize backend oddities like "null", "N/A", "undefined", or whitespace to empty string
