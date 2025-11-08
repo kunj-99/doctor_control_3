@@ -3,6 +3,7 @@ package com.infowave.doctor_control.adapter;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.text.InputType;
+import android.util.Log; // ✅ added for logging
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,6 +32,11 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.ViewHolder> {
+
+    private static final String TAG_REQ  = "REQ:update_status";
+    private static final String TAG_RESP = "RESP:update_status";
+    private static final String TAG_DBG  = "RESP:debug";
+    private static final String TAG_REF  = "RESP:refund";
 
     private final Context context;
     private final ArrayList<Appointment> appointments;
@@ -288,11 +294,37 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
             return;
         }
 
+        // ✅ Request log
+        Log.d(TAG_REQ, "url=" + url + " body=" + postData.toString());
+
         RequestQueue queue = Volley.newRequestQueue(context);
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST, url, postData,
                 response -> {
+                    // ✅ Raw response log
+                    Log.d(TAG_RESP, response.toString());
+
+                    // ✅ Refund-specific logs
                     boolean success = response.optBoolean("success", false);
+                    boolean refundCreated = response.optBoolean("refund_created", false);
+                    boolean walletCredited = response.optBoolean("wallet_credited", false);
+                    boolean phUpdated = response.optBoolean("payment_history_updated", false);
+                    String message = response.optString("message", "");
+
+                    Log.d(TAG_REF,
+                            "success=" + success +
+                                    ", refund_created=" + refundCreated +
+                                    ", wallet_credited=" + walletCredited +
+                                    ", payment_history_updated=" + phUpdated +
+                                    ", message=\"" + message + "\""
+                    );
+
+                    // ✅ Debug object log (contains refund_reason / ph_seeded etc.)
+                    JSONObject dbg = response.optJSONObject("debug");
+                    if (dbg != null) {
+                        Log.d(TAG_DBG, dbg.toString());
+                    }
+
                     if (success) {
                         Toast.makeText(context,
                                 "Appointment updated successfully.",
@@ -310,9 +342,13 @@ public class aRequestAdapeter extends RecyclerView.Adapter<aRequestAdapeter.View
                         }
                     }
                 },
-                error -> Toast.makeText(context,
-                        "Unable to update appointment. Please check your network and try again.",
-                        Toast.LENGTH_SHORT).show()
+                error -> {
+                    // ✅ Network error log
+                    Log.d(TAG_RESP, "error=" + error.toString());
+                    Toast.makeText(context,
+                            "Unable to update appointment. Please check your network and try again.",
+                            Toast.LENGTH_SHORT).show();
+                }
         );
 
         queue.add(request);
