@@ -48,16 +48,42 @@ import java.util.Map;
 public class home extends Fragment {
 
     private static final int REQUEST_LOCATION_PERMISSION = 1;
+
     private SharedPreferences doctorPrefs;
     private String doctorId;
     CardView payment_history, cardPendingPayment;
 
-    // Track current doctor status to decide on-exit behavior
-    private volatile boolean isDoctorActive = false; // true = Active or Ongoing Appointment, false = Inactive
+    /** true => doctor is Active / Ongoing; false => Inactive */
+    private volatile boolean isDoctorActive = false;
+
+    /** guard to avoid showing popup when fragment is not in foreground/root */
+    private final OnBackPressedCallback backCallback = new OnBackPressedCallback(true) {
+        @Override public void handleOnBackPressed() {
+            if (!isResumed() || !isVisible()) {
+                // Not in foreground—let Activity handle it
+                setEnabled(false);
+                requireActivity().onBackPressed();
+                setEnabled(true);
+                return;
+            }
+
+            // If there is fragment back stack, pop it instead of showing exit popup
+            if (requireActivity().getSupportFragmentManager().getBackStackEntryCount() > 0) {
+                requireActivity().getSupportFragmentManager().popBackStack();
+                return;
+            }
+
+            // We are on the Home/root. Now decide exit behavior.
+            if (isDoctorActive) {
+                showExitConfirmDialog();
+            } else {
+                closeApp();
+            }
+        }
+    };
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_home, container, false);
     }
 
@@ -84,17 +110,14 @@ public class home extends Fragment {
             resetGridCardStyles();
             highlightCard(view, R.id.layout_patients, R.id.img_patient, R.id.txt, R.id.patients_count);
         });
-
         layoutYourPatients.setOnClickListener(v -> {
             resetGridCardStyles();
             highlightCard(view, R.id.layout_your_patients, R.id.img_patient2, R.id.txt2, R.id.upcoming_appointments_count);
         });
-
         layoutOngoing.setOnClickListener(v -> {
             resetGridCardStyles();
             highlightCard(view, R.id.layout_ongoing, R.id.img_patient3, R.id.txt3, R.id.ongoing_appointments_count);
         });
-
         layoutDoctorStatus.setOnClickListener(v -> {
             resetGridCardStyles();
             highlightCard(view, R.id.layout_doctor_status, R.id.status_icon, R.id.status_text, 0);
@@ -124,31 +147,20 @@ public class home extends Fragment {
             fetchDoctorStatus(statusText, statusToggle, statusIcon);
         }
 
-        Intent serviceIntent = new Intent(requireContext(), BackgroundService.class);
-        requireContext().startService(serviceIntent);
+        // Start BG service
+        requireContext().startService(new Intent(requireContext(), BackgroundService.class));
 
-        // Intercept system Back to provide the exit dialog flow
-        requireActivity().getOnBackPressedDispatcher().addCallback(
-                getViewLifecycleOwner(),
-                new OnBackPressedCallback(true) {
-                    @Override
-                    public void handleOnBackPressed() {
-                        if (isDoctorActive) {
-                            showExitConfirmDialog(); // professional dialog
-                        } else {
-                            closeApp();
-                        }
-                    }
-                }
-        );
+        // Register back handler (only once; lives with view lifecycle)
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), backCallback);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Intent serviceIntent = new Intent(requireContext(), BackgroundService.class);
-        requireContext().stopService(serviceIntent);
+        requireContext().stopService(new Intent(requireContext(), BackgroundService.class));
     }
+
+    /* --------------------------- UI helpers --------------------------- */
 
     private void highlightCard(View root, int cardId, int imageId, int textId, int countId) {
         root.findViewById(cardId).setBackgroundColor(getResources().getColor(R.color.navy_blue));
@@ -176,8 +188,7 @@ public class home extends Fragment {
     private void attachStatusToggleListener(@NonNull final Switch statusToggle, final TextView statusText, final ImageView statusIcon) {
         statusToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @SuppressLint("SetTextI18n")
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
+            @Override public void onCheckedChanged(final CompoundButton buttonView, final boolean isChecked) {
                 statusText.setText("Updating status...");
                 statusToggle.setEnabled(false);
                 new Handler().postDelayed(() -> updateDoctorStatus(isChecked, statusText, statusToggle, statusIcon), 500);
@@ -197,21 +208,18 @@ public class home extends Fragment {
                         boolean success = jsonObject.getBoolean("success");
                         if (success) {
                             statusText.setText(isActive ? "Active" : "Inactive");
-                            statusIcon.setImageResource(isActive ?
-                                    R.drawable.ic_active_status : R.drawable.ic_inactive_status);
+                            statusIcon.setImageResource(isActive ? R.drawable.ic_active_status : R.drawable.ic_inactive_status);
                             isDoctorActive = isActive;
                         } else {
                             statusText.setText(isActive ? "Inactive" : "Active");
                             statusToggle.setChecked(!isActive);
-                            statusIcon.setImageResource(!isActive ?
-                                    R.drawable.ic_active_status : R.drawable.ic_inactive_status);
+                            statusIcon.setImageResource(!isActive ? R.drawable.ic_active_status : R.drawable.ic_inactive_status);
                             isDoctorActive = !isActive;
                         }
                     } catch (JSONException e) {
                         statusText.setText(isActive ? "Inactive" : "Active");
                         statusToggle.setChecked(!isActive);
-                        statusIcon.setImageResource(!isActive ?
-                                R.drawable.ic_active_status : R.drawable.ic_inactive_status);
+                        statusIcon.setImageResource(!isActive ? R.drawable.ic_active_status : R.drawable.ic_inactive_status);
                         isDoctorActive = !isActive;
                     } finally {
                         statusToggle.setEnabled(true);
@@ -220,13 +228,11 @@ public class home extends Fragment {
                 error -> {
                     statusText.setText(!isActive ? "Inactive" : "Active");
                     statusToggle.setChecked(!isActive);
-                    statusIcon.setImageResource(!isActive ?
-                            R.drawable.ic_active_status : R.drawable.ic_inactive_status);
+                    statusIcon.setImageResource(!isActive ? R.drawable.ic_active_status : R.drawable.ic_inactive_status);
                     statusToggle.setEnabled(true);
                     isDoctorActive = !isActive;
                 }) {
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
+            @Override protected Map<String, String> getParams() throws AuthFailureError {
                 Map<String, String> params = new HashMap<>();
                 params.put("doctor_id", doctorId);
                 params.put("status", statusValue);
@@ -264,8 +270,8 @@ public class home extends Fragment {
                                 statusText.setText("Ongoing Appointment");
                                 statusToggle.setChecked(true);
                                 statusToggle.setEnabled(false);
-                                statusIcon.setImageResource(R.drawable.ic_inactive_status); // fallback
-                                isDoctorActive = true; // treat as active for exit handling
+                                statusIcon.setImageResource(R.drawable.ic_inactive_status); // fallback icon
+                                isDoctorActive = true;
                             } else {
                                 statusText.setText(status);
                                 statusToggle.setChecked(false);
@@ -289,20 +295,17 @@ public class home extends Fragment {
                     isDoctorActive = false;
                 }
         ) {
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
+            @Override protected Map<String, String> getParams() throws AuthFailureError {
                 Map<String, String> params = new HashMap<>();
                 params.put("doctor_id", doctorId);
                 return params;
             }
         };
-        RequestQueue requestQueue = Volley.newRequestQueue(requireContext());
-        requestQueue.add(stringRequest);
+        Volley.newRequestQueue(requireContext()).add(stringRequest);
     }
 
     private void fetchCompletedCount() {
         String urlCompletedCount = ApiConfig.endpoint("completed_appointment.php");
-
         StringRequest stringRequest = new StringRequest(Request.Method.GET, urlCompletedCount,
                 response -> {
                     try {
@@ -315,17 +318,15 @@ public class home extends Fragment {
                                 completedCountTextView.setText(String.valueOf(completedCount));
                             }
                         }
-                    } catch (JSONException ignored) {}
+                    } catch (JSONException ignored) { }
                 },
-                error -> {}
+                error -> { }
         );
-        RequestQueue requestQueue = Volley.newRequestQueue(requireContext());
-        requestQueue.add(stringRequest);
+        Volley.newRequestQueue(requireContext()).add(stringRequest);
     }
 
     private void fetchYourPatientsCount() {
         String urlYourPatientsCount = ApiConfig.endpoint("Doctors/complete_appointment_count.php");
-
         StringRequest stringRequest = new StringRequest(Request.Method.POST, urlYourPatientsCount,
                 response -> {
                     try {
@@ -338,24 +339,21 @@ public class home extends Fragment {
                                 yourPatientsCountTextView.setText(String.valueOf(completedCount));
                             }
                         }
-                    } catch (JSONException ignored) {}
+                    } catch (JSONException ignored) { }
                 },
-                error -> {}
+                error -> { }
         ) {
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
+            @Override protected Map<String, String> getParams() throws AuthFailureError {
                 Map<String, String> params = new HashMap<>();
                 params.put("doctor_id", doctorId);
                 return params;
             }
         };
-        RequestQueue requestQueue = Volley.newRequestQueue(requireContext());
-        requestQueue.add(stringRequest);
+        Volley.newRequestQueue(requireContext()).add(stringRequest);
     }
 
     private void fetchOngoingAppointmentsCount() {
         String urlOngoingCount = ApiConfig.endpoint("Doctors/ongoing_appointment_count.php");
-
         StringRequest stringRequest = new StringRequest(Request.Method.POST, urlOngoingCount,
                 response -> {
                     try {
@@ -368,42 +366,30 @@ public class home extends Fragment {
                                 ongoingCountTextView.setText(String.valueOf(ongoingCount));
                             }
                         }
-                    } catch (JSONException ignored) {}
+                    } catch (JSONException ignored) { }
                 },
-                error -> {}
+                error -> { }
         ) {
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
+            @Override protected Map<String, String> getParams() throws AuthFailureError {
                 Map<String, String> params = new HashMap<>();
                 params.put("doctor_id", doctorId);
                 return params;
             }
         };
-        RequestQueue requestQueue = Volley.newRequestQueue(requireContext());
-        requestQueue.add(stringRequest);
+        Volley.newRequestQueue(requireContext()).add(stringRequest);
     }
 
-    /* --------------------------- Exit Flow Helpers --------------------------- */
+    /* --------------------------- Exit Flow --------------------------- */
 
-    /**
-     * Premium-looking dialog created fully in code (no XML):
-     * - Rounded white card, bold title row with icon
-     * - Comfortable spacing & readable typography
-     * - High-contrast actions: Exit / Make Inactive & Exit
-     */
     private void showExitConfirmDialog() {
         if (!isAdded()) return;
 
-        // Build content layout programmatically
-        final int pad = dp(16);
-        final int space8 = dp(8);
-        final int space12 = dp(12);
+        final int pad = dp(16), space8 = dp(8), space12 = dp(12);
 
         LinearLayout container = new LinearLayout(requireContext());
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(pad, pad, pad, pad);
 
-        // Title row (icon + title)
         LinearLayout titleRow = new LinearLayout(requireContext());
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         titleRow.setPadding(0, 0, 0, space12);
@@ -422,7 +408,6 @@ public class home extends Fragment {
         title.setTextColor(ContextCompat.getColor(requireContext(), R.color.navy_blue));
         titleRow.addView(title);
 
-        // Message
         TextView msg = new TextView(requireContext());
         msg.setText("You are currently Active. Do you want to go Inactive before exiting?");
         msg.setTextSize(15);
@@ -447,7 +432,6 @@ public class home extends Fragment {
 
         dialog.show();
 
-        // Round-corner background for the dialog window
         Window win = dialog.getWindow();
         if (win != null) {
             GradientDrawable bg = new GradientDrawable();
@@ -456,7 +440,6 @@ public class home extends Fragment {
             win.setBackgroundDrawable(bg);
         }
 
-        // Button styling (typography + colors)
         try {
             TextView positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             TextView negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
@@ -479,39 +462,22 @@ public class home extends Fragment {
         requireActivity().finishAffinity();
     }
 
-    /**
-     * Silent status update used during exit. Exits regardless of network outcome,
-     * so user is never trapped in the dialog flow.
-     */
     private void setDoctorInactiveThenExit() {
         String urlDoctorStatus = ApiConfig.endpoint("Doctors/update_doctor_status.php");
-
-        StringRequest req = new StringRequest(
-                Request.Method.POST,
-                urlDoctorStatus,
-                response -> {
-                    try {
-                        JSONObject o = new JSONObject(response);
-                        boolean success = o.optBoolean("success", false);
-                        isDoctorActive = !success;
-                    } catch (JSONException ignored) {}
-                    closeApp();
-                },
+        StringRequest req = new StringRequest(Request.Method.POST, urlDoctorStatus,
+                response -> closeApp(),
                 error -> closeApp()
         ) {
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
+            @Override protected Map<String, String> getParams() throws AuthFailureError {
                 Map<String, String> p = new HashMap<>();
                 p.put("doctor_id", doctorId);
                 p.put("status", "inactive");
                 return p;
             }
         };
-
         Volley.newRequestQueue(requireContext()).add(req);
     }
 
-    /* --------------------------- Utils --------------------------- */
     private int dp(int v) {
         float d = getResources().getDisplayMetrics().density;
         return (int) (v * d + 0.5f);

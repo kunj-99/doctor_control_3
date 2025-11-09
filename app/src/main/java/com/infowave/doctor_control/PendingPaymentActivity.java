@@ -1,5 +1,6 @@
 package com.infowave.doctor_control;
 
+import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -45,7 +46,6 @@ public class PendingPaymentActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pending_payment);
 
-        // Edge-to-edge, but we supply our own black scrims for BOTH bars.
         setupSystemBarScrims();
 
         doctorId = getDoctorIdFromPrefs();
@@ -74,11 +74,10 @@ public class PendingPaymentActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
 
         fetchPendingSummaries(doctorId);
+        // NOTE: No back-press callback, no onUserLeaveHint guard — default back returns to previous screen.
     }
 
-    /** Edge-to-edge + black status/nav bars via overlay Views sized from insets with reliable fallbacks. */
     private void setupSystemBarScrims() {
-        // Draw behind system bars
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
@@ -89,7 +88,6 @@ public class PendingPaymentActivity extends AppCompatActivity {
         final View header = findViewById(R.id.layoutHeader);
         final RecyclerView list = findViewById(R.id.recyclerViewPaymentSummary);
 
-        // White icons on black bars
         WindowInsetsControllerCompat ctrl = ViewCompat.getWindowInsetsController(root);
         if (ctrl != null) {
             ctrl.setAppearanceLightStatusBars(false);
@@ -97,28 +95,23 @@ public class PendingPaymentActivity extends AppCompatActivity {
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            // Include cutouts for devices with notches
             int types = WindowInsetsCompat.Type.statusBars()
                     | WindowInsetsCompat.Type.navigationBars()
                     | WindowInsetsCompat.Type.displayCutout();
             Insets bars = insets.getInsets(types);
 
-            // --- Robust status-bar height with fallback ---
             int top = bars.top;
             if (top == 0) {
-                // Some OEMs return 0 on the first pass; fall back to status_bar_height dimen
-                int resId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+                @SuppressLint("InternalInsetResource") int resId = getResources().getIdentifier("status_bar_height", "dimen", "android");
                 if (resId > 0) top = getResources().getDimensionPixelSize(resId);
             }
 
-            // --- Robust nav-bar height with fallback (gesture nav may be 0) ---
             int bottom = bars.bottom;
             if (bottom == 0) {
-                int resId = getResources().getIdentifier("navigation_bar_height", "dimen", "android");
+                @SuppressLint("InternalInsetResource") int resId = getResources().getIdentifier("navigation_bar_height", "dimen", "android");
                 if (resId > 0) bottom = getResources().getDimensionPixelSize(resId);
             }
 
-            // Size/Show scrims
             if (topScrim != null) {
                 topScrim.getLayoutParams().height = top;
                 topScrim.requestLayout();
@@ -132,14 +125,12 @@ public class PendingPaymentActivity extends AppCompatActivity {
                 bottomScrim.bringToFront();
             }
 
-            // Keep header content below the status area
             if (header != null) {
                 int padTop = Math.max(header.getPaddingTop(), top);
                 header.setPadding(header.getPaddingLeft(), padTop,
                         header.getPaddingRight(), header.getPaddingBottom());
             }
 
-            // Keep list above the bottom gesture/nav area
             if (list != null) {
                 int padBottom = Math.max(list.getPaddingBottom(), bottom);
                 list.setPadding(list.getPaddingLeft(), list.getPaddingTop(),
@@ -147,11 +138,9 @@ public class PendingPaymentActivity extends AppCompatActivity {
                 list.setClipToPadding(false);
             }
 
-            // Do NOT consume; keeps bars visible on OEM variants.
             return insets;
         });
 
-        // Ensure the very first layout receives insets
         ViewCompat.requestApplyInsets(root);
     }
 
@@ -237,6 +226,7 @@ public class PendingPaymentActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private void showSettlementAppointmentsBottomSheet(PaymentSummary summary) {
         try {
             View sheetView = LayoutInflater.from(this)

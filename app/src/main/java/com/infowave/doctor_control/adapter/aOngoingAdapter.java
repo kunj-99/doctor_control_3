@@ -22,6 +22,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.infowave.doctor_control.ApiConfig;
+import com.infowave.doctor_control.ExitGuard;
 import com.infowave.doctor_control.R;
 import com.infowave.doctor_control.track_patient_location;
 import com.infowave.doctor_control.AnimalVirtualReportActivity;
@@ -172,28 +173,43 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
             holder.btnView.setText("Add report");
 
             holder.btnView.setOnClickListener(v -> {
-                boolean isVet = (position < vetCases.size()) && Boolean.TRUE.equals(vetCases.get(position));
+                int pos = holder.getAdapterPosition();
+                if (pos == RecyclerView.NO_POSITION) return;
+
+                boolean isVet = (pos < vetCases.size()) && Boolean.TRUE.equals(vetCases.get(pos));
                 if (isVet) {
+                    // Open Vet report screen
                     Intent intent = new Intent(context, AnimalVirtualReportActivity.class);
-                    intent.putExtra("appointment_id", appointmentIds.get(position));
-                    String vxName = (position < vaccinationNames.size()) ? clean(vaccinationNames.get(position)) : "";
-                    String vxId   = (position < vaccinationIds.size())   ? clean(vaccinationIds.get(position))   : "";
+                    intent.putExtra("appointment_id", appointmentIds.get(pos));
+                    String vxName = (pos < vaccinationNames.size()) ? clean(vaccinationNames.get(pos)) : "";
+                    String vxId   = (pos < vaccinationIds.size())   ? clean(vaccinationIds.get(pos))   : "";
                     if (!vxName.isEmpty()) intent.putExtra("vaccination_name", vxName);
                     if (!vxId.isEmpty())   intent.putExtra("vaccination_id",   vxId);
+
+                    // Prevent exit popup on return
+                    ExitGuard.suppressNextPrompt();
                     context.startActivity(intent);
                 } else {
+                    // Non-vet flow delegated to fragment; still suppress once
+                    ExitGuard.suppressNextPrompt();
                     if (onAddReportClicked != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        onAddReportClicked.accept(appointmentIds.get(position), position);
+                        onAddReportClicked.accept(appointmentIds.get(pos), pos);
                     }
                 }
             });
         }
 
         holder.btnTrack.setOnClickListener(v -> {
-            String mapLink = mapLinks.get(position);
+            int pos = holder.getAdapterPosition();
+            if (pos == RecyclerView.NO_POSITION) return;
+
+            String mapLink = mapLinks.get(pos);
             if (mapLink != null && !mapLink.isEmpty()) {
                 Intent intent = new Intent(context, track_patient_location.class);
                 intent.putExtra("map_link", mapLink);
+
+                // Prevent exit popup on return
+                ExitGuard.suppressNextPrompt();
                 context.startActivity(intent);
             } else {
                 Toast.makeText(context, "Location not available for this patient.", Toast.LENGTH_SHORT).show();
@@ -212,20 +228,19 @@ public class aOngoingAdapter extends RecyclerView.Adapter<aOngoingAdapter.ViewHo
                         .setPositiveButton("Collected & Complete", (d, w) -> {
                             holder.btnComplete.setText("Completing...");
                             holder.btnComplete.setEnabled(false);
-                            updateAppointmentStatus(appointmentIds.get(position), position, holder);
+                            updateAppointmentStatus(appointmentIds.get(holder.getAdapterPosition()), holder.getAdapterPosition(), holder);
                         })
                         .show();
             } else {
                 holder.btnComplete.setText("Completing...");
                 holder.btnComplete.setEnabled(false);
-                updateAppointmentStatus(appointmentIds.get(position), position, holder);
+                updateAppointmentStatus(appointmentIds.get(holder.getAdapterPosition()), holder.getAdapterPosition(), holder);
             }
         });
     }
 
     @Override
     public int getItemCount() {
-        // No placeholder card when empty; fragment shows a proper empty-state
         return appointmentIds.size();
     }
 

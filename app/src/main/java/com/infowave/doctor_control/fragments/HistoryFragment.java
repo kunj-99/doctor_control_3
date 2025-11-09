@@ -437,6 +437,7 @@ public class HistoryFragment extends Fragment {
     }
 
     /** order indices by (epoch desc, id desc) */
+    @SuppressLint("NewApi")
     private ArrayList<Integer> orderDesc(List<Long> keys, List<String> ids) {
         int n = keys.size();
         ArrayList<Integer> idx = new ArrayList<>(n);

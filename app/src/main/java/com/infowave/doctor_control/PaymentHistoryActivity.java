@@ -43,10 +43,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
     private EditText etSearch;
     private PaymentHistoryAdapter adapter;
 
-    // Current doctor id from SharedPreferences (same store as ProfileFragment)
     private int doctorId = -1;
-
-    // Master list for Settled summaries
     private final ArrayList<PaymentSummary> completedList = new ArrayList<>();
 
     @Override
@@ -54,10 +51,8 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment_history);
 
-        // Edge-to-edge with explicit black scrims for BOTH bars
         setupSystemBarScrims();
 
-        // Read doctor id from the same prefs used by ProfileFragment
         doctorId = getDoctorIdFromPrefs();
         if (doctorId <= 0) {
             Toast.makeText(this, "Doctor ID not found. Please login again.", Toast.LENGTH_LONG).show();
@@ -72,7 +67,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         listView.setDivider(null);
         listView.setAdapter(adapter);
 
-        // Live search
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -81,20 +75,17 @@ public class PaymentHistoryActivity extends AppCompatActivity {
             @Override public void afterTextChanged(Editable s) {}
         });
 
-        // Card click → show all appointments for that Settled summary
         listView.setOnItemClickListener((parent, view, position, id) -> {
             PaymentSummary summary = (PaymentSummary) adapter.getItem(position);
             if (summary == null) return;
             showSettlementAppointmentsBottomSheet(summary);
         });
 
-        // Fetch all Settled settlements for THIS doctor
         fetchCompletedSettlements(doctorId);
+        // NOTE: No back-press callback, no onUserLeaveHint guard — default back returns to previous screen.
     }
 
-    /** Makes both status and nav bars black using overlay views with robust inset fallbacks. */
     private void setupSystemBarScrims() {
-        // Draw behind system bars
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
@@ -105,7 +96,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         final View bottomScrim = findViewById(R.id.system_bottom_scrim);
         final ListView list = findViewById(R.id.list_payment);
 
-        // Force white icons on black bars
         WindowInsetsControllerCompat ctrl = ViewCompat.getWindowInsetsController(root);
         if (ctrl != null) {
             ctrl.setAppearanceLightStatusBars(false);
@@ -130,7 +120,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                 if (resId > 0) bottom = getResources().getDimensionPixelSize(resId);
             }
 
-            // Size + show scrims
             if (topScrim != null) {
                 topScrim.getLayoutParams().height = top;
                 topScrim.requestLayout();
@@ -144,7 +133,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                 bottomScrim.bringToFront();
             }
 
-            // Push content below the status area and above the nav area
             if (content != null) {
                 int padTop = Math.max(content.getPaddingTop(), top);
                 int padBottom = Math.max(content.getPaddingBottom(), bottom);
@@ -152,14 +140,13 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                         content.getPaddingRight(), padBottom);
             }
             if (list != null) {
-                // Keep list scrollable above the gesture area
                 int padBottom = Math.max(list.getPaddingBottom(), bottom);
                 list.setPadding(list.getPaddingLeft(), list.getPaddingTop(),
                         list.getPaddingRight(), padBottom);
                 list.setClipToPadding(false);
             }
 
-            return insets; // do not consume; keeps bars visible
+            return insets;
         });
 
         ViewCompat.requestApplyInsets(root);

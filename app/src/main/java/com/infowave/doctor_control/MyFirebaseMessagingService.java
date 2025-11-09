@@ -25,14 +25,16 @@ import com.google.firebase.messaging.RemoteMessage;
 import java.util.Map;
 
 /**
- * Patient-style FCM service for Doctor app with safe channel sound handling.
+ * Doctor-side FCM with patient-style custom sound channel (uses res/raw/sound).
+ * Make sure you have a file at: app/src/main/res/raw/sound.mp3 (or .wav)
  */
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private static final String TAG = "DOC_FCM";
+    // Use a stable channel id. (You can keep your previous ID, but the sound is tied to the channel.)
     private static final String CHANNEL_ID = "requests_channel";
 
-    // ───────────────────────────────── TOKEN HANDLING ─────────────────────────────────
+    // ───────────────────────── TOKEN HANDLING ─────────────────────────
 
     @Override
     public void onNewToken(String token) {
@@ -58,7 +60,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 .addOnFailureListener(e -> Log.e(TAG, "refreshTokenIfNeeded() getToken failed", e));
     }
 
-    // ──────────────────────────────── NOTIFICATION HANDLING ────────────────────────────────
+    // ─────────────────────── NOTIFICATION HANDLING ───────────────────────
 
     @Override
     public void onMessageReceived(RemoteMessage rm) {
@@ -67,10 +69,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             Log.w(TAG, "onMessageReceived() called with null RemoteMessage");
             return;
         }
-        Log.d(TAG, "onMessageReceived(): from=" + rm.getFrom()
-                + " | hasData=" + (rm.getData() != null && !rm.getData().isEmpty())
-                + " | hasNotification=" + (rm.getNotification() != null));
 
+        // Create channel (with custom sound) exactly like patient side
         createChannelIfNeeded();
 
         String title = "New Appointment Request";
@@ -78,12 +78,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         if (rm.getData() != null && !rm.getData().isEmpty()) {
             Map<String, String> data = rm.getData();
-            Log.d(TAG, "Data payload: " + data);
             if (data.containsKey("title") && data.get("title") != null) title = data.get("title");
             if (data.containsKey("body")  && data.get("body")  != null) body  = data.get("body");
         } else if (rm.getNotification() != null) {
             RemoteMessage.Notification n = rm.getNotification();
-            Log.d(TAG, "Notification payload: title=" + n.getTitle() + " body=" + n.getBody());
             if (n.getTitle() != null) title = n.getTitle();
             if (n.getBody()  != null) body  = n.getBody();
         }
@@ -104,7 +102,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         );
 
         NotificationCompat.Builder nb = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_stat_download)   // ensure icon exists
+                .setSmallIcon(R.drawable.ic_stat_download)   // ensure this icon exists
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
@@ -119,21 +117,27 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
 
         NotificationManagerCompat.from(this).notify(1001, nb.build());
-        Log.d(TAG, "Notification shown | title=\"" + title + "\" body_len=" + (body == null ? 0 : body.length()));
     }
 
+    /**
+     * Patient-style channel creation WITH custom sound (raw/sound).
+     * This mirrors the patient app logic: setSound() on the channel with AudioAttributes.
+     */
     private void createChannelIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
 
         NotificationManager nm = getSystemService(NotificationManager.class);
-        if (nm == null) {
-            Log.w(TAG, "NotificationManager null; channel not created");
-            return;
-        }
+        if (nm == null) return;
 
-        if (nm.getNotificationChannel(CHANNEL_ID) != null) {
-            return; // already exists
-        }
+        // If channel already exists, DO NOT recreate (sound is fixed per channel id on Android O+).
+        if (nm.getNotificationChannel(CHANNEL_ID) != null) return;
+
+        // EXACTLY LIKE PATIENT: use res/raw/sound
+        Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.sound);
+        AudioAttributes attrs = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
 
         NotificationChannel ch = new NotificationChannel(
                 CHANNEL_ID,
@@ -141,46 +145,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 NotificationManager.IMPORTANCE_HIGH
         );
         ch.setDescription("Alerts when a patient requests an appointment");
-
-        // Optional custom sound — set only if a raw resource exists.
-        // Put your file in res/raw/ as one of: sound, notify, ring, ding (any one).
-        try {
-            int soundResId = resolveAnyRaw(
-                    "sound",    // preferred
-                    "notify",
-                    "ring",
-                    "ding"
-            );
-            if (soundResId > 0) {
-                Uri soundUri = Uri.parse("android.resource://" + getPackageName() + "/" + soundResId);
-                AudioAttributes attrs = new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build();
-                ch.setSound(soundUri, attrs);
-                Log.d(TAG, "Notification channel sound set (resId=" + soundResId + ")");
-            } else {
-                Log.d(TAG, "No custom raw sound found; using default sound");
-            }
-        } catch (Throwable t) {
-            Log.w(TAG, "Custom sound not set (missing raw/* or other issue)", t);
-        }
-
+        ch.setSound(soundUri, attrs);  // <-- custom sound (same as patient)
         nm.createNotificationChannel(ch);
-        Log.d(TAG, "Notification channel created: " + CHANNEL_ID);
+        Log.d(TAG, "Notification channel created with custom sound: " + CHANNEL_ID);
     }
 
-    /** Try a list of raw names; returns the first that exists or 0 if none. */
-    private int resolveAnyRaw(String... names) {
-        for (String n : names) {
-            @SuppressLint("DiscouragedApi")
-            int id = getResources().getIdentifier(n, "raw", getPackageName());
-            if (id != 0) return id;
-        }
-        return 0;
-    }
-
-    // ──────────────────────────────── ANDROID 13+ PERMISSION ────────────────────────────────
+    // ───────────────────── ANDROID 13+ PERMISSION ─────────────────────
 
     /** Call from your Activity (e.g., Splash/Login) on first launch. */
     public static void requestNotificationPermissionIfNeeded(Activity activity) {

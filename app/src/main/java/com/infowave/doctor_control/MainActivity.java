@@ -3,9 +3,7 @@ package com.infowave.doctor_control;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ImageView;
@@ -14,8 +12,6 @@ import android.widget.TextView;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -84,12 +80,16 @@ public class MainActivity extends AppCompatActivity {
         iconReports = findViewById(R.id.icon_reports);
 
         if (iconSupport != null) {
-            iconSupport.setOnClickListener(v ->
-                    startActivity(new Intent(MainActivity.this, suppor.class)));
+            iconSupport.setOnClickListener(v -> {
+                ExitGuard.suppressNextPrompt(); // NEW: avoid exit popup for own navigation
+                startActivity(new Intent(MainActivity.this, suppor.class));
+            });
         }
         if (iconReports != null) {
-            iconReports.setOnClickListener(v ->
-                    startActivity(new Intent(MainActivity.this, tarmsandcondition.class)));
+            iconReports.setOnClickListener(v -> {
+                ExitGuard.suppressNextPrompt(); // NEW
+                startActivity(new Intent(MainActivity.this, tarmsandcondition.class));
+            });
         }
 
         // ===== ViewPager & BottomNav =====
@@ -128,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // ===== Android 13+ notifications permission (use the service helper for parity) =====
+        // ===== Android 13+ notifications permission (service helper retains parity) =====
         MyFirebaseMessagingService.requestNotificationPermissionIfNeeded(this);
 
         // ===== Sync FCM token like patient side (only if doctor_id is present) =====
@@ -184,6 +184,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onUserLeaveHint() {
         super.onUserLeaveHint();
         Log.d(TAG, "onUserLeaveHint()");
+
+        // NEW: If we ourselves just launched another in-app screen, skip the exit dialog once.
+        if (ExitGuard.consumeIfSuppressed()) {
+            return;
+        }
+
+        // Existing behavior (only for real backgrounding / home / app switch)
         activeGuard.promptAndExit(this,
                 ActiveStatusManager.Trigger.HOME_OR_APP_SWITCH,
                 null);
