@@ -98,6 +98,12 @@ public class HistoryFragment extends Fragment {
     private String lastSig = "";
 
     @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // No back callback here; MainActivity handles switching History → Home on back.
+    }
+
+    @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container,
                              Bundle savedInstanceState) {

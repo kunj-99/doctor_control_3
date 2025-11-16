@@ -57,6 +57,7 @@ public class ProfileFragment extends Fragment {
         SharedPreferences sp = requireActivity().getSharedPreferences("DoctorPrefs", Context.MODE_PRIVATE);
         doctorId = sp.getInt("doctor_id", -1);
         Log.d(TAG, "Loaded doctor_id from SharedPreferences: " + doctorId);
+        // No back-press callback here; MainActivity handles tab back navigation.
     }
 
     @Override
@@ -220,7 +221,7 @@ public class ProfileFragment extends Fragment {
             } else if (years == 1) {
                 return "1 year";
             } else {
-                return years + " years";
+                return years + "years";
             }
         } catch (NumberFormatException e) {
             return experience + " years";

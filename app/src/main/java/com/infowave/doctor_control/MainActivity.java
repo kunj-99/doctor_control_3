@@ -81,13 +81,13 @@ public class MainActivity extends AppCompatActivity {
 
         if (iconSupport != null) {
             iconSupport.setOnClickListener(v -> {
-                ExitGuard.suppressNextPrompt(); // NEW: avoid exit popup for own navigation
+                ExitGuard.suppressNextPrompt(); // avoid exit popup for own navigation
                 startActivity(new Intent(MainActivity.this, suppor.class));
             });
         }
         if (iconReports != null) {
             iconReports.setOnClickListener(v -> {
-                ExitGuard.suppressNextPrompt(); // NEW
+                ExitGuard.suppressNextPrompt();
                 startActivity(new Intent(MainActivity.this, tarmsandcondition.class));
             });
         }
@@ -128,7 +128,32 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // ===== Android 13+ notifications permission (service helper retains parity) =====
+        // ===== Global back press handler =====
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (viewPager == null || bottomNavigationView == null) {
+                    // Safety fallback
+                    finish();
+                    return;
+                }
+
+                int currentItem = viewPager.getCurrentItem();
+                Log.d(TAG, "handleOnBackPressed() currentItem=" + currentItem);
+
+                if (currentItem != 0) {
+                    // Not on Home → always go to Home first
+                    bottomNavigationView.setSelectedItemId(R.id.navigation_home);
+                    viewPager.setCurrentItem(0, true);
+                } else {
+                    // Already on Home → normal exit flow
+                    // If you later wire ActiveStatusManager/ExitGuard, do it here.
+                    finish();
+                }
+            }
+        });
+
+        // ===== Android 13+ notifications permission =====
         MyFirebaseMessagingService.requestNotificationPermissionIfNeeded(this);
 
         // ===== Sync FCM token like patient side (only if doctor_id is present) =====
@@ -149,16 +174,6 @@ public class MainActivity extends AppCompatActivity {
             viewPager.setCurrentItem(1, false);
             toolbarTitle.setText("Appointments");
         }
-
-        // ===== Intercept back to show Active/Inactive guard BEFORE default behavior =====
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-            @Override public void handleOnBackPressed() {
-                Log.d(TAG, "onBackPressed (intercepted)");
-                activeGuard.promptAndExit(MainActivity.this,
-                        ActiveStatusManager.Trigger.BACK_EXIT,
-                        null);
-            }
-        });
     }
 
     /** Enables or disables swipe gestures on the main ViewPager2. */
@@ -178,21 +193,5 @@ public class MainActivity extends AppCompatActivity {
             viewPager.setCurrentItem(2, true);
             bottomNavigationView.setSelectedItemId(R.id.navigation_history);
         }
-    }
-
-    @Override
-    protected void onUserLeaveHint() {
-        super.onUserLeaveHint();
-        Log.d(TAG, "onUserLeaveHint()");
-
-        // NEW: If we ourselves just launched another in-app screen, skip the exit dialog once.
-        if (ExitGuard.consumeIfSuppressed()) {
-            return;
-        }
-
-        // Existing behavior (only for real backgrounding / home / app switch)
-        activeGuard.promptAndExit(this,
-                ActiveStatusManager.Trigger.HOME_OR_APP_SWITCH,
-                null);
     }
 }
