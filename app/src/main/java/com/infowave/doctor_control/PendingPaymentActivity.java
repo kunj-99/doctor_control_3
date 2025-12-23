@@ -1,6 +1,7 @@
 package com.infowave.doctor_control;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -33,9 +34,21 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class PendingPaymentActivity extends AppCompatActivity {
+
+    // Extras (SettlementDetailsActivity will read these)
+    public static final String EXTRA_SUMMARY_ID = "extra_summary_id";
+    public static final String EXTRA_DOCTOR_ID = "extra_doctor_id";
+    public static final String EXTRA_AMOUNT_TO_PAY = "extra_amount_to_pay";           // Doctor -> Admin
+    public static final String EXTRA_AMOUNT_TO_RECEIVE = "extra_amount_to_receive";   // Admin -> Doctor
+    public static final String EXTRA_CREATED_AT = "extra_created_at";
+    public static final String EXTRA_NOTES = "extra_notes";
+    public static final String EXTRA_SETTLEMENT_STATUS = "extra_settlement_status";
+    public static final String EXTRA_APPOINTMENT_IDS_CSV = "extra_appointment_ids_csv";
+    public static final String EXTRA_APPOINTMENT_COUNT = "extra_appointment_count";
+    public static final String EXTRA_ONLINE_COUNT = "extra_online_count";
+    public static final String EXTRA_OFFLINE_COUNT = "extra_offline_count";
 
     private RecyclerView recyclerView;
     private PaymentSummaryAdapter adapter;
@@ -47,6 +60,9 @@ public class PendingPaymentActivity extends AppCompatActivity {
         setContentView(R.layout.activity_pending_payment);
 
         setupSystemBarScrims();
+
+        View back = findViewById(R.id.btnBack);
+        if (back != null) back.setOnClickListener(v -> finish());
 
         doctorId = getDoctorIdFromPrefs();
         if (doctorId <= 0) {
@@ -60,21 +76,43 @@ public class PendingPaymentActivity extends AppCompatActivity {
 
         adapter = new PaymentSummaryAdapter(
                 new ArrayList<>(),
-                summary -> {
-                    double amtDoctorToAdmin = summary.receivedFromDoctor;
-                    if (amtDoctorToAdmin > 0) {
-                        String payText = "Pay Admin ₹" + String.format(Locale.ROOT, "%.2f", amtDoctorToAdmin);
-                        Toast.makeText(this, payText + " (Summary #" + summary.summaryId + ")", Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(this, "No dues to pay.", Toast.LENGTH_SHORT).show();
-                    }
-                },
-                this::showSettlementAppointmentsBottomSheet
+                this::openSettlementDetails,          // Button click (Pay OR Receive)
+                this::showSettlementAppointmentsBottomSheet // Card click (Appointments sheet)
         );
+
         recyclerView.setAdapter(adapter);
 
         fetchPendingSummaries(doctorId);
-        // NOTE: No back-press callback, no onUserLeaveHint guard — default back returns to previous screen.
+    }
+
+    private void openSettlementDetails(PaymentSummary summary) {
+        if (summary == null) return;
+
+        double amountToPay = summary.receivedFromDoctor;   // Doctor -> Admin
+        double amountToReceive = summary.givenToDoctor;     // Admin -> Doctor
+
+        if (amountToPay <= 0 && amountToReceive <= 0) {
+            Toast.makeText(this, "No dues found for this settlement.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent i = new Intent(PendingPaymentActivity.this, SettlementDetailsActivity.class);
+
+        i.putExtra(EXTRA_SUMMARY_ID, summary.summaryId);
+        i.putExtra(EXTRA_DOCTOR_ID, summary.doctorId);
+        i.putExtra(EXTRA_AMOUNT_TO_PAY, amountToPay);
+        i.putExtra(EXTRA_AMOUNT_TO_RECEIVE, amountToReceive);
+
+        i.putExtra(EXTRA_CREATED_AT, summary.createdAt != null ? summary.createdAt : "");
+        i.putExtra(EXTRA_NOTES, summary.notes != null ? summary.notes : "");
+        i.putExtra(EXTRA_SETTLEMENT_STATUS, summary.settlementStatus != null ? summary.settlementStatus : "Pending");
+
+        i.putExtra(EXTRA_APPOINTMENT_IDS_CSV, summary.appointmentIdsCsv != null ? summary.appointmentIdsCsv : "");
+        i.putExtra(EXTRA_APPOINTMENT_COUNT, summary.appointmentCount);
+        i.putExtra(EXTRA_ONLINE_COUNT, summary.onlineAppointments);
+        i.putExtra(EXTRA_OFFLINE_COUNT, summary.offlineAppointments);
+
+        startActivity(i);
     }
 
     private void setupSystemBarScrims() {
@@ -102,13 +140,15 @@ public class PendingPaymentActivity extends AppCompatActivity {
 
             int top = bars.top;
             if (top == 0) {
-                @SuppressLint("InternalInsetResource") int resId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+                @SuppressLint("InternalInsetResource") int resId =
+                        getResources().getIdentifier("status_bar_height", "dimen", "android");
                 if (resId > 0) top = getResources().getDimensionPixelSize(resId);
             }
 
             int bottom = bars.bottom;
             if (bottom == 0) {
-                @SuppressLint("InternalInsetResource") int resId = getResources().getIdentifier("navigation_bar_height", "dimen", "android");
+                @SuppressLint("InternalInsetResource") int resId =
+                        getResources().getIdentifier("navigation_bar_height", "dimen", "android");
                 if (resId > 0) bottom = getResources().getDimensionPixelSize(resId);
             }
 
@@ -178,6 +218,7 @@ public class PendingPaymentActivity extends AppCompatActivity {
                     for (int i = 0; i < arr.length(); i++) {
                         JSONObject o = arr.getJSONObject(i);
                         PaymentSummary s = new PaymentSummary();
+
                         s.summaryId             = o.optInt("summary_id");
                         s.doctorId              = o.optInt("doctor_id");
 
@@ -195,8 +236,8 @@ public class PendingPaymentActivity extends AppCompatActivity {
                         s.doctorCut             = o.optDouble("doctor_cut", 0);
                         s.adjustmentAmount      = o.optDouble("adjustment_amount", 0);
 
-                        s.givenToDoctor         = o.optDouble("given_to_doctor", 0);
-                        s.receivedFromDoctor    = o.optDouble("received_from_doctor", 0);
+                        s.givenToDoctor         = o.optDouble("given_to_doctor", 0);       // Admin -> Doctor
+                        s.receivedFromDoctor    = o.optDouble("received_from_doctor", 0);  // Doctor -> Admin
 
                         s.settlementStatus      = o.optString("settlement_status", "Pending");
                         s.notes                 = o.optString("notes", "");
@@ -207,6 +248,7 @@ public class PendingPaymentActivity extends AppCompatActivity {
                             list.add(s);
                         }
                     }
+
                     adapter.setData(list);
 
                     if (list.isEmpty()) {

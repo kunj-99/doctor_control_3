@@ -2,40 +2,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.infowave.doctor_control">
-
     <!-- Features -->
     <uses-feature
         android:name="android.hardware.camera"
-        android:required="false" />
-
-    <!-- Core permissions -->
-    <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- Location & foreground service (continuous tracking) -->
+        android:required="false" /> <!-- Core permissions -->
+    <uses-permission android:name="android.permission.INTERNET" /> <!-- Location & foreground service (continuous tracking) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /> <!-- Android 10+ -->
     <!-- Top-level (manifest में) -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-
-
-    <!-- Notifications (Android 13+) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- Boot पर auto restart के लिए -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-    <!-- Media / camera (existing) -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <!-- For API < 33 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> <!-- Boot पर auto restart के लिए -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> <!-- Notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> <!-- Media / camera (existing) -->
+    <uses-permission android:name="android.permission.CAMERA" /> <!-- For API < 33 -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <!-- For API 33+ -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"
+        android:maxSdkVersion="32" /> <!-- For API 33+ -->
+    <uses-permission
+        android:name="android.permission.READ_MEDIA_IMAGES"
         tools:ignore="SelectedPhotoAccess" />
 
     <application
@@ -49,12 +35,14 @@
         android:theme="@style/Theme.Doctor_control"
         android:usesCleartextTraffic="true"
         tools:targetApi="35">
-
+        <activity
+            android:name=".SettlementDetailsActivity"
+            android:exported="false" />
         <!-- Activities (as provided) -->
         <activity
             android:name=".AnimalVirtualReportActivity"
             android:exported="false"
-            android:windowSoftInputMode="stateHidden|adjustResize"/>
+            android:windowSoftInputMode="stateHidden|adjustResize" />
         <activity
             android:name=".PendingPaymentActivity"
             android:exported="false" />
@@ -76,57 +64,45 @@
         <activity
             android:name=".otp_verification"
             android:exported="false" />
-
         <activity
             android:name=".login"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
             android:name=".MainActivity"
             android:exported="true" />
-
         <activity
             android:name=".medical_report"
             android:exported="false"
-            android:windowSoftInputMode="stateHidden|adjustResize"/>
-
-        <!-- Foreground location service: keeps sending location in background -->
+            android:windowSoftInputMode="stateHidden|adjustResize" /> <!-- Foreground location service: keeps sending location in background -->
         <service
             android:name=".LiveLocationManager$LocationForegroundService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location" />
-
-        <!-- Guard/background service: periodically ensures tracking stays alive -->
+            android:foregroundServiceType="location" /> <!-- Guard/background service: periodically ensures tracking stays alive -->
         <service
             android:name=".BackgroundService"
             android:enabled="true"
-            android:exported="false" />
-
-        <!-- BOOT/Update पर auto-restart के लिए receiver (inner class) -->
+            android:exported="false" /> <!-- BOOT/Update पर auto-restart के लिए receiver (inner class) -->
         <receiver
             android:name=".LiveLocationManager$BootRestartReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED"/>
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
-        </receiver>
-
-        <!-- Google Maps API key -->
+        </receiver> <!-- Google Maps API key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key"
-            tools:replace="android:value" />
-
-        <!-- FileProvider (camera/image sharing) -->
+            tools:replace="android:value" /> <!-- FileProvider (camera/image sharing) -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -135,26 +111,17 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
-        </provider>
-
-        <!-- Firebase Messaging Service -->
+        </provider> <!-- Firebase Messaging Service -->
         <service
             android:name=".MyFirebaseMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
-        </service>
-
-
-
-
-
-        <!-- Default FCM notification channel -->
+        </service> <!-- Default FCM notification channel -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="requests_channel" />
-
     </application>
 
 </manifest>

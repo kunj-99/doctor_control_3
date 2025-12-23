@@ -148,7 +148,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
 
             return insets;
         });
-
         ViewCompat.requestApplyInsets(root);
     }
 
