@@ -1,3 +1,4 @@
+// PendingPaymentActivity.java
 package com.infowave.doctor_control;
 
 import android.annotation.SuppressLint;
@@ -21,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
+import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -34,6 +36,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class PendingPaymentActivity extends AppCompatActivity {
 
@@ -50,9 +53,16 @@ public class PendingPaymentActivity extends AppCompatActivity {
     public static final String EXTRA_ONLINE_COUNT = "extra_online_count";
     public static final String EXTRA_OFFLINE_COUNT = "extra_offline_count";
 
+    // ✅ NEW: message that explains what the doctor should do next (used for toast + optional UI)
+    private static final String HISTORY_HINT =
+            "Admin payment will reflect in History after approval/settlement. Please check History later.";
+
     private RecyclerView recyclerView;
     private PaymentSummaryAdapter adapter;
     private int doctorId = -1;
+
+    private RequestQueue queue;
+    private boolean isFetching = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,48 +81,95 @@ public class PendingPaymentActivity extends AppCompatActivity {
             return;
         }
 
+        queue = Volley.newRequestQueue(this);
+
         recyclerView = findViewById(R.id.recyclerViewPaymentSummary);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new PaymentSummaryAdapter(
                 new ArrayList<>(),
-                this::openSettlementDetails,          // Button click (Pay OR Receive)
-                this::showSettlementAppointmentsBottomSheet // Card click (Appointments sheet)
+                this::openSettlementDetails,                 // Button click (Pay Admin only; Receive won't redirect)
+                this::showSettlementAppointmentsBottomSheet  // Card click (Appointments sheet)
         );
 
         recyclerView.setAdapter(adapter);
 
+        // initial load
         fetchPendingSummaries(doctorId);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // ✅ Refresh pending list when coming back from details
+        fetchPendingSummaries(doctorId);
+    }
+
+    private boolean isTerminalStatus(String status) {
+        if (status == null) return false;
+        String s = status.trim();
+        if (s.isEmpty()) return false;
+
+        if ("Approved".equalsIgnoreCase(s)) return true;
+        if ("Rejected".equalsIgnoreCase(s)) return true;
+
+        if ("Settled".equalsIgnoreCase(s)) return true;
+        if ("Completed".equalsIgnoreCase(s)) return true;
+
+        return false;
+    }
+
+    /**
+     * ✅ UPDATED:
+     * - Redirect to SettlementDetailsActivity ONLY if Doctor needs to PAY admin (receivedFromDoctor > 0).
+     * - If Doctor needs to RECEIVE from admin (givenToDoctor > 0), do NOT redirect.
+     * - ✅ NEW: Show a clear "check History later" guidance message.
+     */
     private void openSettlementDetails(PaymentSummary summary) {
         if (summary == null) return;
 
-        double amountToPay = summary.receivedFromDoctor;   // Doctor -> Admin
-        double amountToReceive = summary.givenToDoctor;     // Admin -> Doctor
-
-        if (amountToPay <= 0 && amountToReceive <= 0) {
-            Toast.makeText(this, "No dues found for this settlement.", Toast.LENGTH_SHORT).show();
+        // ✅ Safety: don't open terminal settlements from Pending screen
+        if (isTerminalStatus(summary.settlementStatus)) {
+            Toast.makeText(this, "This settlement is " + summary.settlementStatus + " (will be in History).", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Intent i = new Intent(PendingPaymentActivity.this, SettlementDetailsActivity.class);
+        double amountToPay = summary.receivedFromDoctor;   // Doctor -> Admin
+        double amountToReceive = summary.givenToDoctor;    // Admin -> Doctor
 
-        i.putExtra(EXTRA_SUMMARY_ID, summary.summaryId);
-        i.putExtra(EXTRA_DOCTOR_ID, summary.doctorId);
-        i.putExtra(EXTRA_AMOUNT_TO_PAY, amountToPay);
-        i.putExtra(EXTRA_AMOUNT_TO_RECEIVE, amountToReceive);
+        // ✅ If doctor needs to PAY admin -> allow redirect
+        if (amountToPay > 0) {
+            Intent i = new Intent(PendingPaymentActivity.this, SettlementDetailsActivity.class);
 
-        i.putExtra(EXTRA_CREATED_AT, summary.createdAt != null ? summary.createdAt : "");
-        i.putExtra(EXTRA_NOTES, summary.notes != null ? summary.notes : "");
-        i.putExtra(EXTRA_SETTLEMENT_STATUS, summary.settlementStatus != null ? summary.settlementStatus : "Pending");
+            i.putExtra(EXTRA_SUMMARY_ID, summary.summaryId);
+            i.putExtra(EXTRA_DOCTOR_ID, summary.doctorId);
+            i.putExtra(EXTRA_AMOUNT_TO_PAY, amountToPay);
+            i.putExtra(EXTRA_AMOUNT_TO_RECEIVE, amountToReceive);
 
-        i.putExtra(EXTRA_APPOINTMENT_IDS_CSV, summary.appointmentIdsCsv != null ? summary.appointmentIdsCsv : "");
-        i.putExtra(EXTRA_APPOINTMENT_COUNT, summary.appointmentCount);
-        i.putExtra(EXTRA_ONLINE_COUNT, summary.onlineAppointments);
-        i.putExtra(EXTRA_OFFLINE_COUNT, summary.offlineAppointments);
+            i.putExtra(EXTRA_CREATED_AT, summary.createdAt != null ? summary.createdAt : "");
+            i.putExtra(EXTRA_NOTES, summary.notes != null ? summary.notes : "");
+            i.putExtra(EXTRA_SETTLEMENT_STATUS, summary.settlementStatus != null ? summary.settlementStatus : "Pending");
 
-        startActivity(i);
+            i.putExtra(EXTRA_APPOINTMENT_IDS_CSV, summary.appointmentIdsCsv != null ? summary.appointmentIdsCsv : "");
+            i.putExtra(EXTRA_APPOINTMENT_COUNT, summary.appointmentCount);
+            i.putExtra(EXTRA_ONLINE_COUNT, summary.onlineAppointments);
+            i.putExtra(EXTRA_OFFLINE_COUNT, summary.offlineAppointments);
+
+            startActivity(i);
+            return;
+        }
+
+        // ✅ If doctor needs to RECEIVE from admin -> DO NOT redirect
+        if (amountToReceive > 0) {
+            String msg = "You will receive ₹" + String.format(Locale.ROOT, "%.2f", amountToReceive)
+                    + " from Admin.\n\n"
+                    + HISTORY_HINT
+                    + "\n(Ref: #" + summary.summaryId + ")";
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Toast.makeText(this, "No dues found for this settlement.", Toast.LENGTH_SHORT).show();
     }
 
     private void setupSystemBarScrims() {
@@ -195,6 +252,11 @@ public class PendingPaymentActivity extends AppCompatActivity {
     }
 
     private void fetchPendingSummaries(int doctorId) {
+        if (doctorId <= 0) return;
+        if (isFetching) return;
+
+        isFetching = true;
+
         try {
             String base = ApiConfig.endpoint(
                     "Doctors/get_doctor_settlements.php",
@@ -204,10 +266,13 @@ public class PendingPaymentActivity extends AppCompatActivity {
             String url = base + "&status=Pending";
 
             StringRequest req = new StringRequest(Request.Method.GET, url, response -> {
+                isFetching = false;
+
                 try {
                     JSONObject root = new JSONObject(response);
                     if (!root.optBoolean("success", false)) {
                         Toast.makeText(this, root.optString("message", "Failed"), Toast.LENGTH_SHORT).show();
+                        adapter.setData(new ArrayList<>());
                         return;
                     }
 
@@ -215,6 +280,7 @@ public class PendingPaymentActivity extends AppCompatActivity {
                     if (arr == null) arr = new JSONArray();
 
                     List<PaymentSummary> list = new ArrayList<>();
+
                     for (int i = 0; i < arr.length(); i++) {
                         JSONObject o = arr.getJSONObject(i);
                         PaymentSummary s = new PaymentSummary();
@@ -244,7 +310,8 @@ public class PendingPaymentActivity extends AppCompatActivity {
                         s.createdAt             = o.optString("created_at", "");
                         s.updatedAt             = o.optString("updated_at", "");
 
-                        if ("Pending".equalsIgnoreCase(s.settlementStatus)) {
+                        // ✅ Only show true pending records here (not Approved/Rejected)
+                        if (!isTerminalStatus(s.settlementStatus) && "Pending".equalsIgnoreCase(s.settlementStatus)) {
                             list.add(s);
                         }
                     }
@@ -258,12 +325,16 @@ public class PendingPaymentActivity extends AppCompatActivity {
                 } catch (Exception e) {
                     Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
-            }, error -> Toast.makeText(this, "Network error: " + (error.getMessage()!=null?error.getMessage():""), Toast.LENGTH_SHORT).show());
+            }, error -> {
+                isFetching = false;
+                Toast.makeText(this, "Network error: " + (error.getMessage() != null ? error.getMessage() : ""), Toast.LENGTH_SHORT).show();
+            });
 
             req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
-            Volley.newRequestQueue(this).add(req);
+            queue.add(req);
 
         } catch (Exception e) {
+            isFetching = false;
             Toast.makeText(this, "Build URL failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
@@ -333,10 +404,10 @@ public class PendingPaymentActivity extends AppCompatActivity {
                 } catch (Exception e) {
                     Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
-            }, error -> Toast.makeText(this, "Network error: " + (error.getMessage()!=null?error.getMessage():""), Toast.LENGTH_SHORT).show());
+            }, error -> Toast.makeText(this, "Network error: " + (error.getMessage() != null ? error.getMessage() : ""), Toast.LENGTH_SHORT).show());
 
             req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
-            Volley.newRequestQueue(this).add(req);
+            queue.add(req);
 
         } catch (Exception e) {
             Toast.makeText(this, "Bottom sheet error: " + e.getMessage(), Toast.LENGTH_SHORT).show();

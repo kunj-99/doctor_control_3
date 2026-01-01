@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:paddingHorizontal="12dp"
     android:paddingTop="12dp">
@@ -20,16 +20,16 @@
         <View
             android:layout_width="6dp"
             android:layout_height="22dp"
-            android:background="#3F51B5"
-            android:layout_marginEnd="8dp" />
+            android:layout_marginEnd="8dp"
+            android:background="#3F51B5" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Completed Settlements"
+            android:textColor="@color/black"
             android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/black" />
+            android:textStyle="bold" />
     </LinearLayout>
 
     <!-- Card -->
@@ -48,7 +48,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Header Row: Status Chip + Date -->
+            <!-- Row: status chip + created-at -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -59,15 +59,15 @@
                     android:id="@+id/tv_status_chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Completed"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="#2E7D32"
+                    android:background="#E8F5E9"
                     android:paddingLeft="12dp"
-                    android:paddingRight="12dp"
                     android:paddingTop="6dp"
+                    android:paddingRight="12dp"
                     android:paddingBottom="6dp"
-                    android:background="#E8F5E9" />
+                    android:text="Completed"
+                    android:textColor="#2E7D32"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
                 <Space
                     android:layout_width="0dp"
@@ -79,8 +79,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="2025-11-03 10:20:00"
-                    android:textSize="12sp"
-                    android:textColor="#8A8A8A" />
+                    android:textColor="#8A8A8A"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <!-- Notes -->
@@ -88,60 +88,66 @@
                 android:id="@+id/tv_notes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Settlement period..."
-                android:textSize="13sp"
+                android:layout_marginTop="8dp"
+                android:text="Settlement period…"
                 android:textColor="#6B6B6B"
-                android:layout_marginTop="8dp" />
+                android:textSize="13sp" />
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#EEEEEE"
                 android:layout_marginTop="8dp"
-                android:layout_marginBottom="10dp" />
+                android:layout_marginBottom="10dp"
+                android:background="#EEEEEE" />
 
-            <!-- Doctor + Totals Row -->
+            <!-- Direction + Totals -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <!-- Left -->
+                <!-- Left side -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical">
 
+                    <!-- Dynamic direction badge line -->
                     <TextView
-                        android:id="@+id/tv_doctor_id"
+                        android:id="@+id/tv_direction_badge"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Doctor ID: 1"
-                        android:textStyle="bold"
-                        android:textColor="#212121"
-                        android:textSize="15sp" />
+                        android:background="#E3F2FD"
+                        android:paddingLeft="10dp"
+                        android:paddingTop="4dp"
+                        android:paddingRight="10dp"
+                        android:paddingBottom="4dp"
+                        android:text="Admin → Doctor • ₹0.00"
+                        android:textColor="#0D47A1"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tv_base_ex_gst"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
                         android:text="Base (ex-GST): ₹0.00"
                         android:textColor="#212121"
-                        android:textSize="14sp"
-                        android:layout_marginTop="6dp" />
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/tv_gst"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
                         android:text="GST: ₹0.00"
                         android:textColor="#212121"
-                        android:textSize="14sp"
-                        android:layout_marginTop="2dp" />
+                        android:textSize="14sp" />
                 </LinearLayout>
 
-                <!-- Right -->
+                <!-- Right side -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -160,21 +166,21 @@
                         android:id="@+id/tv_doctor_collected"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
                         android:text="Doctor Collected: ₹0.00"
                         android:textColor="#424242"
-                        android:textSize="14sp"
-                        android:layout_marginTop="2dp" />
+                        android:textSize="14sp" />
                 </LinearLayout>
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#EEEEEE"
                 android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp" />
+                android:layout_marginBottom="10dp"
+                android:background="#EEEEEE" />
 
-            <!-- Cuts/Adjustments -->
+            <!-- Cuts / adjustments -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -185,35 +191,35 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Admin Cut: ₹0.00"
-                    android:textStyle="bold"
                     android:textColor="#F57C00"
-                    android:textSize="14sp" />
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tv_doctor_cut"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
                     android:text="Doctor Cut: ₹0.00"
                     android:textColor="#2E7D32"
-                    android:textSize="14sp"
-                    android:layout_marginTop="2dp" />
+                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/tv_adjustment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
                     android:text="Adjustment: ₹0.00"
                     android:textColor="#1565C0"
-                    android:textSize="14sp"
-                    android:layout_marginTop="2dp" />
+                    android:textSize="14sp" />
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#EEEEEE"
                 android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp" />
+                android:layout_marginBottom="10dp"
+                android:background="#EEEEEE" />
 
             <!-- Given / Received -->
             <LinearLayout
@@ -240,15 +246,44 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- footer meta -->
-            <TextView
-                android:id="@+id/tv_footer_meta"
-                android:layout_width="wrap_content"
+            <!-- Footer: meta + Show proof action -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Appointments: 0  |  Online: 0  |  Offline: 0"
-                android:textColor="#777"
-                android:textSize="12sp"
-                android:layout_marginTop="10dp" />
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tv_footer_meta"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Appointments: 0  |  Online: 0  |  Offline: 0"
+                    android:textColor="#777777"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_show_proof"
+                    android:layout_width="wrap_content"
+                    android:layout_height="44dp"
+                    android:minWidth="0dp"
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Show proof"
+                    android:textAllCaps="false"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/white"
+                    app:cornerRadius="22dp"
+                    app:iconPadding="8dp"
+                    app:backgroundTint="#1A73E8"
+                    app:rippleColor="#331A73E8"
+                    android:visibility="visible"/>
+            </LinearLayout>
+
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>

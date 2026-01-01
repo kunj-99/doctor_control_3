@@ -1,3 +1,4 @@
+// PaymentSummaryAdapter.java
 package com.infowave.doctor_control.adapter;
 
 import android.annotation.SuppressLint;
@@ -51,6 +52,12 @@ public class PaymentSummaryAdapter extends RecyclerView.Adapter<PaymentSummaryAd
         return new ViewHolder(v);
     }
 
+    /**
+     * ✅ UPDATED:
+     * - If Doctor -> Admin (receivedFromDoctor > 0): button calls onPayClickListener (redirect allowed)
+     * - If Admin -> Doctor (givenToDoctor > 0): button does NOT call onPayClickListener (no redirect)
+     * - ✅ NEW: Shows an informational note on the card itself so doctor knows to check History.
+     */
     @SuppressLint({"SetTextI18n"})
     @Override
     public void onBindViewHolder(@NonNull ViewHolder h, int position) {
@@ -90,11 +97,14 @@ public class PaymentSummaryAdapter extends RecyclerView.Adapter<PaymentSummaryAd
             h.tvSettlementStatus.setText("Pending • (Doctor → Admin)");
             h.tvSettlementStatus.setTextColor(Color.parseColor("#EF6C00"));
 
+            // keep original notes only
+            h.tvNotes.setText(notes);
+
             h.btnPay.setText(String.format(Locale.ROOT, "Pay Admin ₹%.2f", amtDoctorToAdmin));
             h.btnPay.setAlpha(1f);
 
             h.btnPay.setOnClickListener(v -> {
-                int pos = h.getAdapterPosition(); // ✅ compatible
+                int pos = h.getAdapterPosition();
                 if (pos == RecyclerView.NO_POSITION) return;
                 if (onPayClickListener != null) onPayClickListener.onPayClick(summaryList.get(pos));
             });
@@ -103,25 +113,32 @@ public class PaymentSummaryAdapter extends RecyclerView.Adapter<PaymentSummaryAd
             h.tvSettlementStatus.setText("Pending • (Admin → Doctor)");
             h.tvSettlementStatus.setTextColor(Color.parseColor("#2E7D32"));
 
-            // ✅ Make it clickable to open proof screen
-            h.btnPay.setText(String.format(Locale.ROOT, "Receive from Admin ₹%.2f", amtAdminToDoctor));
-            h.btnPay.setAlpha(1f);
+            // ✅ NEW: append a clear hint into notes area (so user sees it without clicking)
+            String hint = "Note: Admin payment will appear in History after it is settled/approved.";
+            if (notes.trim().isEmpty()) {
+                h.tvNotes.setText(hint);
+            } else {
+                h.tvNotes.setText(notes + "\n" + hint);
+            }
 
+            h.btnPay.setText(String.format(Locale.ROOT, "Receive from Admin ₹%.2f", amtAdminToDoctor));
+            h.btnPay.setAlpha(0.65f); // subtle: indicates no action needed
+
+            // ✅ IMPORTANT: do NOT call onPayClickListener here (no redirect)
             h.btnPay.setOnClickListener(v -> {
-                int pos = h.getAdapterPosition(); // ✅ compatible
-                if (pos == RecyclerView.NO_POSITION) return;
-                if (onPayClickListener != null) onPayClickListener.onPayClick(summaryList.get(pos));
+                // no-op
             });
 
         } else {
             h.tvSettlementStatus.setText("Pending");
             h.tvSettlementStatus.setTextColor(Color.parseColor("#616161"));
             h.btnPay.setVisibility(View.GONE);
+            h.tvNotes.setText(notes);
         }
 
         // Card click: keep showing appointments bottom sheet
         h.itemView.setOnClickListener(v -> {
-            int pos = h.getAdapterPosition(); // ✅ compatible
+            int pos = h.getAdapterPosition();
             if (pos == RecyclerView.NO_POSITION) return;
             if (onCardClickListener != null) onCardClickListener.onCardClick(summaryList.get(pos));
         });

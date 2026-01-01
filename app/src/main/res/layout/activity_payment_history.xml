@@ -6,14 +6,13 @@
     android:layout_height="match_parent"
     android:background="#F5F5F5">
 
-    <!-- Your original screen content -->
     <LinearLayout
         android:id="@+id/content_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- Page Title -->
+        <!-- Title -->
         <TextView
             android:id="@+id/tv_title"
             android:layout_width="match_parent"
@@ -28,23 +27,54 @@
             android:paddingBottom="12dp"
             android:background="@color/white" />
 
-        <!-- Search bar (live search) -->
-        <EditText
-            android:id="@+id/et_search"
+        <!-- Filter Chips -->
+        <HorizontalScrollView
             android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:hint="Search notes / date / amount / #ID"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="8dp"
-            android:background="@drawable/bg_search_bar"
-            android:singleLine="true"
-            android:imeOptions="actionSearch"
-            android:inputType="text" />
+            android:layout_height="wrap_content"
+            android:overScrollMode="never"
+            android:fillViewport="false"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="8dp"
+            android:background="@color/white">
 
-        <!-- ListView below search -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chips_filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                app:singleLine="true"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_all"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="All"
+                    app:checkedIconVisible="false"
+                    android:checked="true" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_admin_to_doctor"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Admin → Doctor"
+                    app:checkedIconVisible="false" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_doctor_to_admin"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Doctor → Admin"
+                    app:checkedIconVisible="false" />
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+
+        <!-- List -->
         <ListView
             android:id="@+id/list_payment"
             android:layout_width="match_parent"
@@ -57,7 +87,7 @@
             android:paddingBottom="16dp" />
     </LinearLayout>
 
-    <!-- Black system-bar scrims (TOP & BOTTOM) -->
+    <!-- System scrims -->
     <View
         android:id="@+id/system_top_scrim"
         android:layout_width="match_parent"
@@ -73,5 +103,4 @@
         android:layout_alignParentBottom="true"
         android:background="#000000"
         android:elevation="20dp" />
-
 </RelativeLayout>

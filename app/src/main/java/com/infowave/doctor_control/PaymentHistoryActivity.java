@@ -1,13 +1,13 @@
 package com.infowave.doctor_control;
 
+import android.annotation.SuppressLint;
+import android.content.Intent; // <-- added
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,6 +26,7 @@ import com.android.volley.Request;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.chip.ChipGroup;
 import com.infowave.doctor_control.adapter.PaymentHistoryAdapter;
 import com.infowave.doctor_control.adapter.SettlementAppointmentAdapter;
 
@@ -39,8 +40,10 @@ import java.util.List;
 
 public class PaymentHistoryActivity extends AppCompatActivity {
 
+    private static final String TAG = "PaymentHistoryActivity";
+
     private ListView listView;
-    private EditText etSearch;
+    private ChipGroup chipsFilter;            // filter via chips
     private PaymentHistoryAdapter adapter;
 
     private int doctorId = -1;
@@ -48,33 +51,65 @@ public class PaymentHistoryActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "onCreate: starting PaymentHistoryActivity");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment_history);
 
         setupSystemBarScrims();
 
         doctorId = getDoctorIdFromPrefs();
+        Log.d(TAG, "onCreate: resolved doctorId=" + doctorId);
         if (doctorId <= 0) {
+            Log.w(TAG, "onCreate: doctorId missing, finishing activity");
             Toast.makeText(this, "Doctor ID not found. Please login again.", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
 
-        listView = findViewById(R.id.list_payment);
-        etSearch = findViewById(R.id.et_search);
+        listView    = findViewById(R.id.list_payment);
+        chipsFilter = findViewById(R.id.chips_filter); // must exist in XML if you want chip filtering
 
-        adapter = new PaymentHistoryAdapter(this, completedList);
+        // Card click: open bottom sheet (unchanged)
+        // Show Proof click: redirect to SettlementDetailsActivity
+        adapter = new PaymentHistoryAdapter(
+                this,
+                completedList,
+                new PaymentHistoryAdapter.RowActionListener() {
+                    @Override
+                    public void onOpenSettlementDetails(PaymentSummary summary) {
+                        if (summary == null) return;
+                        // Whole row/card click -> BottomSheet (unchanged)
+                        showSettlementAppointmentsBottomSheet(summary);
+                    }
+
+                    @Override
+                    public void onShowProof(PaymentSummary summary) {
+                        if (summary == null) return;
+                        // Show Proof button -> redirect to SettlementDetailsActivity
+                        openSettlementDetails(summary);
+                    }
+                }
+        );
+
         listView.setDivider(null);
         listView.setAdapter(adapter);
+        Log.d(TAG, "onCreate: adapter attached with initial size=" + completedList.size());
 
-        etSearch.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                adapter.filter(s != null ? s.toString() : "");
-            }
-            @Override public void afterTextChanged(Editable s) {}
-        });
+        // Chips -> adapter filter (guard if chips not in this layout)
+        if (chipsFilter != null) {
+            chipsFilter.setOnCheckedChangeListener((group, checkedId) -> {
+                int mode = PaymentHistoryAdapter.FILTER_ALL;
+                if (checkedId == R.id.chip_admin_to_doctor) {
+                    mode = PaymentHistoryAdapter.FILTER_ADMIN_TO_DOCTOR;
+                } else if (checkedId == R.id.chip_doctor_to_admin) {
+                    mode = PaymentHistoryAdapter.FILTER_DOCTOR_TO_ADMIN;
+                }
+                Log.d(TAG, "chips: checkedId=" + checkedId + ", mode=" + mode);
+                adapter.setDirectionFilter(mode);
+            });
+        }
 
+        // Keep list item click -> bottom sheet (unchanged)
         listView.setOnItemClickListener((parent, view, position, id) -> {
             PaymentSummary summary = (PaymentSummary) adapter.getItem(position);
             if (summary == null) return;
@@ -82,7 +117,6 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         });
 
         fetchCompletedSettlements(doctorId);
-        // NOTE: No back-press callback, no onUserLeaveHint guard — default back returns to previous screen.
     }
 
     private void setupSystemBarScrims() {
@@ -109,13 +143,15 @@ public class PaymentHistoryActivity extends AppCompatActivity {
             Insets bars = insets.getInsets(types);
 
             int top = bars.top;
+            int bottom = bars.bottom;
+
             if (top == 0) {
+                @SuppressLint("InternalInsetResource")
                 int resId = getResources().getIdentifier("status_bar_height", "dimen", "android");
                 if (resId > 0) top = getResources().getDimensionPixelSize(resId);
             }
-
-            int bottom = bars.bottom;
             if (bottom == 0) {
+                @SuppressLint("InternalInsetResource")
                 int resId = getResources().getIdentifier("navigation_bar_height", "dimen", "android");
                 if (resId > 0) bottom = getResources().getDimensionPixelSize(resId);
             }
@@ -140,9 +176,9 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                         content.getPaddingRight(), padBottom);
             }
             if (list != null) {
-                int padBottom = Math.max(list.getPaddingBottom(), bottom);
+                int padBottom2 = Math.max(list.getPaddingBottom(), bottom);
                 list.setPadding(list.getPaddingLeft(), list.getPaddingTop(),
-                        list.getPaddingRight(), padBottom);
+                        list.getPaddingRight(), padBottom2);
                 list.setClipToPadding(false);
             }
 
@@ -161,6 +197,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         return id;
     }
 
+    /** Loads only Settled items (history). Pending screen keeps using '&status=Pending'. */
     private void fetchCompletedSettlements(int doctorId) {
         try {
             String base = ApiConfig.endpoint(
@@ -169,12 +206,17 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                     URLEncoder.encode(String.valueOf(doctorId), StandardCharsets.UTF_8.name())
             );
             String url = base + "&status=Settled";
+            Log.d(TAG, "fetchCompletedSettlements: GET " + url);
 
+            final long t0 = System.currentTimeMillis();
             StringRequest req = new StringRequest(Request.Method.GET, url, response -> {
+                long dt = System.currentTimeMillis() - t0;
                 try {
                     JSONObject root = new JSONObject(response);
-                    if (!root.optBoolean("success", false)) {
-                        Toast.makeText(this, root.optString("message", "Failed"), Toast.LENGTH_SHORT).show();
+                    boolean success = root.optBoolean("success", false);
+                    if (!success) {
+                        String msg = root.optString("message", "Failed");
+                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
                         return;
                     }
 
@@ -222,7 +264,7 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                     Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }, error -> {
-                String msg = (error.getMessage() != null) ? error.getMessage() : "Network error";
+                String msg = (error != null && error.getMessage() != null) ? error.getMessage() : "Network error";
                 Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
             });
 
@@ -234,6 +276,24 @@ public class PaymentHistoryActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Show Proof button → SettlementDetailsActivity.
+     */
+    private void openSettlementDetails(PaymentSummary summary) {
+        Intent i = new Intent(PaymentHistoryActivity.this, SettlementDetailsActivity.class);
+
+        // Primary extras
+        i.putExtra(SettlementDetailsActivity.EXTRA_DOCTOR_ID, summary.doctorId);
+        i.putExtra(SettlementDetailsActivity.EXTRA_SUMMARY_ID, summary.summaryId);
+
+        // Legacy keys for compatibility
+        i.putExtra("doctor_id", summary.doctorId);
+        i.putExtra("summary_id", summary.summaryId);
+
+        startActivity(i);
+    }
+
+    @SuppressLint("SetTextI18n")
     private void showSettlementAppointmentsBottomSheet(PaymentSummary summary) {
         try {
             View sheetView = LayoutInflater.from(this)
@@ -266,39 +326,44 @@ public class PaymentHistoryActivity extends AppCompatActivity {
                 try {
                     JSONObject root = new JSONObject(response);
                     if (!root.optBoolean("success", false)) {
-                        Toast.makeText(this, root.optString("message", "Failed"), Toast.LENGTH_SHORT).show();
+                        String msg = root.optString("message", "Failed");
+                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
                         return;
                     }
                     JSONArray arr = root.optJSONArray("data");
-                    if (arr == null) arr = new JSONArray();
 
                     List<SettlementAppointment> data = new ArrayList<>();
-                    for (int i = 0; i < arr.length(); i++) {
-                        JSONObject o = arr.getJSONObject(i);
+                    if (arr != null) {
+                        for (int i = 0; i < arr.length(); i++) {
+                            JSONObject o = arr.getJSONObject(i);
 
-                        SettlementAppointment a = new SettlementAppointment();
-                        a.appointmentId   = o.optInt("appointment_id");
-                        a.patientId       = o.optInt("patient_id");
-                        a.patientName     = o.optString("patient_name", "");
-                        a.paymentMethod   = o.optString("payment_method", "");
-                        a.deposit         = o.optDouble("deposit", 0);
-                        a.depositStatus   = o.optString("deposit_status", "");
-                        a.amountTotal     = o.optDouble("amount_total", 0);
-                        a.gst             = o.optDouble("gst", 0);
-                        a.baseExGst       = o.optDouble("base_ex_gst", 0);
-                        a.adminCommission = o.optDouble("admin_commission", 0);
-                        a.doctorEarning   = o.optDouble("doctor_earning", 0);
-                        a.paymentStatus   = o.optString("payment_status", "");
-                        a.createdAt       = o.optString("created_at", "");
+                            SettlementAppointment a = new SettlementAppointment();
+                            a.appointmentId   = o.optInt("appointment_id");
+                            a.patientId       = o.optInt("patient_id");
+                            a.patientName     = o.optString("patient_name", "");
+                            a.paymentMethod   = o.optString("payment_method", "");
+                            a.deposit         = o.optDouble("deposit", 0);
+                            a.depositStatus   = o.optString("deposit_status", "");
+                            a.amountTotal     = o.optDouble("amount_total", 0);
+                            a.gst             = o.optDouble("gst", 0);
+                            a.baseExGst       = o.optDouble("base_ex_gst", 0);
+                            a.adminCommission = o.optDouble("admin_commission", 0);
+                            a.doctorEarning   = o.optDouble("doctor_earning", 0);
+                            a.paymentStatus   = o.optString("payment_status", "");
+                            a.createdAt       = o.optString("created_at", "");
 
-                        data.add(a);
+                            data.add(a);
+                        }
                     }
                     rv.setAdapter(new SettlementAppointmentAdapter(data));
 
                 } catch (Exception e) {
                     Toast.makeText(this, "Parse error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
-            }, error -> Toast.makeText(this, "Network error: " + (error.getMessage()!=null?error.getMessage():""), Toast.LENGTH_SHORT).show());
+            }, error -> {
+                String msg = (error != null && error.getMessage() != null) ? error.getMessage() : "Network error";
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+            });
 
             req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, 1.0f));
             Volley.newRequestQueue(this).add(req);
