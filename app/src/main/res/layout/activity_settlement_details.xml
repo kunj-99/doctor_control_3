@@ -6,7 +6,27 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F7FA"
+    android:clipToPadding="false"
     tools:context=".SettlementDetailsActivity">
+    <!-- Status bar black background (TOP) -->
+    <View
+        android:id="@+id/statusBarScrim"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#000000"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Navigation bar black background (BOTTOM) -->
+    <View
+        android:id="@+id/navBarScrim"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#000000"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- Top App Bar -->
     <com.google.android.material.appbar.MaterialToolbar
@@ -14,11 +34,17 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="#FFFFFF"
-        android:elevation="6dp"
-        app:title="Settlement Details"
-        app:titleTextColor="#111827"
-        app:navigationIcon="@drawable/ic_back"
+        android:elevation="0dp"
+        android:minHeight="?attr/actionBarSize"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        app:contentInsetStartWithNavigation="12dp"
+        app:contentInsetEndWithActions="12dp"
+        app:navigationIcon="@drawable/left_arrow"
         app:navigationIconTint="#111827"
+        app:title="Settlement Details"
+        app:titleCentered="true"
+        app:titleTextColor="#111827"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -29,7 +55,13 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:fillViewport="true"
-        android:padding="16dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="24dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:scrollbars="none"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -39,7 +71,8 @@
             android:id="@+id/contentContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:animateLayoutChanges="true">
 
             <!-- Summary Card -->
             <com.google.android.material.card.MaterialCardView
@@ -47,8 +80,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="14dp"
-                app:cardCornerRadius="16dp"
+                app:cardCornerRadius="18dp"
                 app:cardElevation="2dp"
+                app:cardUseCompatPadding="true"
+                app:cardBackgroundColor="#FFFFFF"
                 app:strokeWidth="1dp"
                 app:strokeColor="#E5E7EB">
 
@@ -56,7 +91,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:paddingTop="18dp"
+                    android:paddingBottom="18dp">
 
                     <!-- Java expects: tvTitle -->
                     <TextView
@@ -66,7 +104,10 @@
                         android:text="Settlement"
                         android:textColor="#111827"
                         android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.01"
+                        android:lineSpacingExtra="2dp" />
 
                     <!-- Java expects: tvMode -->
                     <TextView
@@ -76,14 +117,17 @@
                         android:layout_marginTop="6dp"
                         android:text="Mode: -"
                         android:textColor="#6B7280"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif"
+                        android:lineSpacingExtra="2dp" />
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:layout_marginTop="14dp"
                         android:layout_marginBottom="14dp"
-                        android:background="#EEF2F7" />
+                        android:background="#E5E7EB"
+                        android:alpha="0.7" />
 
                     <!-- Java expects: tvAmount (single amount text based on mode) -->
                     <TextView
@@ -93,7 +137,10 @@
                         android:text="Amount: ₹0.00"
                         android:textColor="#111827"
                         android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.01"
+                        android:lineSpacingExtra="2dp" />
 
                     <!-- Java expects: tvQrHint -->
                     <TextView
@@ -103,21 +150,26 @@
                         android:layout_marginTop="10dp"
                         android:text="Scan QR to pay and upload proof."
                         android:textColor="#6B7280"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif"
+                        android:lineSpacingExtra="2dp" />
 
                     <!-- Keep your chip-like status (Java can update if you want later) -->
                     <TextView
                         android:id="@+id/tvStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:paddingStart="10dp"
-                        android:paddingEnd="10dp"
-                        android:paddingTop="6dp"
-                        android:paddingBottom="6dp"
+                        android:layout_marginTop="14dp"
+                        android:layout_gravity="start"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:paddingTop="7dp"
+                        android:paddingBottom="7dp"
                         android:text="Status: Pending"
                         android:textColor="#111827"
                         android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
                         android:background="#EEF2FF" />
 
                 </LinearLayout>
@@ -129,18 +181,23 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="14dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#E5E7EB"
                 android:visibility="gone"
-                tools:visibility="visible">
+                tools:visibility="visible"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true"
+                app:cardBackgroundColor="#FFFFFF"
+                app:strokeWidth="1dp"
+                app:strokeColor="#E5E7EB">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:paddingTop="18dp"
+                    android:paddingBottom="18dp">
 
                     <TextView
                         android:layout_width="match_parent"
@@ -148,7 +205,9 @@
                         android:text="Pay via QR"
                         android:textColor="#111827"
                         android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.01" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -156,7 +215,9 @@
                         android:layout_marginTop="6dp"
                         android:text="Scan this QR using any UPI app and complete payment."
                         android:textColor="#6B7280"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif"
+                        android:lineSpacingExtra="2dp" />
 
                     <!-- Java expects: ivQr -->
                     <ImageView
@@ -167,8 +228,9 @@
                         android:layout_marginTop="14dp"
                         android:contentDescription="QR Code"
                         android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:background="#FFFFFF"
-                        android:padding="10dp"
+                        android:padding="12dp"
                         tools:src="@drawable/ic_launcher_foreground" />
 
                     <TextView
@@ -176,10 +238,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
+                        android:gravity="center_horizontal"
                         android:text="QR will load from server..."
                         android:textColor="#6B7280"
                         android:textSize="12sp"
-                        android:gravity="center_horizontal" />
+                        android:fontFamily="sans-serif" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -190,18 +253,23 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="14dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#E5E7EB"
                 android:visibility="gone"
-                tools:visibility="visible">
+                tools:visibility="visible"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true"
+                app:cardBackgroundColor="#FFFFFF"
+                app:strokeWidth="1dp"
+                app:strokeColor="#E5E7EB">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:paddingTop="18dp"
+                    android:paddingBottom="18dp">
 
                     <TextView
                         android:layout_width="match_parent"
@@ -209,7 +277,9 @@
                         android:text="Upload Payment Proof"
                         android:textColor="#111827"
                         android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.01" />
 
                     <TextView
                         android:id="@+id/tvUploadHint"
@@ -218,7 +288,9 @@
                         android:layout_marginTop="6dp"
                         android:text="Select the payment screenshot and submit."
                         android:textColor="#6B7280"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif"
+                        android:lineSpacingExtra="2dp" />
 
                     <!-- Java expects: btnChooseProof -->
                     <com.google.android.material.button.MaterialButton
@@ -226,7 +298,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
+                        android:minHeight="48dp"
                         android:text="Select Screenshot"
+                        android:textAllCaps="false"
                         app:cornerRadius="12dp" />
 
                     <TextView
@@ -236,7 +310,9 @@
                         android:layout_marginTop="8dp"
                         android:text="No file selected"
                         android:textColor="#6B7280"
-                        android:textSize="12sp" />
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif"
+                        android:lineSpacingExtra="1dp" />
 
                     <!-- Java expects: ivSelectedProof -->
                     <ImageView
@@ -257,7 +333,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
+                        android:minHeight="48dp"
                         android:text="Submit Proof"
+                        android:textAllCaps="false"
                         app:cornerRadius="12dp" />
 
                 </LinearLayout>
@@ -269,18 +347,23 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="14dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#E5E7EB"
                 android:visibility="gone"
-                tools:visibility="visible">
+                tools:visibility="visible"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true"
+                app:cardBackgroundColor="#FFFFFF"
+                app:strokeWidth="1dp"
+                app:strokeColor="#E5E7EB">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:paddingTop="18dp"
+                    android:paddingBottom="18dp">
 
                     <!-- Java expects: tvDoctorTxnStatus -->
                     <TextView
@@ -290,7 +373,9 @@
                         android:text="Status: -"
                         android:textColor="#111827"
                         android:textSize="14sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.01" />
 
                     <!-- Java expects: tvDoctorTxnNote -->
                     <TextView
@@ -301,6 +386,8 @@
                         android:text=""
                         android:textColor="#6B7280"
                         android:textSize="13sp"
+                        android:fontFamily="sans-serif"
+                        android:lineSpacingExtra="2dp"
                         android:visibility="gone"
                         tools:visibility="visible" />
 
@@ -326,18 +413,23 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="14dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#E5E7EB"
                 android:visibility="gone"
-                tools:visibility="visible">
+                tools:visibility="visible"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true"
+                app:cardBackgroundColor="#FFFFFF"
+                app:strokeWidth="1dp"
+                app:strokeColor="#E5E7EB">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:paddingTop="18dp"
+                    android:paddingBottom="18dp">
 
                     <!-- Java expects: tvAdminProofTitle -->
                     <TextView
@@ -348,6 +440,8 @@
                         android:textColor="#111827"
                         android:textSize="16sp"
                         android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.01"
                         android:visibility="gone"
                         tools:visibility="visible" />
 
@@ -358,7 +452,9 @@
                         android:layout_marginTop="6dp"
                         android:text="Proof shared by admin for this payout."
                         android:textColor="#6B7280"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:fontFamily="sans-serif"
+                        android:lineSpacingExtra="2dp" />
 
                     <!-- Java expects: ivAdminProof -->
                     <ImageView
@@ -380,7 +476,8 @@
                         android:layout_marginTop="10dp"
                         android:text="Proof status: --"
                         android:textColor="#6B7280"
-                        android:textSize="12sp" />
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
